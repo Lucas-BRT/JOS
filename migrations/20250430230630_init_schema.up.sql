@@ -1,7 +1,15 @@
 -- Enums
 CREATE TYPE user_role AS ENUM ('user', 'admin');
+
 CREATE TYPE user_gender AS ENUM ('male', 'female', 'other');
-CREATE TYPE game_theme AS ENUM ('fantasy', 'sci-fi', 'horror', 'modern', 'historical');
+
+CREATE TYPE game_theme AS ENUM (
+    'fantasy',
+    'sci-fi',
+    'horror',
+    'modern',
+    'historical'
+);
 
 -- Genres
 CREATE TABLE IF NOT EXISTS genres (
@@ -21,20 +29,20 @@ CREATE TABLE IF NOT EXISTS systems (
 
 -- Users
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    username VARCHAR(30) UNIQUE NOT NULL CHECK (username ~ '^[a-zA-Z0-9_]{3,30}$'),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    username VARCHAR(30) UNIQUE NOT NULL,
     display_name VARCHAR(100) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role user_role DEFAULT 'user',
-    gender user_gender DEFAULT 'other',
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    user_role user_role DEFAULT 'user' NOT NULL,
+    gender user_gender DEFAULT 'other' NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Tables (RPG groups)
 CREATE TABLE IF NOT EXISTS tables (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     gm_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     title VARCHAR(100) NOT NULL,
     description TEXT,
@@ -54,7 +62,7 @@ CREATE TABLE IF NOT EXISTS table_genres (
 
 -- Participants
 CREATE TABLE IF NOT EXISTS table_participants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     table_id UUID NOT NULL REFERENCES tables (id) ON DELETE CASCADE,
     joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
