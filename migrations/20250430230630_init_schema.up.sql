@@ -3,25 +3,17 @@ CREATE TYPE user_role AS ENUM ('user', 'admin');
 
 CREATE TYPE user_gender AS ENUM ('male', 'female', 'other');
 
-CREATE TYPE game_theme AS ENUM (
-    'fantasy',
-    'sci-fi',
-    'horror',
-    'modern',
-    'historical'
-);
-
 -- Genres
-CREATE TABLE IF NOT EXISTS genres (
+CREATE TABLE IF NOT EXISTS game_genres (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
-    category VARCHAR(100) NOT NULL
+    name TEXT UNIQUE NOT NULL,
+    category TEXT NOT NULL
 );
 
 -- Systems
 CREATE TABLE IF NOT EXISTS systems (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(100) UNIQUE NOT NULL,
+    name TEXT UNIQUE NOT NULL,
     description TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -30,10 +22,10 @@ CREATE TABLE IF NOT EXISTS systems (
 -- Users
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    username VARCHAR(30) UNIQUE NOT NULL,
-    display_name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    username TEXT UNIQUE NOT NULL,
+    display_name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
     user_role user_role DEFAULT 'user' NOT NULL,
     gender user_gender DEFAULT 'other' NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -44,11 +36,11 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS tables (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
     gm_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    title VARCHAR(100) NOT NULL,
+    title TEXT NOT NULL,
     description TEXT,
     system_id INT NOT NULL REFERENCES systems (id),
     theme game_theme NOT NULL,
-    contact_info VARCHAR(255) NOT NULL,
+    contact_info TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
