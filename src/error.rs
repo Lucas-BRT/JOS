@@ -20,4 +20,6 @@ pub enum UserValidationError {
     DisplayName(String),
     #[error("failed to parse email: {0}")]
     Email(String),
+    #[error("failed to parse password: {0}")]
+    Password(String),
 }
