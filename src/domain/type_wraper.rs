@@ -1,4 +1,4 @@
-pub trait Validated: Sized {
+pub trait TypeWrapped: Sized {
     type Raw: Clone;
     type Error;
 

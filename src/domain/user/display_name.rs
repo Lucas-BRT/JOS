@@ -1,8 +1,7 @@
+use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use unicode_segmentation::UnicodeSegmentation;
-
-use crate::{domain::validation::Validated, error::UserValidationError};
 
 #[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct DisplayName(String);
@@ -10,7 +9,7 @@ pub struct DisplayName(String);
 const MAX_DISPLAY_NAME_LENGTH: usize = 30;
 const MIN_DISPLAY_NAME_LENGTH: usize = 5;
 
-impl Validated for DisplayName {
+impl TypeWrapped for DisplayName {
     type Raw = String;
     type Error = UserValidationError;
 
