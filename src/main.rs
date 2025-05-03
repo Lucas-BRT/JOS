@@ -1,7 +1,7 @@
 mod config;
+mod domain;
 mod error;
 mod model;
-mod prelude;
 mod utils;
 
 #[tokio::main]

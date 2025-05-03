@@ -1,7 +1,9 @@
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Failed during application startup: {0}")]
-    ApplicationSetupError(String),
+    ApplicationSetup(String),
+    #[error("Validation error: {0}")]
+    Validation(ValidationError),
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -14,4 +16,6 @@ pub enum ValidationError {
 pub enum UserValidationError {
     #[error("failed to parse username: {0}")]
     Username(String),
+    #[error("failed to parse display name: {0}")]
+    DisplayName(String),
 }
