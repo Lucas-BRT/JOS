@@ -36,7 +36,6 @@ CREATE TABLE IF NOT EXISTS tables (
     title TEXT NOT NULL,
     description TEXT,
     system_id INT NOT NULL REFERENCES systems (id),
-    theme game_theme NOT NULL,
     contact_info TEXT NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
@@ -45,7 +44,7 @@ CREATE TABLE IF NOT EXISTS tables (
 -- Table Genres (many-to-many)
 CREATE TABLE IF NOT EXISTS table_genres (
     table_id UUID NOT NULL REFERENCES tables (id) ON DELETE CASCADE,
-    genre_id INT NOT NULL REFERENCES genres (id) ON DELETE CASCADE,
+    genre_id INT NOT NULL REFERENCES game_genres (id) ON DELETE CASCADE,
     PRIMARY KEY (table_id, genre_id)
 );
 

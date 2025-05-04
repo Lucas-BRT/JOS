@@ -1,5 +1,5 @@
 pub trait TypeWrapped: Sized {
-    type Raw: Clone;
+    type Raw: Clone + ToString;
     type Error;
 
     fn parse(raw: Self::Raw) -> Result<Self, Self::Error>;

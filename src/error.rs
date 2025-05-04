@@ -22,4 +22,6 @@ pub enum UserValidationError {
     Email(String),
     #[error("failed to parse password: {0}")]
     Password(String),
+    #[error("failed to parse user role: {0}")]
+    UserRole(String),
 }
