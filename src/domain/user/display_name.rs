@@ -1,9 +1,8 @@
 use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
 use unicode_segmentation::UnicodeSegmentation;
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct DisplayName(String);
 
 const MAX_DISPLAY_NAME_LENGTH: usize = 30;

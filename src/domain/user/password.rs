@@ -4,14 +4,13 @@ use argon2::{
     password_hash::{self, SaltString, rand_core::OsRng},
 };
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
 
 const MIN_PASSWORD_LENGTH: usize = 8;
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct RawPassword(String);
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct HashPassword(String);
 
 impl TypeWrapped for RawPassword {

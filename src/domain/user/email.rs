@@ -1,9 +1,8 @@
 use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::FromRow;
 use validator::Validate;
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Validate)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Validate)]
 pub struct Email {
     #[validate(email)]
     mail: String,

@@ -1,11 +1,10 @@
 use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
 
 const MAX_USERNAME_LENGTH: usize = 30;
 const MIN_USERNAME_LENGTH: usize = 5;
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Username(String);
 
 impl TypeWrapped for Username {
