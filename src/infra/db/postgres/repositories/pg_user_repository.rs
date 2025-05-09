@@ -1,14 +1,11 @@
-use std::fmt::format;
-
 use crate::domain::type_wraper::TypeWrapped;
 use crate::domain::user::NewUser;
 use crate::domain::user::User;
 use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
 use crate::infra::db::repositories::user_repository::UserRepository;
-use sqlx::query_as;
+use sqlx::query_scalar;
 use sqlx::{PgPool, query};
-use uuid::Uuid;
 
 pub struct PostgresUserRepository {
     pub pool: PgPool,
@@ -21,21 +18,22 @@ impl UserRepository for PostgresUserRepository {
             .hash()
             .map_err(|e| format!("Failed to hash password: {}", e))?;
 
-        query!(
+        let user_id = query_scalar!(
             r#"
                 INSERT INTO users (username, display_name, email, password_hash)
                 VALUES ($1, $2, $3, $4)
+                RETURNING id
             "#,
             user.username.raw(),
             user.display_name.raw(),
             user.email.raw(),
             password_hash.raw()
         )
-        .execute(&self.pool)
+        .fetch_one(&self.pool)
         .await
         .map_err(|e| format!("Failed to create user: {}", e))?;
 
-        Ok(user.username.raw())
+        Ok(user_id.to_string())
     }
 
     async fn update(&self, user: &User) -> Result<(), String> {
