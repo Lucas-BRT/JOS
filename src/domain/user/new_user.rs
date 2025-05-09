@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    display_name::DisplayName, email::Email, password::HashPassword, user_role::UserRole,
+    display_name::DisplayName,
+    email::Email,
+    password::{HashPassword, RawPassword},
+    user_role::UserRole,
     username::Username,
 };
 
@@ -10,6 +13,5 @@ pub struct NewUser {
     pub email: Email,
     pub username: Username,
     pub display_name: DisplayName,
-    pub password: HashPassword,
-    pub role: UserRole,
+    pub password: RawPassword,
 }

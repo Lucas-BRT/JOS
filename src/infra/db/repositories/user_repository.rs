@@ -7,7 +7,7 @@ use uuid::Uuid;
 
 #[async_trait]
 pub trait UserRepository {
-    async fn create(&self, user: &NewUser) -> Result<(), String>;
+    async fn create(&self, user: &NewUser) -> Result<String, String>;
     async fn update(&self, user: &User) -> Result<(), String>;
     async fn get_all(&self) -> Result<Vec<UserRow>, String>;
 

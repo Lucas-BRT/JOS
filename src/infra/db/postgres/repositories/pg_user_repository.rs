@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use crate::domain::type_wraper::TypeWrapped;
 use crate::domain::user::NewUser;
 use crate::domain::user::User;
@@ -5,16 +7,22 @@ use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
 use crate::infra::db::repositories::user_repository::UserRepository;
 use async_trait::async_trait;
+use sqlx::query_as;
 use sqlx::{PgPool, query};
+use uuid::Uuid;
 
 pub struct PostgresUserRepository {
     pub pool: PgPool,
 }
 
-#[allow(warnings)]
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
-    async fn create(&self, user: &NewUser) -> Result<(), String> {
+    async fn create(&self, user: &NewUser) -> Result<String, String> {
+        let password_hash = user
+            .password
+            .hash()
+            .map_err(|e| format!("Failed to hash password: {}", e))?;
+
         query!(
             r#"
                 INSERT INTO users (username, display_name, email, password_hash)
@@ -23,16 +31,36 @@ impl UserRepository for PostgresUserRepository {
             user.username.raw(),
             user.display_name.raw(),
             user.email.raw(),
-            user.password.raw()
+            password_hash.raw()
         )
         .execute(&self.pool)
         .await
         .map_err(|e| format!("Failed to create user: {}", e))?;
 
-        Ok(())
+        Ok(user.username.raw())
     }
 
     async fn update(&self, user: &User) -> Result<(), String> {
+        query!(
+            r#"
+            UPDATE users
+                SET
+                    username = $1,
+                    display_name = $2,
+                    email = $3,
+                    password_hash = $4
+                WHERE id = $5
+            "#,
+            user.username().raw(),
+            user.display_name().raw(),
+            user.email().raw(),
+            user.password_hash().raw(),
+            user.id()
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to update user: {}", e))?;
+
         Ok(())
     }
 

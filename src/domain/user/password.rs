@@ -66,7 +66,7 @@ impl TypeWrapped for RawPassword {
 }
 
 impl RawPassword {
-    fn hash(&self) -> Result<HashPassword, UserValidationError> {
+    pub fn hash(&self) -> Result<HashPassword, UserValidationError> {
         let argon2 = Argon2::default();
         let salt = SaltString::generate(&mut OsRng::default());
 

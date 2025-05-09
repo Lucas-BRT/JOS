@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Validate)]
+#[serde(transparent)]
 pub struct Email {
     #[validate(email)]
     mail: String,

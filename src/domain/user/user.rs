@@ -37,3 +37,29 @@ impl TryFrom<UserRow> for User {
         Ok(user)
     }
 }
+
+impl User {
+    pub fn id(&self) -> Uuid {
+        self.id
+    }
+
+    pub fn username(&self) -> Username {
+        self.username.clone()
+    }
+
+    pub fn display_name(&self) -> DisplayName {
+        self.display_name.clone()
+    }
+
+    pub fn email(&self) -> Email {
+        self.email.clone()
+    }
+
+    pub fn password_hash(&self) -> HashPassword {
+        self.password_hash.clone()
+    }
+
+    pub fn user_role(&self) -> UserRole {
+        self.user_role.clone()
+    }
+}
