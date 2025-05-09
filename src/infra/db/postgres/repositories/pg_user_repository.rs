@@ -6,7 +6,6 @@ use crate::domain::user::User;
 use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
 use crate::infra::db::repositories::user_repository::UserRepository;
-use async_trait::async_trait;
 use sqlx::query_as;
 use sqlx::{PgPool, query};
 use uuid::Uuid;
@@ -15,7 +14,6 @@ pub struct PostgresUserRepository {
     pub pool: PgPool,
 }
 
-#[async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn create(&self, user: &NewUser) -> Result<String, String> {
         let password_hash = user

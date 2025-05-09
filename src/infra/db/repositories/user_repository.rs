@@ -2,10 +2,8 @@ use crate::{
     domain::user::{NewUser, User},
     infra::db::postgres::models::user::UserRow,
 };
-use async_trait::async_trait;
 use uuid::Uuid;
 
-#[async_trait]
 pub trait UserRepository {
     async fn create(&self, user: &NewUser) -> Result<String, String>;
     async fn update(&self, user: &User) -> Result<(), String>;

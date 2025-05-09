@@ -1,3 +1,5 @@
+#![allow(incomplete_features)]
+
 use infra::db::postgres::{create_postgres_pool, migrations::run_postgres_migrations};
 use routes::create_router;
 
