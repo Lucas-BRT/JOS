@@ -1,9 +1,12 @@
 use crate::domain::type_wraper::TypeWrapped;
 use crate::domain::user::NewUser;
 use crate::domain::user::User;
+use crate::domain::user::ValidatedNewUser;
+use crate::error::Error;
 use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
 use crate::infra::db::repositories::user_repository::UserRepository;
+use crate::prelude::AppResult;
 use sqlx::query_scalar;
 use sqlx::{PgPool, query};
 
@@ -12,28 +15,25 @@ pub struct PostgresUserRepository {
 }
 
 impl UserRepository for PostgresUserRepository {
-    async fn create(&self, user: &NewUser) -> Result<String, String> {
-        let password_hash = user
-            .password
-            .hash()
-            .map_err(|e| format!("Failed to hash password: {}", e))?;
+    async fn create(&self, user: &NewUser) -> AppResult<String> {
+        let validated_user = ValidatedNewUser::try_from(user.clone())?;
 
-        let user_id = query_scalar!(
+        query_scalar!(
             r#"
                 INSERT INTO users (username, display_name, email, password_hash)
                 VALUES ($1, $2, $3, $4)
                 RETURNING id
             "#,
-            user.username.raw(),
-            user.display_name.raw(),
-            user.email.raw(),
-            password_hash.raw()
+            validated_user.username.raw(),
+            validated_user.display_name.raw(),
+            validated_user.email.raw(),
+            validated_user.password_hash.raw()
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(|e| format!("Failed to create user: {}", e))?;
+        .map_err(|e| Error::Database(e.as_database_error().unwrap().code().unwrap().to_string()))?;
 
-        Ok(user_id.to_string())
+        Ok(validated_user.username.raw())
     }
 
     async fn update(&self, user: &User) -> Result<(), String> {
@@ -43,14 +43,12 @@ impl UserRepository for PostgresUserRepository {
                 SET
                     username = $1,
                     display_name = $2,
-                    email = $3,
-                    password_hash = $4
-                WHERE id = $5
+                    email = $3
+                WHERE id = $4
             "#,
             user.username().raw(),
             user.display_name().raw(),
             user.email().raw(),
-            user.password_hash().raw(),
             user.id()
         )
         .execute(&self.pool)
@@ -84,12 +82,53 @@ impl UserRepository for PostgresUserRepository {
         }
     }
 
-    async fn find_by_id(&self, id: &uuid::Uuid) -> Result<Option<UserRow>, String> {
-        Err("".to_string())
+    async fn find_by_id(&self, id: &uuid::Uuid) -> Result<UserRow, String> {
+        let user = sqlx::query_as!(
+            UserRow,
+            r#"
+                SELECT
+                    id,
+                    username,
+                    display_name,
+                    email,
+                    password_hash,
+                    user_role as "user_role: RowUserRole",
+                    created_at as "created_at: chrono::DateTime<chrono::Utc>",
+                    updated_at as "updated_at?: chrono::DateTime<chrono::Utc>"
+                FROM users WHERE id = ($1)
+            "#,
+            id
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to find user: {}", e.to_string()))?;
+
+        Ok(user)
     }
 
     async fn find_by_username(&self, username: &str) -> Result<UserRow, String> {
-        Err("".to_string())
+        let user = sqlx::query_as!(
+            UserRow,
+            r#"
+                SELECT
+                    id,
+                    username,
+                    display_name,
+                    email,
+                    password_hash,
+                    user_role as "user_role: RowUserRole",
+                    created_at as "created_at: chrono::DateTime<chrono::Utc>",
+                    updated_at as "updated_at?: chrono::DateTime<chrono::Utc>"
+                FROM users
+                WHERE username = ($1)
+            "#,
+            username
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(|e| format!("Failed to find user: {}", e.to_string()))?;
+
+        Ok(user)
     }
 }
 

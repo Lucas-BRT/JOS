@@ -8,6 +8,7 @@ mod config;
 mod domain;
 mod error;
 mod infra;
+mod prelude;
 mod routes;
 
 #[tokio::main]
