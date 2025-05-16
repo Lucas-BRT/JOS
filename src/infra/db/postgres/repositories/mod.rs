@@ -1,1 +1,12 @@
-pub mod pg_user_repository;
+pub mod user;
+use sqlx::PgPool;
+
+pub struct PostgresRepository {
+    pool: PgPool,
+}
+
+impl PostgresRepository {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+}

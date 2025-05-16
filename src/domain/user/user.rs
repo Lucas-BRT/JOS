@@ -19,7 +19,6 @@ impl TryFrom<UserRow> for User {
     type Error = UserValidationError;
 
     fn try_from(user_row: UserRow) -> Result<Self, Self::Error> {
-        println!("{}", user_row.username);
         let user = User {
             id: user_row.id,
             username: Username::parse(user_row.username)?,

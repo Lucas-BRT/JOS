@@ -10,7 +10,6 @@ pub fn routes(pool: PgPool) -> Router {
         .route("/", get(users::get_users::handle))
         .route("/", put(users::update_users::handle))
         .route("/", post(users::create_user::handle))
-        .route("/id/{id}", get(users::get_user_by_id::handle))
-        .route("/name/{username}", get(users::get_user_by_username::handle))
+        .route("/{username}", get(users::get_user_by_username::handle))
         .with_state(pool)
 }

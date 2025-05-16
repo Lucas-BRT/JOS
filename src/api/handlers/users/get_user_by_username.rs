@@ -4,8 +4,7 @@ use crate::{
         user::{User, username::Username},
     },
     infra::db::{
-        postgres::repositories::pg_user_repository::PostgresUserRepository,
-        repositories::user_repository::UserRepository,
+        postgres::repositories::PostgresRepository, repositories::user_repository::UserRepository,
     },
 };
 use axum::{
@@ -18,7 +17,7 @@ pub async fn handle(
     State(pool): State<PgPool>,
     Path(user): Path<Username>,
 ) -> Result<Json<User>, String> {
-    let usecase = PostgresUserRepository::new(pool);
+    let usecase = PostgresRepository::new(pool);
     let user_row = usecase
         .find_by_username(&user.raw())
         .await
