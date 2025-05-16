@@ -2,8 +2,7 @@ use super::PostgresRepository;
 use crate::domain::type_wraper::TypeWrapped;
 use crate::domain::user::NewUser;
 use crate::domain::user::User;
-use crate::domain::user::ValidatedNewUser;
-use crate::error::Error;
+use crate::domain::user::ValidatedUser;
 use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
 use crate::infra::db::repositories::user_repository::UserRepository;
@@ -13,7 +12,7 @@ use sqlx::query_scalar;
 
 impl UserRepository for PostgresRepository {
     async fn create(&self, user: &NewUser) -> AppResult<String> {
-        let validated_user = ValidatedNewUser::try_from(user.clone())?;
+        let validated_user = ValidatedUser::try_from(user.clone())?;
 
         query_scalar!(
             r#"
@@ -27,8 +26,7 @@ impl UserRepository for PostgresRepository {
             validated_user.password_hash.raw()
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(|e| Error::Database(e.as_database_error().unwrap().code().unwrap().to_string()))?;
+        .await?;
 
         Ok(validated_user.username.raw())
     }

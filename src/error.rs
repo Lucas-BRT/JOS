@@ -1,3 +1,4 @@
+use crate::infra::db::postgres::error::translate_db_error;
 use axum::{
     Json,
     http::StatusCode,
@@ -13,7 +14,7 @@ pub enum Error {
     #[error("Validation error: {0}")]
     Validation(ValidationError),
     #[error("Database error: {0}")]
-    Database(String),
+    Database(#[from] sqlx::Error),
 }
 
 impl IntoResponse for Error {
@@ -23,11 +24,8 @@ impl IntoResponse for Error {
                 let body = Json(json!({ "error": msg }));
                 (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
             }
-            Error::Validation(err) => err.into_response(), // delega pro ValidationError
-            Error::Database(err) => {
-                let body = Json(json!({ "error": err.to_string() }));
-                (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
-            }
+            Error::Validation(err) => err.into_response(),
+            Error::Database(err) => translate_db_error(&err).into_response(),
         }
     }
 }
@@ -41,7 +39,7 @@ pub enum ValidationError {
 impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         match self {
-            ValidationError::User(e) => e.into_response(), // delega pro UserValidationError
+            ValidationError::User(e) => e.into_response(),
         }
     }
 }

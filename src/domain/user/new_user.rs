@@ -12,14 +12,14 @@ pub struct NewUser {
     pub password: String,
 }
 
-pub struct ValidatedNewUser {
+pub struct ValidatedUser {
     pub username: Username,
     pub display_name: DisplayName,
     pub email: Email,
     pub password_hash: HashPassword,
 }
 
-impl TryFrom<NewUser> for ValidatedNewUser {
+impl TryFrom<NewUser> for ValidatedUser {
     type Error = Error;
 
     fn try_from(user: NewUser) -> Result<Self, Self::Error> {
