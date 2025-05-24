@@ -1,9 +1,3 @@
-pub mod email;
-pub mod game_genre;
-pub mod pagination;
-pub mod phone_number;
-pub mod system_min_info;
 pub mod table;
-pub mod type_wraper;
 pub mod user;
-pub mod user_min_info;
+pub mod utils;

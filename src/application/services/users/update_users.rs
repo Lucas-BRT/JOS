@@ -1,9 +1,4 @@
-use crate::{
-    domain::user::User,
-    infra::db::{
-        postgres::repositories::PostgresRepository, repositories::user_repository::UserRepository,
-    },
-};
+use crate::{domain::user::User, infra::db::postgres::repositories::PostgresRepository};
 use axum::{Json, extract::State};
 use sqlx::PgPool;
 

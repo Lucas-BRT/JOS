@@ -1,4 +1,4 @@
-use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
+use crate::{domain::utils::type_wraper::TypeWrapped, error::UserValidationError};
 use argon2::{
     Argon2, PasswordVerifier,
     password_hash::{self, SaltString, rand_core::OsRng},

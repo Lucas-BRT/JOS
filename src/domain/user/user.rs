@@ -1,6 +1,6 @@
 use super::{display_name::DisplayName, user_role::UserRole, username::Username};
 use crate::{
-    domain::{email::Email, type_wraper::TypeWrapped},
+    domain::utils::{email::Email, type_wraper::TypeWrapped},
     error::UserValidationError,
     infra::db::postgres::models::user::UserRow,
 };

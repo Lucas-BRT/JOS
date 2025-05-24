@@ -1,8 +1,6 @@
 use crate::{
-    domain::user::NewUser,
-    infra::db::{
-        postgres::repositories::PostgresRepository, repositories::user_repository::UserRepository,
-    },
+    domain::user::{NewUser, user_repository::UserRepository},
+    infra::db::postgres::repositories::PostgresRepository,
     prelude::AppResult,
 };
 use axum::{Json, extract::State};

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{domain::type_wraper::TypeWrapped, error::DescriptionValidationError};
+use crate::{domain::utils::type_wraper::TypeWrapped, error::DescriptionValidationError};
 
 const MIN_DESCRIPTION_LENGTH: usize = 100;
 const MAX_DESCRIPTION_LENGTH: usize = 1000;

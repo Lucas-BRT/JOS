@@ -1,5 +1,4 @@
-use super::title::Title;
-use crate::domain::game_genre::GameGenre;
+use super::{game_genre::GameGenre, title::Title};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

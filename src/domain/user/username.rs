@@ -1,4 +1,4 @@
-use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
+use crate::{domain::utils::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
 
 const MAX_USERNAME_LENGTH: usize = 30;

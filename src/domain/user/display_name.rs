@@ -1,6 +1,7 @@
-use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
+
+use crate::{domain::utils::type_wraper::TypeWrapped, error::UserValidationError};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct DisplayName(String);

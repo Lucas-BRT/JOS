@@ -1,12 +1,12 @@
-use crate::domain::{
-    pagination::Pagination,
-    table::{
-        aggregate::TableAggregate, new_table::NewTableData, rearch_result::TableSearchResult,
-        search_filters::TableSearchFilters, table::Table, update::UpdateTableData,
-    },
+use crate::domain::table::{
+    new_table::NewTableData, rearch_result::TableSearchResult, search_filters::TableSearchFilters,
+    table::Table, update::UpdateTableData,
 };
+use crate::domain::utils::pagination::Pagination;
 use crate::prelude::AppResult;
 use uuid::Uuid;
+
+use super::table::TableAggregate;
 
 pub trait TableRepository {
     async fn create(&self, table_data: NewTableData, genre_ids: &[i32]) -> AppResult<Table>;

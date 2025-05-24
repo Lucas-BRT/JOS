@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
-use super::{contact_info::ContactInfo, description::Description, title::Title};
+use crate::domain::utils::contact_info::ContactInfo;
+
+use super::{description::Description, title::Title};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct UpdateTableData {

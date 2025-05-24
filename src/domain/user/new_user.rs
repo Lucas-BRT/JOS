@@ -1,7 +1,7 @@
-use super::super::type_wraper::TypeWrapped;
 use super::password::HashPassword;
 use super::{display_name::DisplayName, password::RawPassword, username::Username};
-use crate::domain::email::Email;
+use crate::domain::utils::email::Email;
+use crate::domain::utils::type_wraper::TypeWrapped;
 use crate::error::{AppError, ValidationError};
 use serde::{Deserialize, Serialize};
 

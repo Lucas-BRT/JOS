@@ -1,16 +1,17 @@
 #![allow(incomplete_features)]
 
 use error::AppError;
-use infra::db::postgres::{create_postgres_pool, migrations::run_postgres_migrations};
-use routes::create_router;
+use infra::{
+    db::postgres::{create_postgres_pool, migrations::run_postgres_migrations},
+    web::create_router,
+};
 
-mod api;
+mod application;
 mod config;
 mod domain;
 mod error;
 mod infra;
 mod prelude;
-mod routes;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {

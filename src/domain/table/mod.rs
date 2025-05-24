@@ -1,10 +1,12 @@
 pub mod aggregate;
-pub mod contact_info;
 pub mod description;
+pub mod game_genre;
 pub mod new_table;
 pub mod rearch_result;
 pub mod search_filters;
 pub mod summary;
+pub mod system_min_info;
 pub mod table;
+pub mod table_repository;
 pub mod title;
 pub mod update;

@@ -1,11 +1,11 @@
 use super::PostgresRepository;
-use crate::domain::type_wraper::TypeWrapped;
 use crate::domain::user::NewUser;
 use crate::domain::user::User;
 use crate::domain::user::ValidatedUser;
+use crate::domain::user::user_repository::UserRepository;
+use crate::domain::utils::type_wraper::TypeWrapped;
 use crate::infra::db::postgres::models::user::RowUserRole;
 use crate::infra::db::postgres::models::user::UserRow;
-use crate::infra::db::repositories::user_repository::UserRepository;
 use crate::prelude::AppResult;
 use sqlx::query;
 use sqlx::query_scalar;

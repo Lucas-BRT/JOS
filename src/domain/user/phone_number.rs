@@ -1,5 +1,6 @@
-use crate::{domain::type_wraper::TypeWrapped, error::PhoneNumberValidationError};
 use serde::{Deserialize, Serialize};
+
+use crate::{domain::utils::type_wraper::TypeWrapped, error::PhoneNumberValidationError};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct PhoneNumber(String);

@@ -1,6 +1,9 @@
-use crate::{domain::type_wraper::TypeWrapped, error::UserValidationError};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
+
+use crate::error::UserValidationError;
+
+use super::type_wraper::TypeWrapped;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Validate)]
 #[serde(transparent)]
