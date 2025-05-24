@@ -33,7 +33,11 @@ impl IntoResponse for AppError {
                 Json(json!({ "error": msg })),
             )
                 .into_response(),
-            AppError::Validation(err) => err.into_response(),
+            AppError::Validation(err) => (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": err.to_string() })),
+            )
+                .into_response(),
             AppError::Database(err) => translate_db_error(&err).into_response(),
             AppError::NotFound(msg) => {
                 (StatusCode::NOT_FOUND, Json(json!({ "error": msg }))).into_response()
