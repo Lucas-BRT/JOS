@@ -1,7 +1,7 @@
 use super::super::type_wraper::TypeWrapped;
 use super::password::HashPassword;
 use super::{display_name::DisplayName, email::Email, password::RawPassword, username::Username};
-use crate::error::{Error, ValidationError};
+use crate::error::{AppError, ValidationError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -20,22 +20,22 @@ pub struct ValidatedUser {
 }
 
 impl TryFrom<NewUser> for ValidatedUser {
-    type Error = Error;
+    type Error = AppError;
 
     fn try_from(user: NewUser) -> Result<Self, Self::Error> {
         let username = Username::parse(user.username)
-            .map_err(|e| Error::Validation(ValidationError::User(e)))?;
+            .map_err(|e| AppError::Validation(ValidationError::User(e)))?;
 
         let display_name = DisplayName::parse(user.display_name)
-            .map_err(|e| Error::Validation(ValidationError::User(e)))?;
+            .map_err(|e| AppError::Validation(ValidationError::User(e)))?;
 
         let email =
-            Email::parse(user.email).map_err(|e| Error::Validation(ValidationError::User(e)))?;
+            Email::parse(user.email).map_err(|e| AppError::Validation(ValidationError::User(e)))?;
 
         let password_hash = RawPassword::parse(user.password)
-            .map_err(|e| Error::Validation(ValidationError::User(e)))?
+            .map_err(|e| AppError::Validation(ValidationError::User(e)))?
             .hash()
-            .map_err(|e| Error::Validation(ValidationError::User(e)))?;
+            .map_err(|e| AppError::Validation(ValidationError::User(e)))?;
 
         Ok(Self {
             username,

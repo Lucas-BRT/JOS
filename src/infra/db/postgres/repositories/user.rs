@@ -31,7 +31,7 @@ impl UserRepository for PostgresRepository {
         Ok(validated_user.username.raw())
     }
 
-    async fn update(&self, user: &User) -> Result<(), String> {
+    async fn update(&self, user: &User) -> AppResult<()> {
         query!(
             r#"
             UPDATE users
@@ -47,14 +47,13 @@ impl UserRepository for PostgresRepository {
             user.id()
         )
         .execute(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to update user: {}", e))?;
+        .await?;
 
         Ok(())
     }
 
-    async fn get_all(&self) -> Result<Vec<UserRow>, String> {
-        match sqlx::query_as!(
+    async fn get_all(&self) -> AppResult<Vec<UserRow>> {
+        let rows = sqlx::query_as!(
             UserRow,
             r#"
             SELECT
@@ -70,14 +69,12 @@ impl UserRepository for PostgresRepository {
             "#
         )
         .fetch_all(&self.pool)
-        .await
-        {
-            Ok(rows) => Ok(rows),
-            Err(e) => Err(format!("Failed to fetch users: {}", e)),
-        }
+        .await?;
+
+        Ok(rows)
     }
 
-    async fn find_by_username(&self, username: &str) -> Result<UserRow, String> {
+    async fn find_by_username(&self, username: &str) -> AppResult<Option<UserRow>> {
         let user = sqlx::query_as!(
             UserRow,
             r#"
@@ -95,9 +92,8 @@ impl UserRepository for PostgresRepository {
             "#,
             username
         )
-        .fetch_one(&self.pool)
-        .await
-        .map_err(|e| format!("Failed to find user: {}", e.to_string()))?;
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(user)
     }

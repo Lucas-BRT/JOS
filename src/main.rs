@@ -1,5 +1,6 @@
 #![allow(incomplete_features)]
 
+use error::AppError;
 use infra::db::postgres::{create_postgres_pool, migrations::run_postgres_migrations};
 use routes::create_router;
 
@@ -12,7 +13,7 @@ mod prelude;
 mod routes;
 
 #[tokio::main]
-async fn main() -> Result<(), error::Error> {
+async fn main() -> Result<(), AppError> {
     dotenvy::dotenv().ok();
     let config = config::Config::from_env()?;
 

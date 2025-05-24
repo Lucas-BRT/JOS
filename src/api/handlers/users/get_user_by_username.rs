@@ -3,9 +3,11 @@ use crate::{
         type_wraper::TypeWrapped,
         user::{User, username::Username},
     },
+    error::AppError,
     infra::db::{
         postgres::repositories::PostgresRepository, repositories::user_repository::UserRepository,
     },
+    prelude::AppResult,
 };
 use axum::{
     Json,
@@ -16,14 +18,12 @@ use sqlx::PgPool;
 pub async fn handle(
     State(pool): State<PgPool>,
     Path(user): Path<Username>,
-) -> Result<Json<User>, String> {
+) -> AppResult<Json<User>> {
     let usecase = PostgresRepository::new(pool);
-    let user_row = usecase
-        .find_by_username(&user.raw())
-        .await
-        .map_err(|e| e.to_string())?;
+    let user_row = usecase.find_by_username(&user.raw()).await?;
 
-    let user = User::try_from(user_row).map_err(|e| format!("failed to {}", e))?;
-
-    Ok(Json(user))
+    match user_row {
+        Some(user_row) => Ok(Json(User::try_from(user_row)?)),
+        None => Err(AppError::NotFound("User not found".to_string())),
+    }
 }

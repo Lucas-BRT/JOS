@@ -8,24 +8,36 @@ use serde_json::json;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum Error {
+pub enum AppError {
     #[error("Failed during application startup: {0}")]
     ApplicationSetup(String),
     #[error("Validation error: {0}")]
     Validation(ValidationError),
     #[error("Database error: {0}")]
     Database(#[from] sqlx::Error),
+    #[error("Not Found: {0}")]
+    NotFound(String),
 }
 
-impl IntoResponse for Error {
+impl From<UserValidationError> for AppError {
+    fn from(err: UserValidationError) -> Self {
+        AppError::Validation(ValidationError::User(err))
+    }
+}
+
+impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match self {
-            Error::ApplicationSetup(msg) => {
-                let body = Json(json!({ "error": msg }));
-                (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+            AppError::ApplicationSetup(msg) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": msg })),
+            )
+                .into_response(),
+            AppError::Validation(err) => err.into_response(),
+            AppError::Database(err) => translate_db_error(&err).into_response(),
+            AppError::NotFound(msg) => {
+                (StatusCode::NOT_FOUND, Json(json!({ "error": msg }))).into_response()
             }
-            Error::Validation(err) => err.into_response(),
-            Error::Database(err) => translate_db_error(&err).into_response(),
         }
     }
 }
