@@ -1,5 +1,6 @@
+use super::display_name::DisplayName;
 use super::password::HashPassword;
-use super::{display_name::DisplayName, password::RawPassword, username::Username};
+use super::{password::RawPassword, username::Username};
 use crate::domain::utils::email::Email;
 use crate::domain::utils::type_wraper::TypeWrapped;
 use crate::error::{AppError, ValidationError};

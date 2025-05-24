@@ -1,12 +1,11 @@
+use crate::domain::games::game_genre::GameGenre;
+use crate::domain::games::min_info::SystemMinInfo;
+use crate::domain::{user::user_min_info::UserMinInfo, utils::contact_info::ContactInfo};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{user::user_min_info::UserMinInfo, utils::contact_info::ContactInfo};
-
-use super::{
-    description::Description, game_genre::GameGenre, system_min_info::SystemMinInfo, title::Title,
-};
+use super::description::Description;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Table {
@@ -36,3 +35,6 @@ pub struct TableAggregate {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct Title(String);
