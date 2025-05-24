@@ -50,17 +50,37 @@ impl IntoResponse for AppError {
 pub enum ValidationError {
     #[error("User validation failed: {0}")]
     User(#[from] UserValidationError),
+    #[error("Phone number validation failed: {0}")]
+    PhoneNumber(#[from] PhoneNumberValidationError),
 }
 
 impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         match self {
             ValidationError::User(e) => e.into_response(),
+            ValidationError::PhoneNumber(e) => e.into_response(),
         }
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum PhoneNumberValidationError {
+    #[error("Phone number is too short")]
+    TooShort,
+    #[error("Phone number is too long")]
+    TooLong,
+    #[error("Phone number is invalid")]
+    Invalid,
+}
+
+impl IntoResponse for PhoneNumberValidationError {
+    fn into_response(self) -> Response {
+        let msg = self.to_string();
+        (StatusCode::BAD_REQUEST, Json(json!({ "error": msg }))).into_response()
+    }
+}
+
+#[derive(Debug, Error)]
 pub enum UserValidationError {
     #[error("failed to parse username: {0}")]
     Username(String),
