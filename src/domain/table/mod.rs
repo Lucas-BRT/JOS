@@ -1,4 +1,10 @@
+pub mod aggregate;
 pub mod contact_info;
 pub mod description;
+pub mod new_table;
+pub mod rearch_result;
+pub mod search_filters;
+pub mod summary;
 pub mod table;
 pub mod title;
+pub mod update;
