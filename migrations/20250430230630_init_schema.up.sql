@@ -47,7 +47,6 @@ CREATE TABLE IF NOT EXISTS tables (
     system_id INT NOT NULL REFERENCES systems (id) ON DELETE RESTRICT, -- Impede deletar sistema em uso
     contact_info TEXT NOT NULL,
     max_players INT CHECK (max_players IS NULL OR max_players > 0), -- Garante que max_players é positivo
-    language TEXT,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
