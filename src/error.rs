@@ -52,6 +52,8 @@ pub enum ValidationError {
     User(#[from] UserValidationError),
     #[error("Phone number validation failed: {0}")]
     PhoneNumber(#[from] PhoneNumberValidationError),
+    #[error("Description validation failed: {0}")]
+    Description(#[from] DescriptionValidationError),
 }
 
 impl IntoResponse for ValidationError {
@@ -59,7 +61,26 @@ impl IntoResponse for ValidationError {
         match self {
             ValidationError::User(e) => e.into_response(),
             ValidationError::PhoneNumber(e) => e.into_response(),
+            ValidationError::Description(e) => e.into_response(),
         }
+    }
+}
+
+#[derive(Debug, Error, PartialEq, Eq)]
+pub enum DescriptionValidationError {
+    #[error("Description is too short")]
+    TooShort,
+    #[error("Description is too long")]
+    TooLong,
+}
+
+impl IntoResponse for DescriptionValidationError {
+    fn into_response(self) -> Response {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": self.to_string() })),
+        )
+            .into_response()
     }
 }
 
