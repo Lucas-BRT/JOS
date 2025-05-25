@@ -1,7 +1,8 @@
 use super::table::TableAggregate;
 use super::table::Title;
+use super::vo::UpdateTableData;
 use crate::domain::games::game_genre::GameGenre;
-use crate::domain::table::{new_table::NewTableData, table::Table, update::UpdateTableData};
+use crate::domain::table::{new_table::NewTableData, table::Table};
 use crate::domain::utils::pagination::Pagination;
 use crate::prelude::AppResult;
 use chrono::{DateTime, Utc};

@@ -1,4 +1,7 @@
-use crate::infra::db::postgres::error::translate_db_error;
+use crate::{
+    domain::{error::DomainError, table::error::DescriptionValidationError},
+    infra::db::postgres::error::translate_db_error,
+};
 use axum::{
     Json,
     http::StatusCode,
@@ -11,6 +14,8 @@ use thiserror::Error;
 pub enum AppError {
     #[error("Failed during application startup: {0}")]
     ApplicationSetup(String),
+    #[error("Domain error: {0}")]
+    Domain(DomainError),
     #[error("Validation error: {0}")]
     Validation(ValidationError),
     #[error("Database error: {0}")]
@@ -22,6 +27,12 @@ pub enum AppError {
 impl From<UserValidationError> for AppError {
     fn from(err: UserValidationError) -> Self {
         AppError::Validation(ValidationError::User(err))
+    }
+}
+
+impl From<ApplicationSetupError> for AppError {
+    fn from(err: ApplicationSetupError) -> Self {
+        AppError::ApplicationSetup(err.to_string())
     }
 }
 
@@ -42,8 +53,31 @@ impl IntoResponse for AppError {
             AppError::NotFound(msg) => {
                 (StatusCode::NOT_FOUND, Json(json!({ "error": msg }))).into_response()
             }
+            AppError::Domain(err) => (
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": err.to_string() })),
+            )
+                .into_response(),
         }
     }
+}
+
+#[derive(Debug, Error)]
+pub enum ApplicationSetupError {
+    #[error("Failed to get environment variable: {0}")]
+    FailedToGetEnvironmentVariable(String),
+    #[error("Failed to start TCP listener: {0}")]
+    FailedToStartTcpListener(String),
+    #[error("Failed to launch server: {0}")]
+    FailedToLaunchServer(String),
+    #[error("Failed to parse PORT to u32: {0}")]
+    FailedToParsePort(String),
+    #[error("Failed to setup server address: {0}")]
+    FailedToSetupServerAddress(String),
+    #[error("Failed to establish database connection: {0}")]
+    FailedToEstablishDatabaseConnection(String),
+    #[error("Failed to run database migrations: {0}")]
+    FailedToRunDBMigrations(String),
 }
 
 #[derive(Error, Debug)]
@@ -61,26 +95,9 @@ impl IntoResponse for ValidationError {
         match self {
             ValidationError::User(e) => e.into_response(),
             ValidationError::PhoneNumber(e) => e.into_response(),
-            ValidationError::Description(e) => e.into_response(),
+            ValidationError::Description(e) => todo!(),
+            ValidationError::PhoneNumber(e) => e.into_response(),
         }
-    }
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum DescriptionValidationError {
-    #[error("Description is too short")]
-    TooShort,
-    #[error("Description is too long")]
-    TooLong,
-}
-
-impl IntoResponse for DescriptionValidationError {
-    fn into_response(self) -> Response {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(json!({ "error": self.to_string() })),
-        )
-            .into_response()
     }
 }
 

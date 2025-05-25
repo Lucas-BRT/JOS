@@ -1,4 +1,4 @@
-use crate::{domain::utils::type_wraper::TypeWrapped, error::UserValidationError};
+use crate::{core::error::UserValidationError, domain::utils::type_wraper::TypeWrapped};
 use serde::{Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 

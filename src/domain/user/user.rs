@@ -1,7 +1,7 @@
 use super::{display_name::DisplayName, user_role::UserRole, username::Username};
 use crate::{
+    core::error::UserValidationError,
     domain::utils::{email::Email, type_wraper::TypeWrapped},
-    error::UserValidationError,
     infra::db::postgres::models::user::UserRow,
 };
 use serde::{Deserialize, Serialize};

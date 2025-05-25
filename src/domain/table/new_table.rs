@@ -1,4 +1,4 @@
-use super::{description::Description, table::Title};
+use super::{table::Title, vo::Description};
 use crate::domain::utils::contact_info::ContactInfo;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

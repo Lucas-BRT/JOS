@@ -1,9 +1,9 @@
 use crate::{
+    core::error::AppError,
     domain::{
         user::{NewUser, User, user_repository::UserRepository, username::Username},
         utils::type_wraper::TypeWrapped,
     },
-    error::AppError,
     infra::db::postgres::{models::user::UserRow, repositories::PostgresRepository},
     prelude::AppResult,
 };

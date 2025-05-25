@@ -1,4 +1,4 @@
-use crate::{domain::utils::type_wraper::TypeWrapped, error::UserValidationError};
+use crate::{core::error::UserValidationError, domain::utils::type_wraper::TypeWrapped};
 use argon2::{
     Argon2, PasswordVerifier,
     password_hash::{self, SaltString, rand_core::OsRng},
@@ -106,7 +106,7 @@ impl HashPassword {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::error::UserValidationError;
+    use crate::core::error::UserValidationError;
 
     #[test]
     fn test_valid_password_parsing() {

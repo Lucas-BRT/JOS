@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::error::UserValidationError;
+use crate::core::error::UserValidationError;
 
 use super::type_wraper::TypeWrapped;
 

@@ -1,9 +1,9 @@
 use super::display_name::DisplayName;
 use super::password::HashPassword;
 use super::{password::RawPassword, username::Username};
+use crate::core::error::{AppError, ValidationError};
 use crate::domain::utils::email::Email;
 use crate::domain::utils::type_wraper::TypeWrapped;
-use crate::error::{AppError, ValidationError};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

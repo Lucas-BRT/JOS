@@ -1,40 +1,42 @@
 #![allow(incomplete_features)]
 
-use error::AppError;
+use core::{
+    config::Config,
+    error::{AppError, ApplicationSetupError},
+};
+
 use infra::{
     db::postgres::{create_postgres_pool, migrations::run_postgres_migrations},
     web::create_router,
 };
 
 mod application;
-mod config;
+mod core;
 mod domain;
-mod error;
 mod infra;
 mod prelude;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     dotenvy::dotenv().ok();
-    let config = config::Config::from_env()?;
+    let config = Config::from_env()?;
 
-    let pool = create_postgres_pool(config.database_url)
-        .await
-        .expect("Failed to create PostgreSQL pool");
+    let pool = create_postgres_pool(config.database_url).await?;
 
-    run_postgres_migrations(&pool)
-        .await
-        .expect("failed to run Postgres migrations");
+    run_postgres_migrations(&pool).await?;
 
     let listener = tokio::net::TcpListener::bind(&config.addr)
         .await
-        .expect("msg");
+        .map_err(|err| ApplicationSetupError::FailedToStartTcpListener(err.to_string()))?;
 
-    println!("server launched at: {}", listener.local_addr().unwrap());
+    println!(
+        "server launched at: {}",
+        listener.local_addr().expect("failed to get server addr")
+    );
 
     axum::serve(listener, create_router(pool))
         .await
-        .expect("failed to launch server");
+        .map_err(|err| ApplicationSetupError::FailedToLaunchServer(err.to_string()))?;
 
     Ok(())
 }
