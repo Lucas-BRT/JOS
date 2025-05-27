@@ -1,51 +1,40 @@
+use validator::Validate;
+
 use crate::{
     core::error::AppError,
-    domain::{
-        user::{NewUser, User, user_repository::UserRepository, username::Username},
-        utils::type_wraper::TypeWrapped,
-    },
-    infra::db::postgres::{models::user::UserRow, repositories::PostgresRepository},
+    domain::user::{dtos::NewUser, entity::User, user_repository::UserRepository},
+    interfaces::http::user::dtos::CreateUserDto,
     prelude::AppResult,
 };
-use axum::{
-    Json,
-    extract::{Path, State},
-};
-use sqlx::PgPool;
+use std::sync::Arc;
 
-pub async fn create(State(pool): State<PgPool>, Json(user): Json<NewUser>) -> AppResult<String> {
-    let usecase = PostgresRepository::new(pool);
-    let user = usecase.create(&user).await?;
-
-    Ok(user)
+#[derive(Clone)]
+pub struct UserService {
+    user_repository: Arc<dyn UserRepository>,
 }
 
-pub async fn find_by_username(
-    State(pool): State<PgPool>,
-    Path(user): Path<Username>,
-) -> AppResult<Json<User>> {
-    let usecase = PostgresRepository::new(pool);
-    let user_row = usecase.find_by_username(&user.raw()).await?;
-
-    match user_row {
-        Some(user_row) => Ok(Json(User::try_from(user_row)?)),
-        None => Err(AppError::NotFound("User not found".to_string())),
+impl UserService {
+    pub fn new(user_repository: Arc<dyn UserRepository>) -> Self {
+        Self { user_repository }
     }
-}
 
-pub async fn get_all(State(pool): State<PgPool>) -> Json<Vec<UserRow>> {
-    let usecase = PostgresRepository::new(pool);
-    let users = usecase.get_all().await.unwrap();
+    pub async fn create_user(&self, new_user_data: &CreateUserDto) -> AppResult<String> {
+        new_user_data
+            .validate()
+            .map_err(|e| AppError::Validation(e.to_string()))?;
 
-    Json(users)
-}
+        let new_user = NewUser::try_from(new_user_data).map_err(|e| AppError::Domain(e.into()))?;
 
-pub async fn update(
-    State(pool): State<PgPool>,
-    Json(user): Json<User>,
-) -> Result<Json<()>, String> {
-    let usecase = PostgresRepository::new(pool);
-    let users = usecase.update(&user).await.map_err(|e| e.to_string())?;
+        let created_user = self.user_repository.create(&new_user).await?;
 
-    Ok(Json(users))
+        Ok(created_user)
+    }
+
+    pub async fn find_user_by_username(&self, username: &str) -> AppResult<Option<User>> {
+        Ok(self.user_repository.find_by_username(username).await?)
+    }
+
+    pub async fn get_all_users(&self) -> AppResult<Vec<User>> {
+        Ok(self.user_repository.get_all().await?)
+    }
 }

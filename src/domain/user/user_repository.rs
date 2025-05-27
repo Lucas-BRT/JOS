@@ -1,12 +1,10 @@
-use crate::{
-    domain::user::{NewUser, User},
-    infra::db::postgres::models::user::UserRow,
-    prelude::AppResult,
-};
+use super::{dtos::NewUser, entity::User};
+use crate::prelude::AppResult;
+use async_trait::async_trait;
 
-pub trait UserRepository {
+#[async_trait]
+pub trait UserRepository: Send + Sync {
     async fn create(&self, user: &NewUser) -> AppResult<String>;
-    async fn update(&self, user: &User) -> AppResult<()>;
-    async fn get_all(&self) -> AppResult<Vec<UserRow>>;
-    async fn find_by_username(&self, name: &str) -> AppResult<Option<UserRow>>;
+    async fn get_all(&self) -> AppResult<Vec<User>>;
+    async fn find_by_username(&self, name: &str) -> AppResult<Option<User>>;
 }

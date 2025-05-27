@@ -1,7 +1,7 @@
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum TableError {
+pub enum TableDomainError {
     #[error("Table not found")]
     NotFound,
     #[error("Table already exists")]

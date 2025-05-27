@@ -1,31 +1,34 @@
 #![allow(incomplete_features)]
 
-use core::{
-    config::Config,
-    error::{AppError, ApplicationSetupError},
-};
-
-use infra::{
-    db::postgres::{create_postgres_pool, migrations::run_postgres_migrations},
-    web::create_router,
-};
-
 mod application;
 mod core;
 mod domain;
-mod infra;
+mod infrastructure;
+mod interfaces;
 mod prelude;
+
+use application::services::user_service::UserService;
+use core::error::{AppError, ApplicationSetupError};
+use core::state::AppState;
+use infrastructure::config::Config;
+use infrastructure::persistance::postgres::create_postgres_pool;
+use infrastructure::persistance::postgres::migrations::run_postgres_migrations;
+use infrastructure::persistance::postgres::repositories::PostgresUserRepository;
+use interfaces::http::create_router;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), AppError> {
     dotenvy::dotenv().ok();
     let config = Config::from_env()?;
+    let pool = create_postgres_pool(&config.database_url).await?;
+    let user_repo = PostgresUserRepository::new(pool.clone());
+    let user_service = UserService::new(Arc::new(user_repo));
+    let state = AppState::new(pool, Arc::new(config), user_service);
 
-    let pool = create_postgres_pool(config.database_url).await?;
+    run_postgres_migrations(&state.pg_pool).await?;
 
-    run_postgres_migrations(&pool).await?;
-
-    let listener = tokio::net::TcpListener::bind(&config.addr)
+    let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await
         .map_err(|err| ApplicationSetupError::FailedToStartTcpListener(err.to_string()))?;
 
@@ -34,7 +37,7 @@ async fn main() -> Result<(), AppError> {
         listener.local_addr().expect("failed to get server addr")
     );
 
-    axum::serve(listener, create_router(pool))
+    axum::serve(listener, create_router(state))
         .await
         .map_err(|err| ApplicationSetupError::FailedToLaunchServer(err.to_string()))?;
 
