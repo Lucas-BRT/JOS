@@ -1,12 +1,11 @@
-use validator::Validate;
-
 use crate::{
     core::error::AppError,
     domain::user::{dtos::NewUser, entity::User, user_repository::UserRepository},
-    interfaces::http::user::dtos::CreateUserDto,
+    interfaces::http::{error::validation_errors_to_response, user::dtos::CreateUserDto},
     prelude::AppResult,
 };
 use std::sync::Arc;
+use validator::Validate;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -21,7 +20,7 @@ impl UserService {
     pub async fn create_user(&self, new_user_data: &CreateUserDto) -> AppResult<String> {
         new_user_data
             .validate()
-            .map_err(|e| AppError::Validation(e.to_string()))?;
+            .map_err(|e| AppError::Validation(validation_errors_to_response(&e)))?;
 
         let new_user = NewUser::try_from(new_user_data).map_err(|e| AppError::Domain(e.into()))?;
 

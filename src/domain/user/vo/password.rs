@@ -1,4 +1,3 @@
-use super::{MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
 use crate::domain::user::error::PasswordDomainError;
 use argon2::{
     Argon2,
@@ -69,77 +68,45 @@ impl<State> PasswordVo<State> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::user::error::PasswordDomainError;
-
-    const VALID_PASSWORD: &str = "Valid1!";
 
     #[test]
-    fn test_parse_empty_password() {
-        let result = PasswordVo::parse("".to_string());
-        assert!(matches!(result, Err(PasswordDomainError::Empty)));
+    fn test_parse_removes_whitespace() {
+        let raw = "  my_password  ".to_string();
+        let parsed = PasswordVo::parse(raw).unwrap();
+        assert_eq!(parsed.raw(), "my_password");
     }
 
     #[test]
-    fn test_parse_too_short_password() {
-        let result = PasswordVo::parse("A1!".to_string());
-        assert!(matches!(result, Err(PasswordDomainError::TooShort)));
+    fn test_hash_generates_hashed_password() {
+        let raw = PasswordVo::parse("password123".to_string()).unwrap();
+        let hashed = raw.hash().unwrap();
+        assert_ne!(hashed.raw(), "password123"); // hash deve ser diferente do original
     }
 
     #[test]
-    fn test_parse_too_long_password() {
-        let long_password = "A1!".repeat(MAX_PASSWORD_LENGTH + 1);
-        let result = PasswordVo::parse(long_password);
-        assert!(matches!(result, Err(PasswordDomainError::TooLong)));
+    fn test_verify_correct_password() {
+        let raw_password = "password123";
+        let raw = PasswordVo::parse(raw_password.to_string()).unwrap();
+        let hashed = raw.hash().unwrap();
+
+        assert!(hashed.verify(raw_password).is_ok());
     }
 
     #[test]
-    fn test_parse_missing_uppercase() {
-        let result = PasswordVo::parse("valid1!".to_string());
-        assert!(matches!(result, Err(PasswordDomainError::MissingUppercase)));
+    fn test_verify_incorrect_password() {
+        let raw_password = "password123";
+        let wrong_password = "wrongpass";
+        let raw = PasswordVo::parse(raw_password.to_string()).unwrap();
+        let hashed = raw.hash().unwrap();
+
+        let result = hashed.verify(wrong_password);
+        assert!(matches!(result, Err(PasswordDomainError::PasswordMismatch)));
     }
 
     #[test]
-    fn test_parse_missing_lowercase() {
-        let result = PasswordVo::parse("VALID1!".to_string());
-        assert!(matches!(result, Err(PasswordDomainError::MissingLowercase)));
-    }
-
-    #[test]
-    fn test_parse_missing_digit() {
-        let result = PasswordVo::parse("Valid!".to_string());
-        assert!(matches!(result, Err(PasswordDomainError::MissingDigit)));
-    }
-
-    #[test]
-    fn test_parse_missing_punctuation() {
-        let result = PasswordVo::parse("Valid1".to_string());
-        assert!(matches!(
-            result,
-            Err(PasswordDomainError::MissingPunctuation)
-        ));
-    }
-
-    #[test]
-    fn test_parse_valid_password() {
-        let result = PasswordVo::parse(VALID_PASSWORD.to_string());
-        assert!(result.is_ok());
-
-        let password_vo = result.unwrap();
-        assert_eq!(password_vo.raw(), VALID_PASSWORD);
-    }
-
-    #[test]
-    fn test_hash_and_verify_success() {
-        let raw_password = VALID_PASSWORD.to_string();
-        let parsed = PasswordVo::parse(raw_password.clone()).unwrap();
-
-        let hashed = parsed.hash().unwrap();
-        hashed.verify(&raw_password).unwrap();
-    }
-
-    #[test]
-    fn test_raw_method() {
-        let parsed = PasswordVo::parse(VALID_PASSWORD.to_string()).unwrap();
-        assert_eq!(parsed.raw(), VALID_PASSWORD);
+    fn test_raw_returns_inner_password() {
+        let raw = "some_password".to_string();
+        let parsed = PasswordVo::parse(raw.clone()).unwrap();
+        assert_eq!(parsed.raw(), "some_password");
     }
 }

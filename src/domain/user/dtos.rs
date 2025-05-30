@@ -19,7 +19,7 @@ impl TryFrom<&CreateUserDto> for NewUser {
     fn try_from(value: &CreateUserDto) -> Result<Self, Self::Error> {
         let username = UsernameVo::parse(value.username.value.clone())?;
         let display_name = DisplayNameVo::parse(value.display_name.value.clone())?;
-        let email = EmailVo::parse(value.email.clone())?;
+        let email = EmailVo::parse(value.email.value.clone())?;
         let password = PasswordVo::parse(value.password.value.clone())?.hash()?;
 
         Ok(NewUser {

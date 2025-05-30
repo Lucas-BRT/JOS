@@ -2,6 +2,7 @@ use crate::{
     application::error::ApplicationError,
     domain::error::DomainError,
     infrastructure::persistance::{error::RepositoryError, postgres::error::translate_db_error},
+    interfaces::http::error::ErrorResponse,
 };
 use axum::{Json, http::StatusCode, response::IntoResponse, response::Response};
 use serde_json::json;
@@ -19,8 +20,8 @@ pub enum AppError {
     Application(ApplicationError),
     #[error("Repository error: {0}")]
     Repository(RepositoryError),
-    #[error("Validation error: {0}")]
-    Validation(String),
+    #[error("Validation error: ")]
+    Validation(ErrorResponse),
 }
 
 impl IntoResponse for AppError {
@@ -47,9 +48,7 @@ impl IntoResponse for AppError {
                 Json(json!({ "error": err.to_string() })),
             )
                 .into_response(),
-            AppError::Validation(err) => {
-                (StatusCode::BAD_REQUEST, Json(json!({ "error": err }))).into_response()
-            }
+            AppError::Validation(err) => err.into_response(),
         }
     }
 }

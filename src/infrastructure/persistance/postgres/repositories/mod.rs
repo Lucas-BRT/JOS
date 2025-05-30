@@ -1,12 +1,14 @@
 pub mod user;
+use std::sync::Arc;
+
 use sqlx::PgPool;
 
 pub struct PostgresUserRepository {
-    pool: PgPool,
+    pool: Arc<PgPool>,
 }
 
-impl PostgresUserRepository {
-    pub fn new(pool: PgPool) -> Self {
+impl<'a> PostgresUserRepository {
+    pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
 }

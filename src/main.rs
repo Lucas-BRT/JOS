@@ -21,12 +21,14 @@ use std::sync::Arc;
 async fn main() -> Result<(), AppError> {
     dotenvy::dotenv().ok();
     let config = Config::from_env()?;
+
     let pool = create_postgres_pool(&config.database_url).await?;
+
+    run_postgres_migrations(pool.clone()).await?;
+
     let user_repo = PostgresUserRepository::new(pool.clone());
     let user_service = UserService::new(Arc::new(user_repo));
     let state = AppState::new(pool, Arc::new(config), user_service);
-
-    run_postgres_migrations(&state.pg_pool).await?;
 
     let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await

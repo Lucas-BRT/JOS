@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use super::PostgresUserRepository;
 use crate::domain::user::dtos::NewUser;
 use crate::domain::user::entity::User;
@@ -23,7 +25,7 @@ impl UserRepository for PostgresUserRepository {
             user.email.raw(),
             user.password.raw()
         )
-        .fetch_one(&self.pool)
+        .fetch_one(self.pool.deref())
         .await?;
 
         Ok(response)
@@ -45,7 +47,7 @@ impl UserRepository for PostgresUserRepository {
             FROM users
             "#
         )
-        .fetch_all(&self.pool)
+        .fetch_all(self.pool.deref())
         .await?;
 
         Ok(Vec::new())
@@ -69,7 +71,7 @@ impl UserRepository for PostgresUserRepository {
             "#,
             name
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(self.pool.deref())
         .await?;
 
         Ok(None)
