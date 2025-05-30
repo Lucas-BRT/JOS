@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::domain::{
     user::error::{EmailDomainError, UserDomainError},
     utils::type_wraper::TypeWrapped,
@@ -27,5 +29,13 @@ impl TypeWrapped for EmailVo {
 
     fn raw(&self) -> Self::Raw {
         self.mail.clone()
+    }
+}
+
+impl FromStr for EmailVo {
+    type Err = UserDomainError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::parse(s.to_string())
     }
 }

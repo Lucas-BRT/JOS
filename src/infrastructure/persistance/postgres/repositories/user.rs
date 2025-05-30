@@ -1,6 +1,6 @@
-use std::ops::Deref;
-
 use super::PostgresUserRepository;
+use crate::core::error::AppError;
+use crate::domain::error::DomainError;
 use crate::domain::user::dtos::NewUser;
 use crate::domain::user::entity::User;
 use crate::domain::user::user_repository::UserRepository;
@@ -10,6 +10,36 @@ use crate::infrastructure::persistance::postgres::models::user::UserRow;
 use crate::prelude::AppResult;
 use async_trait::async_trait;
 use sqlx::query_scalar;
+use std::ops::Deref;
+
+impl TryFrom<UserRow> for User {
+    type Error = AppError;
+
+    fn try_from(row: UserRow) -> Result<Self, Self::Error> {
+        let username = row
+            .username
+            .parse()
+            .map_err(|e| AppError::Domain(DomainError::User(e)))?;
+
+        let display_name = row
+            .display_name
+            .parse()
+            .map_err(|e| AppError::Domain(DomainError::User(e)))?;
+        let email = row
+            .email
+            .parse()
+            .map_err(|e| AppError::Domain(DomainError::User(e)))?;
+        let user_role = row.user_role.into();
+
+        Ok(User {
+            id: row.id,
+            username,
+            display_name,
+            email,
+            user_role,
+        })
+    }
+}
 
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
@@ -50,7 +80,12 @@ impl UserRepository for PostgresUserRepository {
         .fetch_all(self.pool.deref())
         .await?;
 
-        Ok(Vec::new())
+        let users = rows
+            .into_iter()
+            .map(|row| row.try_into())
+            .collect::<AppResult<Vec<User>>>()?;
+
+        Ok(users)
     }
 
     async fn find_by_username(&self, name: &str) -> AppResult<Option<User>> {
@@ -74,6 +109,6 @@ impl UserRepository for PostgresUserRepository {
         .fetch_optional(self.pool.deref())
         .await?;
 
-        Ok(None)
+        Ok(user.map(|row| row.try_into()).transpose()?)
     }
 }

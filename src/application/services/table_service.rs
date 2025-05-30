@@ -24,7 +24,7 @@ impl TableService {
     pub async fn create_table(&self, new_table_data: &NewTableData) -> AppResult<String> {
         let created_table = self.table_repository.create(new_table_data).await?;
 
-        Ok(created_table.id.to_string())
+        Ok(created_table.to_string())
     }
 
     pub async fn find_table_by_id(&self, table_id: &Uuid) -> AppResult<Option<Table>> {
