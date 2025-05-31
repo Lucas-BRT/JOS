@@ -1,8 +1,8 @@
-use crate::infrastructure::persistance::postgres::models::user::RowUserRole;
+use crate::infrastructure::persistance::postgres::models::user::AccessLevel;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Default)]
-pub enum UserRoleVo {
+pub enum UserAccessLevelVo {
     #[serde(rename = "admin")]
     Admin,
     #[default]
@@ -10,11 +10,11 @@ pub enum UserRoleVo {
     User,
 }
 
-impl From<RowUserRole> for UserRoleVo {
-    fn from(user_role: RowUserRole) -> Self {
-        match user_role {
-            RowUserRole::Admin => UserRoleVo::Admin,
-            RowUserRole::User => UserRoleVo::User,
+impl From<AccessLevel> for UserAccessLevelVo {
+    fn from(access_level: AccessLevel) -> Self {
+        match access_level {
+            AccessLevel::Admin => UserAccessLevelVo::Admin,
+            AccessLevel::User => UserAccessLevelVo::User,
         }
     }
-} 
+}

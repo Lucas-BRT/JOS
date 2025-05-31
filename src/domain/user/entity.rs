@@ -1,4 +1,4 @@
-use super::vo::{DisplayNameVo, EmailVo, UserRoleVo, UsernameVo};
+use super::vo::{DisplayNameVo, EmailVo, UserAccessLevelVo, UsernameVo};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -8,5 +8,5 @@ pub struct User {
     pub username: UsernameVo,
     pub display_name: DisplayNameVo,
     pub email: EmailVo,
-    pub user_role: UserRoleVo,
+    pub access_level: UserAccessLevelVo,
 }

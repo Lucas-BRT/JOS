@@ -45,10 +45,10 @@ pub async fn get_all_users_handler(
     Ok(Json(users))
 }
 
-pub fn routes(state: AppState) -> Router {
+pub fn routes(state: &AppState) -> Router {
     Router::new()
         .route("/", get(get_all_users_handler))
         .route("/", post(create_user_handler))
         .route("/{username}", get(find_user_by_username_handler))
-        .with_state(state)
+        .with_state(state.clone())
 }

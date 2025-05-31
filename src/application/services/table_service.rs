@@ -12,6 +12,7 @@ use crate::{
 use std::sync::Arc;
 use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct TableService {
     table_repository: Arc<dyn TableRepository>,
 }

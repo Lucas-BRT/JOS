@@ -7,13 +7,15 @@ mod infrastructure;
 mod interfaces;
 mod prelude;
 
+use application::services::table_service::TableService;
 use application::services::user_service::UserService;
 use core::error::{AppError, ApplicationSetupError};
 use core::state::AppState;
 use infrastructure::config::Config;
 use infrastructure::persistance::postgres::create_postgres_pool;
 use infrastructure::persistance::postgres::migrations::run_postgres_migrations;
-use infrastructure::persistance::postgres::repositories::PostgresUserRepository;
+use infrastructure::persistance::postgres::repositories::PostgresTableRepository;
+use infrastructure::persistance::postgres::repositories::user::PostgresUserRepository;
 use interfaces::http::create_router;
 use std::sync::Arc;
 
@@ -28,7 +30,11 @@ async fn main() -> Result<(), AppError> {
 
     let user_repo = PostgresUserRepository::new(pool.clone());
     let user_service = UserService::new(Arc::new(user_repo));
-    let state = AppState::new(pool, Arc::new(config), user_service);
+
+    let table_repo = PostgresTableRepository::new(pool.clone());
+    let table_service = TableService::new(Arc::new(table_repo));
+
+    let state = AppState::new(pool, Arc::new(config), user_service, table_service);
 
     let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await

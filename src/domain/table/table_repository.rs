@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 #[async_trait]
-pub trait TableRepository {
+pub trait TableRepository: Send + Sync {
     async fn create(&self, table_data: &NewTableData) -> AppResult<String>;
 
     async fn update(&self, table_id: &Uuid, update_data: &UpdateTableData) -> AppResult<()>;

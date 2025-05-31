@@ -3,8 +3,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::{FromRow, Type};
 
 #[derive(Debug, PartialEq, Eq, Clone, Type, Serialize, Deserialize)]
-#[sqlx(type_name = "user_role", rename_all = "lowercase")]
-pub enum RowUserRole {
+#[sqlx(type_name = "access_level", rename_all = "lowercase")]
+pub enum AccessLevel {
     Admin,
     User,
 }
@@ -16,7 +16,7 @@ pub struct UserRow {
     pub display_name: String,
     pub email: String,
     pub password_hash: String,
-    pub user_role: RowUserRole,
+    pub access_level: AccessLevel,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }

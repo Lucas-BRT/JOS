@@ -3,6 +3,7 @@ use crate::domain::utils::type_wraper::TypeWrapped;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct PhoneNumberVo(String);
 
 impl TypeWrapped for PhoneNumberVo {

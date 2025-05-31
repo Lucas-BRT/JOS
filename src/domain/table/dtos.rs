@@ -2,7 +2,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{games::game_genre::GameGenreVo, utils::contact_info::ContactInfoVo};
+use crate::domain::{games::game_genre::GameGenreVo, utils::contact_info::ContactInfoTypeVo};
 
 use super::vo::{DescriptionVo, TitleVo};
 
@@ -11,7 +11,7 @@ pub struct UpdateTableData {
     pub title: Option<TitleVo>,
     pub description: Option<Option<DescriptionVo>>,
     pub system_id: Option<u32>,
-    pub contact_info: Option<ContactInfoVo>,
+    pub contact_info: Option<ContactInfoTypeVo>,
     pub max_players: Option<Option<u32>>,
     pub language: Option<String>,
 }
@@ -27,11 +27,14 @@ pub struct TableSummary {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TableSearchFilters {
     pub query_text: Option<String>,
     pub system_id: Option<i32>,
     pub genre_ids: Option<Vec<i32>>,
+    pub gm_id: Option<Uuid>,
+    pub min_players: Option<i32>,
+    pub max_players: Option<i32>,
     pub has_vacancies: Option<bool>,
 }
 
@@ -41,6 +44,9 @@ impl Default for TableSearchFilters {
             query_text: None,
             system_id: None,
             genre_ids: None,
+            gm_id: None,
+            min_players: None,
+            max_players: None,
             has_vacancies: Some(true),
         }
     }
@@ -65,7 +71,9 @@ pub struct NewTableData {
     pub gm_id: Uuid,
     pub title: TitleVo,
     pub description: Option<DescriptionVo>,
-    pub system_id: i32,
-    pub contact_info: ContactInfoVo,
-    pub max_players: Option<u32>,
+    pub system_id: Uuid,
+    pub is_public: bool,
+    pub player_slots: u32,
+    pub occupied_slots: u32,
+    pub bg_image_link: Option<String>,
 }

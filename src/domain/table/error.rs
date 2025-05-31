@@ -4,8 +4,6 @@ use thiserror::Error;
 pub enum TableDomainError {
     #[error("Table not found")]
     NotFound,
-    #[error("Table already exists")]
-    AlreadyExists,
     #[error("Invalid Description: {0}")]
     InvalidDescription(DescriptionValidationError),
     #[error("Invalid Title: {0}")]
@@ -26,4 +24,6 @@ pub enum TitleValidationError {
     TooShort,
     #[error("Title is too long")]
     TooLong,
+    #[error("Title is empty")]
+    Empty,
 }

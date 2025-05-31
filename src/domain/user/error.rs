@@ -2,8 +2,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum UserDomainError {
-    #[error("Username error: {0}")]
-    Username(#[from] UsernameDomainError),
     #[error("Password error: {0}")]
     Password(#[from] PasswordDomainError),
     #[error("Display name error: {0}")]
@@ -65,31 +63,7 @@ pub enum PhoneNumberValidationError {
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum UsernameDomainError {
-    #[error("Invalid username: {0}")]
-    InvalidUsername(String),
-    #[error("Username is too short")]
-    TooShort,
-    #[error("Username is too long")]
-    TooLong,
-    #[error("Username cannot be empty")]
-    Empty,
-    #[error("Username contains invalid characters")]
-    InvalidCharacters,
-    #[error("Username cannot start with underscore")]
-    StartsWithUnderscore,
-    #[error("Username cannot end with underscore")]
-    EndsWithUnderscore,
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
 pub enum EmailDomainError {
     #[error("Invalid email: {0}")]
     InvalidEmail(String),
-    #[error("Email is too short")]
-    TooShort,
-    #[error("Email is too long")]
-    TooLong,
-    #[error("Email cannot be empty")]
-    Empty,
 }

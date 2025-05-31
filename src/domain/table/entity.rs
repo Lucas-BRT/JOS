@@ -1,5 +1,5 @@
 use super::vo::{DescriptionVo, TitleVo};
-use crate::domain::utils::contact_info::ContactInfoVo;
+use crate::domain::utils::contact_info::ContactInfoTypeVo;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -11,7 +11,7 @@ pub struct Table {
     pub title: TitleVo,
     pub description: Option<DescriptionVo>,
     pub system_id: u32,
-    pub contact_info: ContactInfoVo,
+    pub contact_info: ContactInfoTypeVo,
     pub max_players: Option<u32>,
     pub created_at: DateTime<Utc>,
 }

@@ -6,12 +6,6 @@ use crate::core::error::AppError;
 pub enum RepositoryError {
     #[error("Not found")]
     NotFound,
-    #[error("Duplicate")]
-    Duplicate,
-    #[error("Invalid input")]
-    InvalidInput,
-    #[error("Data mapping error: {0}")]
-    DataMappingError(String),
     #[error("Database error: {0}")]
     DatabaseError(sqlx::Error),
 }

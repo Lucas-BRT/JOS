@@ -4,7 +4,7 @@ use argon2::{
     password_hash::{self, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use serde::{Deserialize, Serialize};
-use std::{marker::PhantomData, str::FromStr};
+use std::marker::PhantomData;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Hashed;

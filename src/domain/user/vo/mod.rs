@@ -10,5 +10,5 @@ pub use email::EmailVo;
 pub use password::Hashed;
 pub use password::PasswordVo;
 pub use phone_number::PhoneNumberVo;
-pub use user_role::UserRoleVo;
+pub use user_role::UserAccessLevelVo;
 pub use username::UsernameVo;
