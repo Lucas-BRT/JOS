@@ -29,3 +29,6 @@ validator = { version = "0.20.0", features = ["derive"] }
 
 [dev-dependencies]
 anyhow = "1.0.98"
+
+[profile.release]
+opt-level = 3

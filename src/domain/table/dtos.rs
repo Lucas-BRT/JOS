@@ -2,9 +2,9 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::{games::game_genre::GameGenreVo, utils::contact_info::ContactInfoTypeVo};
+use crate::{core::error::AppError, domain::{games::game_genre::GameGenreVo, utils::{contact_info::ContactInfoTypeVo, type_wraper::TypeWrapped}}, interfaces::http::table::dtos::CreateTableDto};
 
-use super::vo::{DescriptionVo, TitleVo};
+use super::{error::TableDomainError, vo::{DescriptionVo, TitleVo}};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct UpdateTableData {
@@ -76,4 +76,36 @@ pub struct NewTableData {
     pub player_slots: u32,
     pub occupied_slots: u32,
     pub bg_image_link: Option<String>,
+}
+
+impl TryFrom<&CreateTableDto> for NewTableData {
+    type Error = TableDomainError;
+
+    fn try_from(value: &CreateTableDto) -> Result<Self, Self::Error> {
+        let title = TitleVo::parse(value.title.clone())?;
+
+        let description = if value.description.is_some() {
+            Some(DescriptionVo::parse(value.description.clone().unwrap())?)
+        } else {
+            None
+        };
+
+
+        let bg_image_link = if value.bg_image_link.is_some() {
+            Some(value.bg_image_link.clone().unwrap())
+        } else {
+            None
+        };
+
+        Ok(Self {
+            gm_id: value.gm_id,
+            title,
+            description,
+            system_id: value.system_id,
+            is_public: true,
+            player_slots: value.player_slots,
+            occupied_slots: value.occupied_slots,
+            bg_image_link,
+        })
+    }
 }

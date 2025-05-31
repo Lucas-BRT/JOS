@@ -13,7 +13,8 @@ pub struct CreateTableDto {
         message = "Description must be between 50 and 1000 characters"
     ))]
     pub description: Option<String>,
-    pub system_id: u32,
-    pub contact_info: String,
-    pub max_players: Option<u32>,
+    pub system_id: Uuid,
+    pub player_slots: u32,
+    pub occupied_slots: u32,
+    pub bg_image_link: Option<String>,
 }

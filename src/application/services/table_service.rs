@@ -1,4 +1,5 @@
 use crate::{
+    core::error::AppError,
     domain::{
         table::{
             dtos::{NewTableData, TableSearchFilters, UpdateTableData},
@@ -7,6 +8,7 @@ use crate::{
         },
         utils::pagination::Pagination,
     },
+    interfaces::http::table::dtos::CreateTableDto,
     prelude::AppResult,
 };
 use std::sync::Arc;
@@ -22,8 +24,11 @@ impl TableService {
         Self { table_repository }
     }
 
-    pub async fn create_table(&self, new_table_data: &NewTableData) -> AppResult<String> {
-        let created_table = self.table_repository.create(new_table_data).await?;
+    pub async fn create_table(&self, new_table_data: &CreateTableDto) -> AppResult<String> {
+        let new_table_data =
+            NewTableData::try_from(new_table_data).map_err(|e| AppError::Domain(e.into()))?;
+
+        let created_table = self.table_repository.create(&new_table_data).await?;
 
         Ok(created_table.to_string())
     }

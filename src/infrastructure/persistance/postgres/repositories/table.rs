@@ -1,3 +1,7 @@
+use crate::core::error::AppError;
+use crate::domain::error::DomainError;
+use crate::domain::table::error::TableDomainError;
+use crate::domain::table::vo::{DescriptionVo, TitleVo};
 use crate::domain::utils::type_wraper::TypeWrapped;
 use crate::infrastructure::persistance::postgres::models::tables::TableRow;
 use crate::{
@@ -13,6 +17,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use sqlx::{PgPool, query_scalar};
+use std::num::TryFromIntError;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -33,6 +38,46 @@ pub struct PostgresTableRepository {
 impl<'a> PostgresTableRepository {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
+    }
+}
+
+impl TryFrom<TableRow> for Table {
+    type Error = AppError;
+
+    fn try_from(row: TableRow) -> Result<Self, Self::Error> {
+        let title = TitleVo::parse(row.title.clone()).map_err(|e| AppError::Domain(e.into()))?;
+        let description = DescriptionVo::parse(row.description.clone())
+            .map_err(|e| AppError::Domain(e.into()))?;
+        let game_system_id = row.game_system_id;
+        let is_public = row.is_public;
+        let player_slots = row.player_slots.try_into().map_err(|e: TryFromIntError| {
+            AppError::Domain(DomainError::Table(TableDomainError::FailedToParseDbData(
+                e.to_string(),
+            )))
+        })?;
+        let occupied_slots = row
+            .occupied_slots
+            .try_into()
+            .map_err(|e: TryFromIntError| {
+                AppError::Domain(DomainError::Table(TableDomainError::FailedToParseDbData(
+                    e.to_string(),
+                )))
+            })?;
+        let bg_image_link = row.bg_image_link;
+
+        Ok(Self {
+            id: row.id,
+            gm_id: row.gm_id,
+            title,
+            description,
+            game_system_id,
+            is_public,
+            player_slots,
+            occupied_slots,
+            bg_image_link,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+        })
     }
 }
 
@@ -110,6 +155,12 @@ impl TableRepository for PostgresTableRepository {
         )
         .fetch_all(self.pool.as_ref())
         .await?;
-        todo!();
+
+        let tables: Vec<Table> = result
+            .into_iter()
+            .filter_map(|row| Table::try_from(row).ok())
+            .collect();
+
+        Ok(tables)
     }
 }
