@@ -1,3 +1,4 @@
+use super::ApplicationSetupError;
 use crate::{
     application::error::ApplicationError,
     domain::error::DomainError,
@@ -11,7 +12,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum AppError {
     #[error("Failed during application startup: {0}")]
-    ApplicationSetup(String),
+    ApplicationSetup(ApplicationSetupError),
     #[error("Domain error: {0}")]
     Domain(DomainError),
     #[error("Database error: {0}")]
@@ -29,7 +30,7 @@ impl IntoResponse for AppError {
         match self {
             AppError::ApplicationSetup(msg) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": msg })),
+                Json(json!({ "error": msg.to_string() })),
             )
                 .into_response(),
             AppError::Database(err) => translate_db_error(&err).into_response(),

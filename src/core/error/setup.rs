@@ -21,6 +21,6 @@ pub enum ApplicationSetupError {
 
 impl From<ApplicationSetupError> for AppError {
     fn from(err: ApplicationSetupError) -> Self {
-        AppError::ApplicationSetup(err.to_string())
+        AppError::ApplicationSetup(err)
     }
 }
