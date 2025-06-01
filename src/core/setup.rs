@@ -26,7 +26,7 @@ pub async fn setup_services() -> Result<AppState, AppError> {
     let table_repo = PostgresTableRepository::new(pool.clone());
     let table_service = TableService::new(Arc::new(table_repo));
 
-    let state = AppState::new(pool, Arc::new(config), user_service, table_service);
+    let state = AppState::new(Arc::new(config), user_service, table_service);
 
     Ok(state)
 }

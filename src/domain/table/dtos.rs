@@ -2,9 +2,18 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::{core::error::AppError, domain::{games::game_genre::GameGenreVo, utils::{contact_info::ContactInfoTypeVo, type_wraper::TypeWrapped}}, interfaces::http::table::dtos::CreateTableDto};
+use crate::{
+    domain::{
+        games::game_genre::GameGenreVo,
+        utils::{contact_info::ContactInfoTypeVo, type_wraper::TypeWrapped},
+    },
+    interfaces::http::table::dtos::CreateTableDto,
+};
 
-use super::{error::TableDomainError, vo::{DescriptionVo, TitleVo}};
+use super::{
+    error::TableDomainError,
+    vo::{DescriptionVo, TitleVo},
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 pub struct UpdateTableData {
@@ -89,7 +98,6 @@ impl TryFrom<&CreateTableDto> for NewTableData {
         } else {
             None
         };
-
 
         let bg_image_link = if value.bg_image_link.is_some() {
             Some(value.bg_image_link.clone().unwrap())

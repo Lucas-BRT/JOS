@@ -21,16 +21,6 @@ use std::num::TryFromIntError;
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub struct PostgresUserRepository {
-    pool: Arc<PgPool>,
-}
-
-impl<'a> PostgresUserRepository {
-    pub fn new(pool: Arc<PgPool>) -> Self {
-        Self { pool }
-    }
-}
-
 pub struct PostgresTableRepository {
     pool: Arc<PgPool>,
 }
@@ -121,25 +111,29 @@ impl TableRepository for PostgresTableRepository {
         Ok(response)
     }
 
-    async fn update(&self, table_id: &Uuid, update_data: &UpdateTableData) -> AppResult<()> {
+    async fn update(&self, _table_id: &Uuid, _update_data: &UpdateTableData) -> AppResult<()> {
         todo!();
     }
 
-    async fn delete(&self, table_id: &Uuid) -> AppResult<()> {
+    async fn delete(&self, _table_id: &Uuid) -> AppResult<()> {
         todo!();
     }
 
-    async fn find_by_id(&self, table_id: &Uuid) -> AppResult<Option<Table>> {
+    async fn find_by_id(&self, _table_id: &Uuid) -> AppResult<Option<Table>> {
         todo!();
     }
 
-    async fn find_by_gm_id(&self, gm_id: &Uuid, pagination: &Pagination) -> AppResult<Vec<Table>> {
+    async fn find_by_gm_id(
+        &self,
+        _gm_id: &Uuid,
+        _pagination: &Pagination,
+    ) -> AppResult<Vec<Table>> {
         todo!();
     }
 
     async fn search_public_tables(
         &self,
-        filters: &TableSearchFilters,
+        _filters: &TableSearchFilters,
         pagination: &Pagination,
     ) -> AppResult<Vec<Table>> {
         let result = sqlx::query_as!(

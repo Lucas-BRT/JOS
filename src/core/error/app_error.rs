@@ -23,8 +23,6 @@ pub enum AppError {
     Repository(RepositoryError),
     #[error("Validation error: ")]
     Validation(ErrorResponse),
-    #[error("Internal server error")]
-    InternalServerError,
 }
 
 impl IntoResponse for AppError {
@@ -52,11 +50,6 @@ impl IntoResponse for AppError {
             )
                 .into_response(),
             AppError::Validation(err) => err.into_response(),
-            AppError::InternalServerError => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error" })),
-            )
-                .into_response(),
         }
     }
 }

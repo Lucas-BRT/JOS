@@ -1,10 +1,5 @@
 use super::dtos::{CreateUserDto, CreateUserResponseDto};
-use crate::{
-    core::{error::AppError, state::AppState},
-    domain::user::entity::User,
-    infrastructure::persistance::error::RepositoryError,
-    prelude::AppResult,
-};
+use crate::{core::state::AppState, domain::user::entity::User, prelude::AppResult};
 use axum::{
     Json, Router,
     extract::{Path, State},

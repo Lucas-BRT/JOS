@@ -1,5 +1,4 @@
 pub mod error;
-pub mod login;
 pub mod routers;
 pub mod signin;
 pub mod table;
