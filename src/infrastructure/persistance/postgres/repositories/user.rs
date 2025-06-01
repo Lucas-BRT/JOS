@@ -99,28 +99,28 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn find_by_username(&self, name: &str) -> AppResult<Option<User>> {
-        // let user = sqlx::query_as!(
-        //     UserRow,
-        //     r#"
-        //         SELECT
-        //             id,
-        //             username,
-        //             display_name,
-        //             email,
-        //             password_hash,
-        //             user_role as "user_role: RowUserRole",
-        //             created_at as "created_at: chrono::DateTime<chrono::Utc>",
-        //             updated_at as "updated_at?: chrono::DateTime<chrono::Utc>"
-        //         FROM users
-        //         WHERE username = ($1)
-        //     "#,
-        //     name
-        // )
-        // .fetch_optional(self.pool.deref())
-        // .await?;
+        let user = sqlx::query_as!(
+            UserRow,
+            r#"
+                SELECT
+                    id,
+                    username,
+                    display_name,
+                    email,
+                    password_hash,
+                    access_level as "access_level: AccessLevel",
+                    created_at as "created_at: chrono::DateTime<chrono::Utc>",
+                    updated_at as "updated_at?: chrono::DateTime<chrono::Utc>"
+                FROM users
+                WHERE username = ($1)
+            "#,
+            name
+        )
+        .fetch_optional(self.pool.deref())
+        .await?;
 
-        // Ok(user.map(|row| row.try_into()).transpose()?)
+        let user = user.map(|row| row.try_into()).transpose()?;
 
-        todo!()
+        Ok(user)
     }
 }

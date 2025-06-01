@@ -5,6 +5,8 @@ use thiserror::Error;
 pub enum ApplicationError {
     #[error("Data error: {0}")]
     DataError(String),
+    #[error("not found: {0}")]
+    NotFound(String),
 }
 
 impl From<ApplicationError> for AppError {

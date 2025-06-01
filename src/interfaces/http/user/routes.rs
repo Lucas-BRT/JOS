@@ -32,10 +32,7 @@ pub async fn find_user_by_username_handler(
         .find_user_by_username(&username_str)
         .await?;
 
-    match user {
-        Some(user) => Ok(Json(user)),
-        None => Err(AppError::Repository(RepositoryError::NotFound)),
-    }
+    Ok(Json(user))
 }
 
 pub async fn get_all_users_handler(

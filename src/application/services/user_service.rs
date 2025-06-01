@@ -1,6 +1,12 @@
 use crate::{
+    application::error::ApplicationError,
     core::error::AppError,
-    domain::user::{dtos::NewUser, entity::User, user_repository::UserRepository},
+    domain::{
+        error::DomainError,
+        user::{
+            dtos::NewUser, entity::User, error::UserDomainError, user_repository::UserRepository,
+        },
+    },
     interfaces::http::{error::validation_errors_to_response, user::dtos::CreateUserDto},
     prelude::AppResult,
 };
@@ -29,8 +35,13 @@ impl UserService {
         Ok(created_user)
     }
 
-    pub async fn find_user_by_username(&self, username: &str) -> AppResult<Option<User>> {
-        Ok(self.user_repository.find_by_username(username).await?)
+    pub async fn find_user_by_username(&self, username: &str) -> AppResult<User> {
+        let result = self.user_repository.find_by_username(username).await?;
+
+        match result {
+            Some(user) => Ok(user),
+            None => Err(DomainError::User(UserDomainError::NotFound).into()),
+        }
     }
 
     pub async fn get_all_users(&self) -> AppResult<Vec<User>> {

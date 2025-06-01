@@ -10,6 +10,8 @@ pub enum UserDomainError {
     PhoneNumber(#[from] PhoneNumberValidationError),
     #[error("Email error: {0}")]
     Email(#[from] EmailDomainError),
+    #[error("not found")]
+    NotFound,
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
