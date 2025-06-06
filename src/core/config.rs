@@ -1,4 +1,4 @@
-use crate::{core::error::ApplicationSetupError, prelude::AppResult};
+use crate::{Error, Result, core::error::ApplicationSetupError};
 use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
 
 #[derive(Clone, Debug)]
@@ -8,9 +8,11 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from_env() -> AppResult<Self> {
-        let db_url = std::env::var("DATABASE_URL").map_err(|err| {
-            ApplicationSetupError::FailedToGetEnvironmentVariable(err.to_string())
+    pub fn from_env() -> Result<Self> {
+        let db_url = std::env::var("DATABASE_URL").map_err(|e| {
+            Error::ApplicationSetup(ApplicationSetupError::FailedToGetEnvironmentVariable(
+                e.to_string(),
+            ))
         })?;
 
         let server_port: u32 = std::env::var("PORT")

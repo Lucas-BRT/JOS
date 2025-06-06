@@ -1,16 +1,6 @@
-use crate::{
-    core::error::AppError,
-    domain::{
-        table::{
-            dtos::{NewTableData, TableSearchFilters, UpdateTableData},
-            entity::Table,
-            table_repository::TableRepository,
-        },
-        utils::pagination::Pagination,
-    },
-    interfaces::http::table::dtos::CreateTableDto,
-    prelude::AppResult,
-};
+use crate::Result;
+use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableData};
+use crate::domain::table::{entity::Table, table_repository::TableRepository};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -24,33 +14,23 @@ impl TableService {
         Self { table_repository }
     }
 
-    pub async fn create_table(&self, new_table_data: &CreateTableDto) -> AppResult<String> {
-        let new_table_data =
-            NewTableData::try_from(new_table_data).map_err(|e| AppError::Domain(e.into()))?;
-
-        let created_table = self.table_repository.create(&new_table_data).await?;
+    pub async fn create(&self, new_table_data: &CreateTableCommand) -> Result<String> {
+        let created_table = self.table_repository.create(new_table_data).await?;
 
         Ok(created_table.to_string())
     }
 
-    pub async fn find_table_by_id(&self, table_id: &Uuid) -> AppResult<Option<Table>> {
+    pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Option<Table>> {
         Ok(self.table_repository.find_by_id(table_id).await?)
     }
 
-    pub async fn get_avaliable(&self) -> AppResult<Vec<Table>> {
-        let tables = self
-            .table_repository
-            .search_public_tables(&TableSearchFilters::default(), &Pagination::default())
-            .await?;
+    pub async fn get(&self, options: Option<TableFilters>) -> Result<Vec<Table>> {
+        let tables = self.table_repository.get(options).await?;
 
         Ok(tables)
     }
 
-    pub async fn update_table(
-        &self,
-        table_id: &Uuid,
-        table_to_update: &UpdateTableData,
-    ) -> AppResult<()> {
+    pub async fn update(&self, table_id: &Uuid, table_to_update: &UpdateTableData) -> Result<()> {
         self.table_repository
             .update(table_id, table_to_update)
             .await?;

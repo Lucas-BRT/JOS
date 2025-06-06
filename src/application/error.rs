@@ -1,7 +1,6 @@
-use crate::core::error::AppError;
-use thiserror::Error;
+use crate::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApplicationError {
     #[error("Data error: {0}")]
     DataError(String),
@@ -9,8 +8,8 @@ pub enum ApplicationError {
     NotFound(String),
 }
 
-impl From<ApplicationError> for AppError {
+impl From<ApplicationError> for Error {
     fn from(err: ApplicationError) -> Self {
-        AppError::Application(err)
+        Error::Application(err)
     }
 }

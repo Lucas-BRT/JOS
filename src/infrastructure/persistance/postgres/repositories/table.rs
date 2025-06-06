@@ -1,84 +1,26 @@
-use crate::core::error::AppError;
-use crate::domain::error::DomainError;
-use crate::domain::table::error::TableDomainError;
-use crate::domain::table::vo::{DescriptionVo, TitleVo};
-use crate::domain::utils::type_wraper::TypeWrapped;
+use crate::domain::table::dtos::{CreateTableCommand, TableSearchFilters, UpdateTableData};
+use crate::domain::table::entity::Table;
+use crate::domain::table::table_repository::TableRepository;
+use crate::domain::utils::pagination::Pagination;
 use crate::infrastructure::persistance::postgres::models::tables::TableRow;
-use crate::{
-    domain::{
-        table::{
-            dtos::{NewTableData, TableSearchFilters, UpdateTableData},
-            entity::Table,
-            table_repository::TableRepository,
-        },
-        utils::pagination::Pagination,
-    },
-    prelude::AppResult,
-};
+use crate::{Db, Result};
 use async_trait::async_trait;
-use sqlx::{PgPool, query_scalar};
-use std::num::TryFromIntError;
-use std::sync::Arc;
+use sqlx::query_scalar;
 use uuid::Uuid;
 
 pub struct PostgresTableRepository {
-    pool: Arc<PgPool>,
+    pool: Db,
 }
 
 impl<'a> PostgresTableRepository {
-    pub fn new(pool: Arc<PgPool>) -> Self {
+    pub fn new(pool: Db) -> Self {
         Self { pool }
-    }
-}
-
-impl TryFrom<TableRow> for Table {
-    type Error = AppError;
-
-    fn try_from(row: TableRow) -> Result<Self, Self::Error> {
-        let title = TitleVo::parse(row.title.clone()).map_err(|e| AppError::Domain(e.into()))?;
-        let description = DescriptionVo::parse(row.description.clone())
-            .map_err(|e| AppError::Domain(e.into()))?;
-        let game_system_id = row.game_system_id;
-        let is_public = row.is_public;
-        let player_slots = row.player_slots.try_into().map_err(|e: TryFromIntError| {
-            AppError::Domain(DomainError::Table(TableDomainError::FailedToParseDbData(
-                e.to_string(),
-            )))
-        })?;
-        let occupied_slots = row
-            .occupied_slots
-            .try_into()
-            .map_err(|e: TryFromIntError| {
-                AppError::Domain(DomainError::Table(TableDomainError::FailedToParseDbData(
-                    e.to_string(),
-                )))
-            })?;
-        let bg_image_link = row.bg_image_link;
-
-        Ok(Self {
-            id: row.id,
-            gm_id: row.gm_id,
-            title,
-            description,
-            game_system_id,
-            is_public,
-            player_slots,
-            occupied_slots,
-            bg_image_link,
-            created_at: row.created_at,
-            updated_at: row.updated_at,
-        })
     }
 }
 
 #[async_trait]
 impl TableRepository for PostgresTableRepository {
-    async fn create(&self, table_data: &NewTableData) -> AppResult<String> {
-        let description = table_data
-            .description
-            .as_ref()
-            .map(|description| description.raw());
-
+    async fn create(&self, table_data: &CreateTableCommand) -> Result<String> {
         let response = query_scalar!(
             r#"
                 INSERT INTO tables (
@@ -97,8 +39,8 @@ impl TableRepository for PostgresTableRepository {
                 RETURNING title
             "#,
             table_data.gm_id,
-            table_data.title.raw(),
-            description,
+            table_data.title,
+            table_data.description,
             table_data.system_id,
             table_data.is_public,
             table_data.player_slots as i32,
@@ -106,28 +48,26 @@ impl TableRepository for PostgresTableRepository {
             table_data.bg_image_link
         )
         .fetch_one(self.pool.as_ref())
-        .await?;
+        .await;
+
+        let username = response.map_err(|e|   )?;
 
         Ok(response)
     }
 
-    async fn update(&self, _table_id: &Uuid, _update_data: &UpdateTableData) -> AppResult<()> {
+    async fn update(&self, _table_id: &Uuid, _update_data: &UpdateTableData) -> Result<()> {
         todo!();
     }
 
-    async fn delete(&self, _table_id: &Uuid) -> AppResult<()> {
+    async fn delete(&self, _table_id: &Uuid) -> Result<()> {
         todo!();
     }
 
-    async fn find_by_id(&self, _table_id: &Uuid) -> AppResult<Option<Table>> {
+    async fn find_by_id(&self, _table_id: &Uuid) -> Result<Option<Table>> {
         todo!();
     }
 
-    async fn find_by_gm_id(
-        &self,
-        _gm_id: &Uuid,
-        _pagination: &Pagination,
-    ) -> AppResult<Vec<Table>> {
+    async fn find_by_gm_id(&self, _gm_id: &Uuid, _pagination: &Pagination) -> Result<Vec<Table>> {
         todo!();
     }
 
@@ -135,7 +75,7 @@ impl TableRepository for PostgresTableRepository {
         &self,
         _filters: &TableSearchFilters,
         pagination: &Pagination,
-    ) -> AppResult<Vec<Table>> {
+    ) -> Result<Vec<Table>> {
         let result = sqlx::query_as!(
             TableRow,
             r#"
@@ -148,7 +88,7 @@ impl TableRepository for PostgresTableRepository {
             pagination.offset() as i64
         )
         .fetch_all(self.pool.as_ref())
-        .await?;
+        .await;
 
         let tables: Vec<Table> = result
             .into_iter()

@@ -24,6 +24,12 @@ sqlx = { version = "0.8.5", features = [
 ] }
 thiserror = "2.0.12"
 tokio = { version = "1.44.2", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = [
+    "fmt",
+    "env-filter",
+    "json",
+] }
 unicode-segmentation = "1.12.0"
 uuid = { version = "1.16.0", features = ["serde", "v4"] }
 validator = { version = "0.20.0", features = ["derive"] }

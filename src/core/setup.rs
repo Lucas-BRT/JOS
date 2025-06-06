@@ -1,18 +1,26 @@
+use super::config::Config;
+use super::error::ApplicationSetupError;
+use super::state::AppState;
 use crate::application::services::table_service::TableService;
 use crate::application::services::user_service::UserService;
-use crate::core::error::AppError;
-use crate::core::state::AppState;
-use crate::infrastructure::config::Config;
 use crate::infrastructure::persistance::postgres::create_postgres_pool;
 use crate::infrastructure::persistance::postgres::migrations::run_postgres_migrations;
 use crate::infrastructure::persistance::postgres::repositories::PostgresTableRepository;
 use crate::infrastructure::persistance::postgres::repositories::user::PostgresUserRepository;
 use crate::interfaces::http::create_router;
+use crate::{Error, Result};
 use std::sync::Arc;
+use tracing::{Level, info};
+use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::fmt::format::FmtSpan;
 
-use super::error::ApplicationSetupError;
+pub async fn setup_services() -> Result<AppState> {
+    let subscriber = FmtSubscriber::builder()
+        .with_max_level(Level::INFO)
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .with_target(true)
+        .init();
 
-pub async fn setup_services() -> Result<AppState, AppError> {
     dotenvy::dotenv().ok();
     let config = Config::from_env()?;
 
@@ -31,16 +39,14 @@ pub async fn setup_services() -> Result<AppState, AppError> {
     Ok(state)
 }
 
-pub async fn launch_server(state: AppState) -> Result<(), AppError> {
+pub async fn launch_server(state: AppState) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await
         .map_err(|err| {
-            AppError::ApplicationSetup(ApplicationSetupError::FailedToStartTcpListener(
-                err.to_string(),
-            ))
+            Error::ApplicationSetup(ApplicationSetupError::FailedToBindAddress(err.to_string()))
         })?;
 
-    println!(
+    info!(
         "server launched at: {}",
         listener.local_addr().expect("failed to get server addr")
     );
@@ -48,6 +54,6 @@ pub async fn launch_server(state: AppState) -> Result<(), AppError> {
     axum::serve(listener, create_router(state))
         .await
         .map_err(|err| {
-            AppError::ApplicationSetup(ApplicationSetupError::FailedToLaunchServer(err.to_string()))
+            Error::ApplicationSetup(ApplicationSetupError::FailedToLaunchServer(err.to_string()))
         })
 }

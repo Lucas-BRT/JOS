@@ -1,10 +1,8 @@
+use crate::{Result, core::error::ApplicationSetupError};
+use sqlx::PgPool;
 use std::sync::Arc;
 
-use sqlx::PgPool;
-
-use crate::{core::error::ApplicationSetupError, prelude::AppResult};
-
-pub async fn run_postgres_migrations(pool: Arc<PgPool>) -> AppResult<()> {
+pub async fn run_postgres_migrations(pool: Arc<PgPool>) -> Result<()> {
     sqlx::migrate!("./migrations")
         .run(pool.as_ref())
         .await
