@@ -48,17 +48,17 @@ pub struct AvaliableTableResponse {
     pub bg_image_link: Option<String>,
 }
 
-impl From<Table> for AvaliableTableResponse {
-    fn from(table: Table) -> Self {
+impl From<&Table> for AvaliableTableResponse {
+    fn from(table: &Table) -> Self {
         Self {
             gm_id: table.gm_id,
-            title: table.title,
-            description: table.description,
+            title: table.title.clone(),
+            description: table.description.clone(),
             game_system_id: table.game_system_id,
             is_public: table.is_public,
             player_slots: table.player_slots,
             occupied_slots: table.occupied_slots,
-            bg_image_link: table.bg_image_link,
+            bg_image_link: table.bg_image_link.clone(),
         }
     }
 }

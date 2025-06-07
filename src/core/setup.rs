@@ -14,8 +14,8 @@ use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 use tracing_subscriber::fmt::format::FmtSpan;
 
-pub async fn setup_services() -> Result<AppState> {
-    let subscriber = FmtSubscriber::builder()
+pub async fn setup_services() -> Result<Arc<AppState>> {
+    let _ = FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_target(true)
@@ -34,18 +34,17 @@ pub async fn setup_services() -> Result<AppState> {
     let table_repo = PostgresTableRepository::new(pool.clone());
     let table_service = TableService::new(Arc::new(table_repo));
 
-    let state = AppState::new(Arc::new(config), user_service, table_service);
+    let state = AppState::new(config, user_service, table_service);
 
-    Ok(state)
+    Ok(Arc::new(state))
 }
 
-pub async fn launch_server(state: AppState) -> Result<()> {
+pub async fn launch_server(state: Arc<AppState>) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await
         .map_err(|err| {
             Error::ApplicationSetup(ApplicationSetupError::FailedToBindAddress(err.to_string()))
         })?;
-
     info!(
         "server launched at: {}",
         listener.local_addr().expect("failed to get server addr")

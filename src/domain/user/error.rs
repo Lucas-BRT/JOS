@@ -4,12 +4,8 @@ use thiserror::Error;
 pub enum UserDomainError {
     #[error("Password error: {0}")]
     Password(#[from] PasswordDomainError),
-    #[error("Phone number error: {0}")]
-    PhoneNumber(#[from] PhoneNumberValidationError),
     #[error("Email error: {0}")]
     Email(#[from] EmailDomainError),
-    #[error("not found")]
-    NotFound,
 }
 
 #[allow(dead_code)]
@@ -44,17 +40,4 @@ pub enum PasswordDomainError {
 }
 
 #[derive(Debug, Error, PartialEq, Eq)]
-pub enum PhoneNumberValidationError {
-    #[error("Invalid phone number format")]
-    Invalid,
-    #[error("Phone number is too short")]
-    TooShort,
-    #[error("Phone number is too long")]
-    TooLong,
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum EmailDomainError {
-    #[error("Invalid email: {0}")]
-    InvalidEmail(String),
-}
+pub enum EmailDomainError {}

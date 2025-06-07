@@ -1,4 +1,5 @@
 use crate::application::error::ApplicationError;
+use axum::{http::StatusCode, response::IntoResponse};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -29,5 +30,20 @@ pub enum ApplicationSetupError {
 impl From<ApplicationSetupError> for Error {
     fn from(err: ApplicationSetupError) -> Self {
         Error::ApplicationSetup(err)
+    }
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> axum::response::Response {
+        match self {
+            Error::ApplicationSetup(err) => {
+                tracing::error!("Application setup error: {}", err);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+            }
+            Error::Application(err) => {
+                tracing::error!("Application error: {}", err);
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+            }
+        }
     }
 }

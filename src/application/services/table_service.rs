@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableData};
+use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableCommand};
 use crate::domain::table::{entity::Table, table_repository::TableRepository};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -30,7 +30,11 @@ impl TableService {
         Ok(tables)
     }
 
-    pub async fn update(&self, table_id: &Uuid, table_to_update: &UpdateTableData) -> Result<()> {
+    pub async fn update(
+        &self,
+        table_id: &Uuid,
+        table_to_update: &UpdateTableCommand,
+    ) -> Result<()> {
         self.table_repository
             .update(table_id, table_to_update)
             .await?;

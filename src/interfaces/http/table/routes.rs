@@ -10,27 +10,35 @@ use axum::{
     extract::State,
     routing::{get, post},
 };
+use std::sync::Arc;
 
+#[axum::debug_handler]
 pub async fn create_table(
-    State(app_state): State<AppState>,
+    State(app_state): State<Arc<AppState>>,
     Json(new_table_payload): Json<CreateTableDto>,
 ) -> Result<Json<String>> {
     let table = CreateTableCommand::from(new_table_payload);
-    let users = app_state.table_service.create(&table).await?;
+    let table_id = app_state.table_service.create(&table).await?;
 
-    Ok(Json(users))
+    Ok(Json(table_id))
 }
 
+#[axum::debug_handler]
 pub async fn get_available_tables(
-    State(app_state): State<AppState>,
+    State(app_state): State<Arc<AppState>>,
     Json(filters): Json<Option<TableFilters>>,
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let users = app_state.table_service.get(filters).await?;
+    let tables = app_state.table_service.get(filters).await?;
 
-    Ok(Json(users))
+    let tables = tables
+        .iter()
+        .map(|table| AvaliableTableResponse::from(table))
+        .collect();
+
+    Ok(Json(tables))
 }
 
-pub fn routes(state: &AppState) -> Router {
+pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_available_tables))
         .route("/", post(create_table))
