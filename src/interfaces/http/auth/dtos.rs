@@ -1,5 +1,5 @@
 use axum::extract::Multipart;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use validator::Validate;
 
 use crate::domain::user::dtos::CreateUserCommand;
@@ -48,6 +48,14 @@ pub enum Gender {
     Female,
     NonBinary,
     Other,
+}
+
+#[derive(Debug, Deserialize, Serialize, thiserror::Error)]
+pub enum InvalidImageError {
+    #[error("Image is too large: {0}")]
+    TooLarge(String),
+    #[error("The format {0} is not supported")]
+    InvalidFormat(String),
 }
 
 #[derive(Debug, Validate, Deserialize)]
