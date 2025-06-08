@@ -1,5 +1,3 @@
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
 -- ENUMs
 CREATE TYPE access_level AS ENUM ('user', 'admin');
 
@@ -11,9 +9,8 @@ CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected', 'cancelle
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    username TEXT NOT NULL UNIQUE,
-    display_name TEXT NOT NULL,
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
     access_level access_level NOT NULL DEFAULT 'user',
@@ -23,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Table for game systems
 CREATE TABLE IF NOT EXISTS game_systems (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    id UUID PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     description TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
@@ -32,7 +29,7 @@ CREATE TABLE IF NOT EXISTS game_systems (
 
 -- Tables table
 CREATE TABLE IF NOT EXISTS tables (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    id UUID PRIMARY KEY,
     gm_id UUID NOT NULL REFERENCES users (id),
     title TEXT NOT NULL,
     game_system_id UUID NOT NULL REFERENCES game_systems (id),
@@ -50,7 +47,7 @@ CREATE TABLE IF NOT EXISTS tables (
 
 -- Requests table
 CREATE TABLE IF NOT EXISTS requests (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    id UUID PRIMARY KEY,
     user_id UUID NOT NULL REFERENCES users (id),
     table_id UUID NOT NULL REFERENCES tables (id),
     status request_status NOT NULL DEFAULT 'pending',
@@ -60,7 +57,7 @@ CREATE TABLE IF NOT EXISTS requests (
 
 -- Sessions table
 CREATE TABLE IF NOT EXISTS sessions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
+    id UUID PRIMARY KEY,
     table_id UUID NOT NULL REFERENCES tables (id),
     title TEXT NOT NULL,
     description TEXT NOT NULL,

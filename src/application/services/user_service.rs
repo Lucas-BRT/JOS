@@ -14,8 +14,9 @@ impl UserService {
         Self { user_repository }
     }
 
-    pub async fn create(&self, _new_user_data: &CreateUserCommand) -> Result<String> {
-        todo!()
+    pub async fn create(&self, new_user_data: &CreateUserCommand) -> Result<String> {
+        let user_id = self.user_repository.create(new_user_data).await?;
+        Ok(user_id.to_string())
     }
 
     pub async fn find_by_username(&self, _username: &str) -> Result<User> {

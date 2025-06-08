@@ -4,6 +4,7 @@ use std::sync::Arc;
 
 fn router(app_state: Arc<AppState>) -> Router {
     Router::new()
+        .nest("/auth", super::auth::routes::routes(app_state.clone()))
         .nest("/users", super::user::routes::routes(app_state.clone()))
         .nest("/tables", super::table::routes::routes(app_state.clone()))
 }

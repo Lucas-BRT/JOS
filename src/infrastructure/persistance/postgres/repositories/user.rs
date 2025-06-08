@@ -1,10 +1,13 @@
+use crate::Error;
 use crate::Result;
 use crate::domain::user::dtos::CreateUserCommand;
 use crate::domain::user::dtos::UpdateUserCommand;
 use crate::domain::user::entity::User;
 use crate::domain::user::user_repository::UserRepository;
+use crate::infrastructure::persistance::postgres::repositories::error::RepositoryError;
 use async_trait::async_trait;
 use sqlx::PgPool;
+use sqlx::{Error as SqlxError, postgres::PgDatabaseError};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -21,8 +24,43 @@ impl<'a> PostgresUserRepository {
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn create(&self, user: &CreateUserCommand) -> Result<String> {
-        todo!()
+        let uuid = Uuid::new_v4();
+
+        let result = sqlx::query_scalar!(
+            r#"
+                INSERT INTO users (id, email, name, password_hash)
+                VALUES ($1, $2, $3, $4)
+                RETURNING name
+            "#,
+            uuid,
+            user.email,
+            user.username,
+            user.password
+        )
+        .fetch_one(self.pool.as_ref())
+        .await;
+
+        match result {
+            Ok(name) => Ok(name),
+
+            Err(SqlxError::Database(db_err)) => {
+                if let Some(pg_err) = db_err.try_downcast_ref::<PgDatabaseError>() {
+                    if pg_err.code() == "23505" && pg_err.constraint() == Some("users_name_key") {
+                        return Err(Error::Repository(RepositoryError::UsernameAlreadyTaken(
+                            user.username.clone(),
+                        )));
+                    }
+                }
+
+                Err(Error::Repository(RepositoryError::DatabaseError(
+                    SqlxError::Database(db_err),
+                )))
+            }
+
+            Err(e) => Err(Error::Repository(RepositoryError::DatabaseError(e))),
+        }
     }
+
     async fn update(&self, user_id: &Uuid, data: &UpdateUserCommand) -> Result<()> {
         todo!()
     }

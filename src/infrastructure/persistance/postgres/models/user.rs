@@ -1,17 +1,22 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::prelude::{FromRow, Type};
+use uuid::Uuid;
 
-#[derive(Debug, PartialEq, Eq, Clone, Type, Serialize, Deserialize)]
-#[sqlx(type_name = "access_level", rename_all = "lowercase")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AccessLevel {
     Admin,
     User,
 }
 
-#[derive(FromRow, Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub struct UserRow {
-    pub id: sqlx::types::Uuid,
+impl Default for AccessLevel {
+    fn default() -> Self {
+        AccessLevel::User
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Default)]
+pub struct Model {
+    pub id: Uuid,
     pub username: String,
     pub display_name: String,
     pub email: String,
