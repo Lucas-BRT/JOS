@@ -15,13 +15,13 @@ impl UserService {
         Self { user_repository }
     }
 
-    pub async fn create(&self, new_user_data: &CreateUserCommand) -> Result<String> {
+    pub async fn create(&self, new_user_data: &CreateUserCommand) -> Result<User> {
         if new_user_data.password != new_user_data.confirm_password {
             return Err(Error::Validation(ValidationError::PasswordMismatch));
         }
 
-        let user_id = self.user_repository.create(new_user_data).await?;
-        Ok(user_id.to_string())
+        let user = self.user_repository.create(new_user_data).await?;
+        Ok(user)
     }
 
     pub async fn find_by_username(&self, _username: &str) -> Result<User> {

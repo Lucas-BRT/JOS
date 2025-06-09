@@ -1,8 +1,8 @@
+use crate::domain::user::{dtos::CreateUserCommand, entity::User};
 use axum::extract::Multipart;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 use validator::Validate;
-
-use crate::domain::user::dtos::CreateUserCommand;
 
 const MIN_USERNAME_LENGTH: u64 = 4;
 const MAX_USERNAME_LENGTH: u64 = 100;
@@ -81,6 +81,23 @@ impl Into<CreateUserCommand> for SignupDto {
             email: self.email,
             password: self.password,
             confirm_password: self.confirm_password,
+        }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct UserSignupResponse {
+    pub id: Uuid,
+    pub name: String,
+    pub email: String,
+}
+
+impl From<User> for UserSignupResponse {
+    fn from(user: User) -> Self {
+        UserSignupResponse {
+            id: user.id,
+            name: user.name,
+            email: user.email,
         }
     }
 }

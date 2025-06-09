@@ -1,7 +1,10 @@
 use crate::{
-    Error, Result, error::ValidationError, interfaces::http::auth::dtos::SignupDto, state::AppState,
+    Error, Result,
+    error::ValidationError,
+    interfaces::http::auth::dtos::{SignupDto, UserSignupResponse},
+    state::AppState,
 };
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
 use std::sync::Arc;
 use validator::Validate;
 
@@ -9,17 +12,27 @@ use validator::Validate;
 async fn signup(
     State(app_state): State<Arc<AppState>>,
     Json(new_user_payload): Json<SignupDto>,
-) -> Result<Json<String>> {
-    new_user_payload
-        .validate()
-        .map_err(|err| Error::Validation(ValidationError::Other(err)))?;
+) -> impl IntoResponse {
+    if let Err(sanitization_error) = new_user_payload.validate() {
+        return Err(Error::Validation(ValidationError::Other(
+            sanitization_error,
+        )));
+    }
 
-    match app_state
+    let user = app_state
         .user_service
         .create(&new_user_payload.into())
-        .await
-    {
-        Ok(user_id) => Ok(Json(user_id.to_string())),
+        .await;
+
+    match user {
+        Ok(user) => {
+            let response = UserSignupResponse {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            };
+            Ok((StatusCode::CREATED, Json(response)).into_response())
+        }
         Err(err) => Err(err),
     }
 }
