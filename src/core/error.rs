@@ -16,9 +16,11 @@ pub enum Error {
     #[error("Application error: {0}")]
     Application(ApplicationError),
     #[error("Validation error: {0}")]
-    Validation(ValidationErrors),
+    Validation(ValidationError),
     #[error("Repository error: {0}")]
     Repository(RepositoryError),
+    #[error("Internal server error")]
+    InternalServerError,
 }
 
 impl IntoResponse for RepositoryError {
@@ -101,18 +103,17 @@ impl IntoResponse for RepositoryError {
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum ValidationErrors {
+pub enum ValidationError {
     #[error("password and password_confirmation mismatch")]
-    PasswordConfirmationMismatch,
-
+    PasswordMismatch,
     #[error("{0}")]
     Other(#[from] validator::ValidationErrors),
 }
 
-impl IntoResponse for ValidationErrors {
+impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         match self {
-            ValidationErrors::PasswordConfirmationMismatch => {
+            ValidationError::PasswordMismatch => {
                 tracing::error!("Password confirmation mismatch");
                 return (
                     StatusCode::BAD_REQUEST,
@@ -122,7 +123,7 @@ impl IntoResponse for ValidationErrors {
                 )
                     .into_response();
             }
-            ValidationErrors::Other(errors) => {
+            ValidationError::Other(errors) => {
                 let errors = errors
                     .errors()
                     .clone()
@@ -181,6 +182,10 @@ impl IntoResponse for Error {
             }
             Error::Repository(err) => err.into_response(),
             Error::Validation(err) => err.into_response(),
+            Error::InternalServerError => {
+                tracing::error!("Internal server error");
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
+            }
         }
     }
 }

@@ -1,6 +1,5 @@
 use crate::{
-    Error, Result, error::ValidationErrors, interfaces::http::auth::dtos::SignupDto,
-    state::AppState,
+    Error, Result, error::ValidationError, interfaces::http::auth::dtos::SignupDto, state::AppState,
 };
 use axum::{Json, Router, extract::State, routing::post};
 use std::sync::Arc;
@@ -13,7 +12,11 @@ async fn signup(
 ) -> Result<Json<String>> {
     new_user_payload
         .validate()
-        .map_err(|err| Error::Validation(ValidationErrors::Other(err)))?;
+        .map_err(|err| Error::Validation(ValidationError::Other(err)))?;
+
+    if new_user_payload.password != new_user_payload.confirm_password {
+        return Err(Error::Validation(ValidationError::PasswordMismatch));
+    }
 
     match app_state
         .user_service

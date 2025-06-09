@@ -1,5 +1,5 @@
 -- ENUMs
-CREATE TYPE access_level AS ENUM ('user', 'admin');
+CREATE TYPE access_level AS ENUM ('user', 'admin', 'moderator');
 
 CREATE TYPE attendance_status AS ENUM ('unknown', 'confirmed', 'absent');
 

@@ -5,11 +5,12 @@ use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
 pub struct Config {
     pub database_url: String,
     pub addr: SocketAddr,
+    pub jwt_secret: String,
 }
 
 impl Config {
     pub fn from_env() -> Result<Self> {
-        let db_url = std::env::var("DATABASE_URL").map_err(|e| {
+        let database_url = std::env::var("DATABASE_URL").map_err(|e| {
             Error::ApplicationSetup(ApplicationSetupError::FailedToGetEnvironmentVariable(
                 e.to_string(),
             ))
@@ -20,12 +21,19 @@ impl Config {
             .parse()
             .map_err(|e: ParseIntError| ApplicationSetupError::FailedToParsePort(e.to_string()))?;
 
-        let server_addr = SocketAddr::from_str(format!("127.0.0.1:{}", server_port).as_str())
+        let addr = SocketAddr::from_str(format!("127.0.0.1:{}", server_port).as_str())
             .map_err(|err| ApplicationSetupError::FailedToSetupServerAddress(err.to_string()))?;
 
+        let jwt_secret = std::env::var("JWT_SECRET").map_err(|e| {
+            Error::ApplicationSetup(ApplicationSetupError::FailedToGetEnvironmentVariable(
+                e.to_string(),
+            ))
+        })?;
+
         Ok(Self {
-            database_url: db_url,
-            addr: server_addr,
+            database_url,
+            addr,
+            jwt_secret,
         })
     }
 }
