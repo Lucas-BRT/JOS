@@ -1,7 +1,7 @@
 use crate::{
     Error, Result,
     error::ValidationError,
-    interfaces::http::auth::dtos::{SignupDto, UserSignupResponse},
+    interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
     state::AppState,
 };
 use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
@@ -21,7 +21,7 @@ async fn signup(
 
     let user = app_state
         .user_service
-        .create(&new_user_payload.into())
+        .signup(&new_user_payload.into())
         .await;
 
     match user {

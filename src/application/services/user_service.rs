@@ -15,7 +15,7 @@ impl UserService {
         Self { user_repository }
     }
 
-    pub async fn create(&self, new_user_data: &CreateUserCommand) -> Result<User> {
+    pub async fn signup(&self, new_user_data: &CreateUserCommand) -> Result<User> {
         if new_user_data.password != new_user_data.confirm_password {
             return Err(Error::Validation(ValidationError::PasswordMismatch));
         }
