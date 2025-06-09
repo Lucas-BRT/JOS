@@ -1,5 +1,3 @@
-use chrono::Duration;
-
 use crate::{
     Error, Result,
     application::error::ApplicationError,
@@ -11,6 +9,7 @@ use crate::{
     error::ValidationError,
     utils::{jwt::Claims, password::verify_hash},
 };
+use chrono::Duration;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -43,24 +42,17 @@ impl UserService {
             .find_by_email(&login_payload.email)
             .await?;
 
-        match user {
-            Some(user) => {
-                if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
-                    let jwt_token = Claims::create_jwt(
-                        user.id,
-                        jwt_secret,
-                        jwt_expiration_duration,
-                        user.access_level,
-                    )?;
+        if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
+            let jwt_token = Claims::create_jwt(
+                user.id,
+                jwt_secret,
+                jwt_expiration_duration,
+                user.access_level,
+            )?;
 
-                    Ok(jwt_token)
-                } else {
-                    Err(Error::Application(ApplicationError::InvalidCredentials))
-                }
-            }
-            None => Err(Error::Application(ApplicationError::UserNotFound(
-                login_payload.email.clone(),
-            ))),
+            Ok(jwt_token)
+        } else {
+            Err(Error::Application(ApplicationError::InvalidCredentials))
         }
     }
 

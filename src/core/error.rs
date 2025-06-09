@@ -187,10 +187,7 @@ impl IntoResponse for Error {
                 tracing::error!("Application setup error: {}", err);
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
             }
-            Error::Application(err) => {
-                tracing::error!("Application error: {}", err);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error").into_response()
-            }
+            Error::Application(err) => err.into_response(),
             Error::Repository(err) => err.into_response(),
             Error::Validation(err) => err.into_response(),
             Error::InternalServerError => {

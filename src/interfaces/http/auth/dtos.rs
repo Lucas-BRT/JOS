@@ -2,7 +2,7 @@ use crate::domain::user::{
     dtos::{CreateUserCommand, LoginUserCommand},
     entity::User,
 };
-use axum::extract::Multipart;
+use axum::{Json, extract::Multipart, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
@@ -111,5 +111,11 @@ impl From<User> for UserSignupResponse {
             name: user.name,
             email: user.email,
         }
+    }
+}
+
+impl IntoResponse for UserSignupResponse {
+    fn into_response(self) -> axum::response::Response {
+        (StatusCode::CREATED, Json(self)).into_response()
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
     state::AppState,
 };
-use axum::{Json, Router, extract::State, http::StatusCode, response::IntoResponse, routing::post};
+use axum::{Json, Router, extract::State, response::IntoResponse, routing::post};
 use std::sync::Arc;
 use validator::Validate;
 
@@ -12,7 +12,7 @@ use validator::Validate;
 async fn signup(
     State(app_state): State<Arc<AppState>>,
     Json(new_user_payload): Json<SignupDto>,
-) -> impl IntoResponse {
+) -> Result<UserSignupResponse> {
     if let Err(sanitization_error) = new_user_payload.validate() {
         return Err(Error::Validation(ValidationError::Other(
             sanitization_error,
@@ -22,26 +22,16 @@ async fn signup(
     let user = app_state
         .user_service
         .signup(&new_user_payload.into())
-        .await;
+        .await?;
 
-    match user {
-        Ok(user) => {
-            let response = UserSignupResponse {
-                id: user.id,
-                name: user.name,
-                email: user.email,
-            };
-            Ok((StatusCode::CREATED, Json(response)).into_response())
-        }
-        Err(err) => Err(err),
-    }
+    Ok(user.into())
 }
 
 #[axum::debug_handler]
 async fn login(
     State(app_state): State<Arc<AppState>>,
     Json(login_payload): Json<LoginDto>,
-) -> impl IntoResponse {
+) -> Result<String> {
     if let Err(sanitization_error) = login_payload.validate() {
         return Err(Error::Validation(ValidationError::Other(
             sanitization_error,
@@ -55,12 +45,9 @@ async fn login(
             &app_state.config.jwt_secret,
             app_state.config.jwt_expiration_duration,
         )
-        .await;
+        .await?;
 
-    match jwt_token {
-        Ok(jwt_token) => Ok((StatusCode::OK, Json(jwt_token)).into_response()),
-        Err(err) => Err(err),
-    }
+    Ok(jwt_token)
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {
