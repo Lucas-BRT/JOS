@@ -27,7 +27,7 @@ impl<'a> PostgresUserRepository {
 
 #[async_trait]
 impl UserRepository for PostgresUserRepository {
-    async fn create(&self, user: &CreateUserCommand) -> Result<String> {
+    async fn create(&self, user: &CreateUserCommand) -> Result<Uuid> {
         let uuid = Uuid::new_v4();
 
         let password_hash = generate_hash(user.password.clone()).await?;
@@ -67,7 +67,7 @@ impl UserRepository for PostgresUserRepository {
         .await;
 
         match result {
-            Ok(model) => Ok(model.name),
+            Ok(model) => Ok(model.id),
             Err(SqlxError::Database(db_err)) => {
                 if let Some(pg_err) = db_err.try_downcast_ref::<PgDatabaseError>() {
                     if pg_err.code() == "23505" && pg_err.constraint() == Some("users_name_key") {
