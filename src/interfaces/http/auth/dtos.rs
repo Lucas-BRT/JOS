@@ -33,7 +33,7 @@ pub struct RecoveryDto {
 #[derive(Validate, Deserialize)]
 pub struct SignupDto {
     #[validate(length(min = MIN_USERNAME_LENGTH, max = MAX_USERNAME_LENGTH))]
-    pub username: String,
+    pub name: String,
     #[validate(email)]
     pub email: String,
     #[validate(length(min = MIN_PASSWORD_LENGTH, max = MAX_PASSWORD_LENGTH))]
@@ -77,7 +77,7 @@ pub struct UpdateProfileWithAvatar {
 impl Into<CreateUserCommand> for SignupDto {
     fn into(self) -> CreateUserCommand {
         CreateUserCommand {
-            username: self.username,
+            name: self.name,
             email: self.email,
             password: self.password,
             confirm_password: self.confirm_password,

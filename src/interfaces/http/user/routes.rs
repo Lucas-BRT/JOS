@@ -14,7 +14,7 @@ const MAX_IMAGE_SIZE: usize = 1024 * 1024 * 5; // 5MB
 const ALLOWED_IMAGE_TYPES: [&str; 2] = ["image/jpeg", "image/png"];
 
 pub async fn upload_image(
-    State(app_state): State<Arc<AppState>>, // pode usar se quiser acesso ao estado
+    State(app_state): State<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
     while let Some(field_result) = multipart.next_field().await.transpose() {
@@ -35,7 +35,7 @@ pub async fn upload_image(
             .unwrap_or_default();
 
         if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
-            let _ = field.bytes().await; // consome o conteúdo pra evitar erro de protocolo
+            let _ = field.bytes().await;
             tracing::warn!("tipo inválido: {}", content_type);
             return Json(json!({
                 "error": "invalid image format",

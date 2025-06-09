@@ -2,6 +2,8 @@
 pub enum RepositoryError {
     #[error("username already taken: {0}")]
     UsernameAlreadyTaken(String),
+    #[error("email already taken: {0}")]
+    EmailAlreadyTaken(String),
     #[error("not found {0}")]
     NotFound(String),
     #[error("unique violation {0}")]

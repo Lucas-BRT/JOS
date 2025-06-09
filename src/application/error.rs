@@ -1,5 +1,3 @@
-use axum::response::IntoResponse;
-
 use crate::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

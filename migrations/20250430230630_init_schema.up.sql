@@ -13,7 +13,11 @@ CREATE TABLE IF NOT EXISTS users (
     name TEXT NOT NULL UNIQUE,
     email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    access_level access_level NOT NULL DEFAULT 'user',
+    access_level access_level NOT NULL,
+    bio TEXT,
+    avatar_url TEXT,
+    nickname TEXT,
+    years_of_experience INTEGER,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
 );

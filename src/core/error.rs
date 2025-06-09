@@ -98,6 +98,17 @@ impl IntoResponse for RepositoryError {
                 )
                     .into_response();
             }
+            RepositoryError::EmailAlreadyTaken(email) => {
+                tracing::error!("Email already taken: {}", email);
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "message": "Email already taken",
+                        "value": email
+                    })),
+                )
+                    .into_response();
+            }
         }
     }
 }
