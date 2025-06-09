@@ -1,5 +1,4 @@
 use super::config::Config;
-use super::error::ApplicationSetupError;
 use super::state::AppState;
 use crate::application::services::table_service::TableService;
 use crate::application::services::user_service::UserService;
@@ -13,6 +12,30 @@ use std::sync::Arc;
 use tracing::{Level, info};
 use tracing_subscriber::FmtSubscriber;
 use tracing_subscriber::fmt::format::FmtSpan;
+
+#[derive(Debug, thiserror::Error)]
+pub enum SetupError {
+    #[error("Failed to get environment variable: {0}")]
+    FailedToGetEnvironmentVariable(String),
+    #[error("Failed to bind address: {0}")]
+    FailedToBindAddress(String),
+    #[error("Failed to launch server: {0}")]
+    FailedToLaunchServer(String),
+    #[error("Failed to parse PORT to u32: {0}")]
+    FailedToParsePort(String),
+    #[error("Failed to setup server address: {0}")]
+    FailedToSetupServerAddress(String),
+    #[error("Failed to establish database connection: {0}")]
+    FailedToEstablishDatabaseConnection(String),
+    #[error("Failed to run database migrations: {0}")]
+    FailedToRunDBMigrations(String),
+}
+
+impl From<SetupError> for Error {
+    fn from(err: SetupError) -> Self {
+        Error::Setup(err)
+    }
+}
 
 pub async fn setup_services() -> Result<Arc<AppState>> {
     let _ = FmtSubscriber::builder()
@@ -42,9 +65,7 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
 pub async fn launch_server(state: Arc<AppState>) -> Result<()> {
     let listener = tokio::net::TcpListener::bind(&state.config.addr)
         .await
-        .map_err(|err| {
-            Error::ApplicationSetup(ApplicationSetupError::FailedToBindAddress(err.to_string()))
-        })?;
+        .map_err(|err| Error::Setup(SetupError::FailedToBindAddress(err.to_string())))?;
     info!(
         "server launched at: {}",
         listener.local_addr().expect("failed to get server addr")
@@ -52,7 +73,5 @@ pub async fn launch_server(state: Arc<AppState>) -> Result<()> {
 
     axum::serve(listener, create_router(state))
         .await
-        .map_err(|err| {
-            Error::ApplicationSetup(ApplicationSetupError::FailedToLaunchServer(err.to_string()))
-        })
+        .map_err(|err| Error::Setup(SetupError::FailedToLaunchServer(err.to_string())))
 }

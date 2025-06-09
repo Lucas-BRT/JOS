@@ -1,10 +1,12 @@
 use crate::{
     Error, Result,
-    error::ValidationError,
-    interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
+    interfaces::http::{
+        auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
+        error::ValidationError,
+    },
     state::AppState,
 };
-use axum::{Json, Router, extract::State, response::IntoResponse, routing::post};
+use axum::{Json, Router, extract::State, routing::post};
 use std::sync::Arc;
 use validator::Validate;
 
@@ -17,6 +19,10 @@ async fn signup(
         return Err(Error::Validation(ValidationError::Other(
             sanitization_error,
         )));
+    }
+
+    if new_user_payload.password != new_user_payload.confirm_password {
+        return Err(Error::Validation(ValidationError::PasswordMismatch));
     }
 
     let user = app_state

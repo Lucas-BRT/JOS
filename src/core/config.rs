@@ -1,4 +1,4 @@
-use crate::{Error, Result, core::error::ApplicationSetupError};
+use crate::{Error, Result, setup::SetupError};
 use chrono::Duration;
 use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
 
@@ -14,25 +14,19 @@ pub struct Config {
 
 impl Config {
     pub fn from_env() -> Result<Self> {
-        let database_url = std::env::var("DATABASE_URL").map_err(|e| {
-            Error::ApplicationSetup(ApplicationSetupError::FailedToGetEnvironmentVariable(
-                e.to_string(),
-            ))
-        })?;
+        let database_url = std::env::var("DATABASE_URL")
+            .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?;
 
         let server_port: u32 = std::env::var("PORT")
-            .map_err(|e| ApplicationSetupError::FailedToGetEnvironmentVariable(e.to_string()))?
+            .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))?
             .parse()
-            .map_err(|e: ParseIntError| ApplicationSetupError::FailedToParsePort(e.to_string()))?;
+            .map_err(|e: ParseIntError| SetupError::FailedToParsePort(e.to_string()))?;
 
         let addr = SocketAddr::from_str(format!("127.0.0.1:{}", server_port).as_str())
-            .map_err(|err| ApplicationSetupError::FailedToSetupServerAddress(err.to_string()))?;
+            .map_err(|err| SetupError::FailedToSetupServerAddress(err.to_string()))?;
 
-        let jwt_secret = std::env::var("JWT_SECRET").map_err(|e| {
-            Error::ApplicationSetup(ApplicationSetupError::FailedToGetEnvironmentVariable(
-                e.to_string(),
-            ))
-        })?;
+        let jwt_secret = std::env::var("JWT_SECRET")
+            .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?;
 
         Ok(Self {
             database_url,

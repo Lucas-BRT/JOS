@@ -6,7 +6,6 @@ use crate::{
         entity::User,
         user_repository::UserRepository,
     },
-    error::ValidationError,
     utils::{jwt::Claims, password::verify_hash},
 };
 use chrono::Duration;
@@ -23,10 +22,6 @@ impl UserService {
     }
 
     pub async fn signup(&self, new_user_data: &CreateUserCommand) -> Result<User> {
-        if new_user_data.password != new_user_data.confirm_password {
-            return Err(Error::Validation(ValidationError::PasswordMismatch));
-        }
-
         let user = self.user_repository.create(new_user_data).await?;
         Ok(user)
     }

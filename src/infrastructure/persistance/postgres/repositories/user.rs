@@ -1,6 +1,5 @@
 use crate::Error;
 use crate::Result;
-use crate::application::error::ApplicationError;
 use crate::domain::user::dtos::CreateUserCommand;
 use crate::domain::user::dtos::UpdateUserCommand;
 use crate::domain::user::entity::User;
@@ -104,6 +103,7 @@ impl UserRepository for PostgresUserRepository {
     async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>> {
         todo!()
     }
+
     async fn find_by_email(&self, email: &str) -> Result<User> {
         let result = sqlx::query_as!(
             UserModel,
@@ -126,11 +126,11 @@ impl UserRepository for PostgresUserRepository {
         )
         .fetch_optional(self.pool.as_ref())
         .await
-        .map_err(|e| Error::Repository(RepositoryError::DatabaseError(e).into()))?;
+        .map_err(|e| Error::Repository(RepositoryError::DatabaseError(e)))?;
 
         match result {
             Some(user) => Ok(user.into()),
-            None => Err(ApplicationError::UserNotFound.into()),
+            None => Err(RepositoryError::UserNotFound.into()),
         }
     }
 }
