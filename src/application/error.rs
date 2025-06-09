@@ -6,6 +6,10 @@ pub enum ApplicationError {
     DataError(String),
     #[error("not found: {0}")]
     NotFound(String),
+    #[error("invalid credentials")]
+    InvalidCredentials,
+    #[error("user not found: {0}")]
+    UserNotFound(String),
 }
 
 impl From<ApplicationError> for Error {

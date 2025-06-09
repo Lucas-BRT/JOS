@@ -37,8 +37,35 @@ async fn signup(
     }
 }
 
+#[axum::debug_handler]
+async fn login(
+    State(app_state): State<Arc<AppState>>,
+    Json(login_payload): Json<LoginDto>,
+) -> impl IntoResponse {
+    if let Err(sanitization_error) = login_payload.validate() {
+        return Err(Error::Validation(ValidationError::Other(
+            sanitization_error,
+        )));
+    }
+
+    let jwt_token = app_state
+        .user_service
+        .login(
+            &login_payload.into(),
+            &app_state.config.jwt_secret,
+            app_state.config.jwt_expiration_duration,
+        )
+        .await;
+
+    match jwt_token {
+        Ok(jwt_token) => Ok((StatusCode::OK, Json(jwt_token)).into_response()),
+        Err(err) => Err(err),
+    }
+}
+
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/signup", post(signup))
+        .route("/login", post(login))
         .with_state(state.clone())
 }

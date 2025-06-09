@@ -25,6 +25,7 @@ impl Into<User> for Model {
             id: self.id,
             name: self.name,
             email: self.email,
+            password_hash: self.password_hash,
             access_level: self.access_level.into(),
             bio: self.bio,
             avatar_url: self.avatar_url,

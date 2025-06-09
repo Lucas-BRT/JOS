@@ -1,4 +1,7 @@
-use crate::domain::user::{dtos::CreateUserCommand, entity::User};
+use crate::domain::user::{
+    dtos::{CreateUserCommand, LoginUserCommand},
+    entity::User,
+};
 use axum::extract::Multipart;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -16,12 +19,21 @@ const MAX_NICKNAME_LENGTH: u64 = 100;
 const MIN_BIO_LENGTH: u64 = 2;
 const MAX_BIO_LENGTH: u64 = 200;
 
-#[derive(Validate)]
+#[derive(Validate, Deserialize)]
 pub struct LoginDto {
     #[validate(email)]
     pub email: String,
     #[validate(length(min = MIN_PASSWORD_LENGTH, max = MAX_PASSWORD_LENGTH))]
     pub password: String,
+}
+
+impl Into<LoginUserCommand> for LoginDto {
+    fn into(self) -> LoginUserCommand {
+        LoginUserCommand {
+            email: self.email,
+            password: self.password,
+        }
+    }
 }
 
 #[derive(Validate)]

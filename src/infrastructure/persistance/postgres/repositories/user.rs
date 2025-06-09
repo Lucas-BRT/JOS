@@ -2,7 +2,6 @@ use crate::Error;
 use crate::Result;
 use crate::domain::user::dtos::CreateUserCommand;
 use crate::domain::user::dtos::UpdateUserCommand;
-use crate::domain::user::entity::AccessLevel;
 use crate::domain::user::entity::User;
 use crate::domain::user::user_repository::UserRepository;
 use crate::infrastructure::persistance::postgres::models::user::AccessLevelModel;
@@ -99,5 +98,39 @@ impl UserRepository for PostgresUserRepository {
     }
     async fn find_by_username(&self, name: &str) -> Result<Option<User>> {
         todo!()
+    }
+
+    async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>> {
+        todo!()
+    }
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            UserModel,
+            r#"
+                SELECT
+                    id,
+                    name,
+                    email,
+                    password_hash,
+                    access_level as "access_level: AccessLevelModel",
+                    bio,
+                    avatar_url,
+                    nickname,
+                    years_of_experience,
+                    created_at,
+                    updated_at
+                FROM users WHERE email = $1
+            "#,
+            email
+        )
+        .fetch_optional(self.pool.as_ref())
+        .await
+        .unwrap();
+
+        if let Some(user) = user {
+            Ok(Some(user.into()))
+        } else {
+            Ok(None)
+        }
     }
 }

@@ -29,6 +29,7 @@ pub struct User {
     pub id: Uuid,
     pub name: String,
     pub email: String,
+    pub password_hash: String,
     pub access_level: AccessLevel,
     pub bio: Option<String>,
     pub avatar_url: Option<String>,

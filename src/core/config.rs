@@ -1,11 +1,15 @@
 use crate::{Error, Result, core::error::ApplicationSetupError};
+use chrono::Duration;
 use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
+
+const JWT_EXPIRATION_DURATION: Duration = Duration::days(7);
 
 #[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
     pub addr: SocketAddr,
     pub jwt_secret: String,
+    pub jwt_expiration_duration: Duration,
 }
 
 impl Config {
@@ -34,6 +38,7 @@ impl Config {
             database_url,
             addr,
             jwt_secret,
+            jwt_expiration_duration: JWT_EXPIRATION_DURATION,
         })
     }
 }

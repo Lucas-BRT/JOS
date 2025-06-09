@@ -1,7 +1,15 @@
+use chrono::Duration;
+
 use crate::{
     Error, Result,
-    domain::user::{dtos::CreateUserCommand, entity::User, user_repository::UserRepository},
+    application::error::ApplicationError,
+    domain::user::{
+        dtos::{CreateUserCommand, LoginUserCommand},
+        entity::User,
+        user_repository::UserRepository,
+    },
     error::ValidationError,
+    utils::{jwt::Claims, password::verify_hash},
 };
 use std::sync::Arc;
 
@@ -22,6 +30,38 @@ impl UserService {
 
         let user = self.user_repository.create(new_user_data).await?;
         Ok(user)
+    }
+
+    pub async fn login(
+        &self,
+        login_payload: &LoginUserCommand,
+        jwt_secret: &str,
+        jwt_expiration_duration: Duration,
+    ) -> Result<String> {
+        let user = self
+            .user_repository
+            .find_by_email(&login_payload.email)
+            .await?;
+
+        match user {
+            Some(user) => {
+                if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
+                    let jwt_token = Claims::create_jwt(
+                        user.id,
+                        jwt_secret,
+                        jwt_expiration_duration,
+                        user.access_level,
+                    )?;
+
+                    Ok(jwt_token)
+                } else {
+                    Err(Error::Application(ApplicationError::InvalidCredentials))
+                }
+            }
+            None => Err(Error::Application(ApplicationError::UserNotFound(
+                login_payload.email.clone(),
+            ))),
+        }
     }
 
     pub async fn find_by_username(&self, _username: &str) -> Result<User> {
