@@ -5,6 +5,7 @@ use crate::domain::user::dtos::UpdateUserCommand;
 use crate::domain::user::entity::User;
 use crate::domain::user::user_repository::UserRepository;
 use crate::infrastructure::persistance::postgres::repositories::error::RepositoryError;
+use crate::utils::password::generate_hash;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use sqlx::{Error as SqlxError, postgres::PgDatabaseError};
@@ -26,6 +27,8 @@ impl UserRepository for PostgresUserRepository {
     async fn create(&self, user: &CreateUserCommand) -> Result<String> {
         let uuid = Uuid::new_v4();
 
+        let password_hash = generate_hash(user.password.clone()).await?;
+
         let result = sqlx::query_scalar!(
             r#"
                 INSERT INTO users (id, email, name, password_hash)
@@ -35,7 +38,7 @@ impl UserRepository for PostgresUserRepository {
             uuid,
             user.email,
             user.username,
-            user.password
+            password_hash
         )
         .fetch_one(self.pool.as_ref())
         .await;

@@ -14,10 +14,6 @@ async fn signup(
         .validate()
         .map_err(|err| Error::Validation(ValidationError::Other(err)))?;
 
-    if new_user_payload.password != new_user_payload.confirm_password {
-        return Err(Error::Validation(ValidationError::PasswordMismatch));
-    }
-
     match app_state
         .user_service
         .create(&new_user_payload.into())

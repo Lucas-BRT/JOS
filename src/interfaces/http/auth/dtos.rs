@@ -80,6 +80,7 @@ impl Into<CreateUserCommand> for SignupDto {
             username: self.username,
             email: self.email,
             password: self.password,
+            confirm_password: self.confirm_password,
         }
     }
 }

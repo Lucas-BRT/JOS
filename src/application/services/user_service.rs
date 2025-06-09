@@ -1,6 +1,7 @@
 use crate::{
-    Result,
+    Error, Result,
     domain::user::{dtos::CreateUserCommand, entity::User, user_repository::UserRepository},
+    error::ValidationError,
 };
 use std::sync::Arc;
 
@@ -15,6 +16,10 @@ impl UserService {
     }
 
     pub async fn create(&self, new_user_data: &CreateUserCommand) -> Result<String> {
+        if new_user_data.password != new_user_data.confirm_password {
+            return Err(Error::Validation(ValidationError::PasswordMismatch));
+        }
+
         let user_id = self.user_repository.create(new_user_data).await?;
         Ok(user_id.to_string())
     }
