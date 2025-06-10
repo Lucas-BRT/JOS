@@ -1,12 +1,23 @@
-use crate::{Error, Result, domain::user::entity::AccessLevel};
+use crate::{Error, Result, config::JWT_SECRET, domain::user::entity::AccessLevel};
+use axum::{
+    Json, RequestPartsExt,
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
+    response::{IntoResponse, Response},
+};
+use axum_extra::{
+    TypedHeader,
+    headers::{Authorization, authorization::Bearer},
+};
 use chrono::{Duration, Utc};
-use jsonwebtoken::{EncodingKey, Header, encode};
+use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: Uuid, // Subject (user id)
+    pub sub: Uuid,
     pub exp: usize,
     pub iat: usize,
     pub access_level: AccessLevel,
@@ -40,5 +51,56 @@ impl Claims {
             tracing::error!("failed to generate JWT token {}", e);
             Error::InternalServerError
         })
+    }
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct AuthUser {
+    pub user_id: Uuid,
+}
+
+#[derive(Debug)]
+pub enum AuthError {
+    InvalidToken,
+}
+
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        tracing::debug!("Extracting claims from request parts");
+        let (status, error_message) = match self {
+            AuthError::InvalidToken => (StatusCode::BAD_REQUEST, "Invalid token"),
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
+}
+
+impl<S> FromRequestParts<S> for Claims
+where
+    S: Send + Sync,
+{
+    type Rejection = AuthError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        _state: &S,
+    ) -> std::result::Result<Self, Self::Rejection> {
+        let TypedHeader(Authorization(bearer)) = parts
+            .extract::<TypedHeader<Authorization<Bearer>>>()
+            .await
+            .map_err(|_| AuthError::InvalidToken)?;
+
+        let token_data = decode::<Claims>(
+            bearer.token(),
+            &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+            &Validation::default(),
+        )
+        .map_err(|_| AuthError::InvalidToken)?;
+
+        Ok(token_data.claims)
     }
 }

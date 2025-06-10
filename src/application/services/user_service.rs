@@ -10,6 +10,7 @@ use crate::{
 };
 use chrono::Duration;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct UserService {
@@ -57,5 +58,9 @@ impl UserService {
 
     pub async fn get(&self) -> Result<Vec<User>> {
         Ok(self.user_repository.get_all().await?)
+    }
+
+    pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
+        self.user_repository.find_by_id(id).await
     }
 }

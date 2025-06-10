@@ -100,8 +100,34 @@ impl UserRepository for PostgresUserRepository {
         todo!()
     }
 
-    async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>> {
-        todo!()
+    async fn find_by_id(&self, id: &Uuid) -> Result<User> {
+        let result = sqlx::query_as!(
+            UserModel,
+            r#"
+                SELECT
+                    id,
+                    name,
+                    email,
+                    password_hash,
+                    access_level as "access_level: AccessLevelModel",
+                    bio,
+                    avatar_url,
+                    nickname,
+                    years_of_experience,
+                    created_at,
+                    updated_at
+                FROM users WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(self.pool.as_ref())
+        .await
+        .map_err(|e| Error::Repository(RepositoryError::DatabaseError(e)))?;
+
+        match result {
+            Some(user) => Ok(user.into()),
+            None => Err(RepositoryError::UserNotFound.into()),
+        }
     }
 
     async fn find_by_email(&self, email: &str) -> Result<User> {

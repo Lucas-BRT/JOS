@@ -1,9 +1,11 @@
-use crate::state::AppState;
+use crate::{
+    Result, interfaces::http::user::dtos::MeResponse, state::AppState, utils::jwt::Claims,
+};
 use axum::{
     Json, Router,
     extract::{Multipart, State},
     response::IntoResponse,
-    routing::post,
+    routing::{get, post},
 };
 use chrono::Utc;
 use serde_json::json;
@@ -89,8 +91,16 @@ pub async fn upload_image(
     .into_response()
 }
 
+#[axum::debug_handler]
+pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<Json<MeResponse>> {
+    let user = app_state.user_service.find_by_id(&user.sub).await?;
+
+    Ok(Json(user.into()))
+}
+
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/upload-image/{uuid}/image", post(upload_image))
+        .route("/me", get(me))
         .with_state(state.clone())
 }
