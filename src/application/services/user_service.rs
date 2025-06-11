@@ -52,8 +52,8 @@ impl UserService {
         }
     }
 
-    pub async fn find_by_username(&self, _username: &str) -> Result<User> {
-        todo!()
+    pub async fn find_by_username(&self, username: &str) -> Result<User> {
+        Ok(self.user_repository.find_by_username(username).await?)
     }
 
     pub async fn get(&self) -> Result<Vec<User>> {
