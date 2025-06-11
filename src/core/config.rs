@@ -21,7 +21,7 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         let database_url = std::env::var("DATABASE_URL")
-            .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?;
+            .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))?;
 
         let server_port: u32 = std::env::var("PORT")
             .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))?
