@@ -1,58 +1,73 @@
--- Enums
-CREATE TYPE user_role AS ENUM ('user', 'admin');
+-- ENUMs
+CREATE TYPE access_level AS ENUM ('user', 'admin', 'moderator');
 
--- Genres
-CREATE TABLE IF NOT EXISTS game_genres (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    category TEXT NOT NULL
-);
+CREATE TYPE attendance_status AS ENUM ('unknown', 'confirmed', 'absent');
 
--- Systems
-CREATE TABLE IF NOT EXISTS systems (
-    id SERIAL PRIMARY KEY,
-    name TEXT UNIQUE NOT NULL,
-    description TEXT,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
-);
+CREATE TYPE session_status AS ENUM ('planned', 'confirmed', 'cancelled', 'finished');
 
--- Users
+CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
+
+-- Users table
 CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    username TEXT UNIQUE NOT NULL,
-    display_name TEXT NOT NULL,
-    email TEXT UNIQUE NOT NULL,
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    email TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
-    user_role user_role DEFAULT 'user' NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    access_level access_level NOT NULL,
+    bio TEXT,
+    avatar_url TEXT,
+    nickname TEXT,
+    years_of_experience INTEGER,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
 );
 
--- Tables (RPG groups)
+-- Table for game systems
+CREATE TABLE IF NOT EXISTS game_systems (
+    id UUID PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    description TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+);
+
+-- Tables table
 CREATE TABLE IF NOT EXISTS tables (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    gm_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    id UUID PRIMARY KEY,
+    gm_id UUID NOT NULL REFERENCES users (id),
     title TEXT NOT NULL,
-    description TEXT,
-    system_id INT NOT NULL REFERENCES systems (id),
-    contact_info TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    game_system_id UUID NOT NULL REFERENCES game_systems (id),
+    is_public BOOLEAN NOT NULL DEFAULT FALSE,
+    description TEXT NOT NULL,
+    player_slots INTEGER NOT NULL CHECK (player_slots >= 0),
+    occupied_slots INTEGER NOT NULL CHECK (
+        occupied_slots >= 0
+        AND occupied_slots <= player_slots
+    ),
+    bg_image_link TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
 );
 
--- Table Genres (many-to-many)
-CREATE TABLE IF NOT EXISTS table_genres (
-    table_id UUID NOT NULL REFERENCES tables (id) ON DELETE CASCADE,
-    genre_id INT NOT NULL REFERENCES game_genres (id) ON DELETE CASCADE,
-    PRIMARY KEY (table_id, genre_id)
+-- Requests table
+CREATE TABLE IF NOT EXISTS requests (
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES users (id),
+    table_id UUID NOT NULL REFERENCES tables (id),
+    status request_status NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
 );
 
--- Participants
-CREATE TABLE IF NOT EXISTS table_participants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    table_id UUID NOT NULL REFERENCES tables (id) ON DELETE CASCADE,
-    joined_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (user_id, table_id)
+-- Sessions table
+CREATE TABLE IF NOT EXISTS sessions (
+    id UUID PRIMARY KEY,
+    table_id UUID NOT NULL REFERENCES tables (id),
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ,
+    status session_status NOT NULL DEFAULT 'planned',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
 );

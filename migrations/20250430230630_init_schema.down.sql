@@ -1,18 +1,20 @@
--- Add down migration script here
--- Drop many-to-many first
-DROP TABLE IF EXISTS table_participants;
+-- Drop tables na ordem inversa para respeitar FKs
+DROP TABLE IF EXISTS sessions;
 
-DROP TABLE IF EXISTS table_genres;
+DROP TABLE IF EXISTS requests;
 
--- Drop dependent tables
 DROP TABLE IF EXISTS tables;
 
 DROP TABLE IF EXISTS users;
 
--- Drop lookup/reference tables
-DROP TABLE IF EXISTS systems;
+-- Drop types ENUM
+DROP TYPE IF EXISTS request_status;
 
-DROP TABLE IF EXISTS game_genres;
+DROP TYPE IF EXISTS session_status;
 
--- Drop enums
-DROP TYPE IF EXISTS user_role;
+DROP TYPE IF EXISTS attendance_status;
+
+DROP TYPE IF EXISTS access_level;
+
+-- Drop extension pgcrypto (normalmente não se remove, mas para completo)
+DROP EXTENSION IF EXISTS "pgcrypto";
