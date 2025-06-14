@@ -1,4 +1,4 @@
-use crate::{Error, Result, setup::SetupError};
+use crate::{Result, setup::SetupError};
 use chrono::Duration;
 use std::ops::Deref;
 use std::sync::LazyLock;

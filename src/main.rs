@@ -1,14 +1,9 @@
 #![allow(incomplete_features)]
 
-mod application;
-mod core;
-mod domain;
-mod infrastructure;
-mod interfaces;
-mod utils;
-
-use core::setup::{launch_server, setup_services};
-pub use core::*;
+use jos::{
+    Result,
+    setup::{launch_server, setup_services},
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
