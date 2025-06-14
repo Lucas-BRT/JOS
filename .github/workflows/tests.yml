@@ -37,6 +37,9 @@ jobs:
           components: rustfmt, clippy
 
       - name: Run cargo test
+        env:
+          DATABASE_URL: "postgres://testuser:testpassword@localhost:5432/testdb"
+          SQLX_OFFLINE: true
         run: cargo test --workspace --verbose
 
       - name: Run cargo clippy
