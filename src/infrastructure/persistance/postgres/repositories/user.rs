@@ -18,7 +18,7 @@ pub struct PostgresUserRepository {
     pool: Arc<PgPool>,
 }
 
-impl<'a> PostgresUserRepository {
+impl PostgresUserRepository {
     pub fn new(pool: Arc<PgPool>) -> Self {
         Self { pool }
     }
@@ -90,7 +90,7 @@ impl UserRepository for PostgresUserRepository {
         }
     }
 
-    async fn update(&self, user_id: &Uuid, data: &UpdateUserCommand) -> Result<()> {
+    async fn update(&self, _user_id: &Uuid, _data: &UpdateUserCommand) -> Result<()> {
         todo!()
     }
 

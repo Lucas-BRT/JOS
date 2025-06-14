@@ -22,7 +22,7 @@ pub struct UpdateTableCommand {
     pub bg_image_link: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TableFilters {
     pub title: Option<String>,
     pub game_system_id: Option<Uuid>,
@@ -32,19 +32,7 @@ pub struct TableFilters {
     pub bg_image_link: Option<String>,
 }
 
-impl Default for TableFilters {
-    fn default() -> Self {
-        Self {
-            title: None,
-            game_system_id: None,
-            is_public: None,
-            player_slots: None,
-            occupied_slots: None,
-            bg_image_link: None,
-        }
-    }
-}
-
+#[allow(unused)]
 pub struct TableGetOptions {
     pagination: Option<Pagination>,
     filters: Option<TableFilters>,

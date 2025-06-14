@@ -4,17 +4,12 @@ use uuid::Uuid;
 
 use crate::domain::game_system::GameSystem;
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Default)]
 pub enum AccessLevel {
     Admin,
     Moderator,
+    #[default]
     User,
-}
-
-impl Default for AccessLevel {
-    fn default() -> Self {
-        AccessLevel::User
-    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

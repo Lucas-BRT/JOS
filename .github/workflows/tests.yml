@@ -18,7 +18,6 @@ jobs:
           POSTGRES_USER: runner
           POSTGRES_PASSWORD: password
           POSTGRES_DB: jos_db
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -62,19 +61,31 @@ jobs:
         run: cargo install sqlx-cli --no-default-features --features rustls,postgres
 
       - name: Run Migrations
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: sqlx migrate run
 
       - name: Build project
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo build --workspace --verbose
 
       - name: Run tests
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo test --workspace
 
       - name: Run clippy (lint)
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo clippy --workspace -- -D warnings
 
       - name: Check formatting
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo fmt --all -- --check
 
       - name: Build documentation
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo doc --no-deps --workspace --verbose

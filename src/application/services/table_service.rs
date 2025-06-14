@@ -21,13 +21,11 @@ impl TableService {
     }
 
     pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Option<Table>> {
-        Ok(self.table_repository.find_by_id(table_id).await?)
+        self.table_repository.find_by_id(table_id).await
     }
 
     pub async fn get(&self, options: Option<TableFilters>) -> Result<Vec<Table>> {
-        let tables = self.table_repository.get(options).await?;
-
-        Ok(tables)
+        self.table_repository.get(options).await
     }
 
     pub async fn update(

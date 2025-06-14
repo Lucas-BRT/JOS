@@ -19,46 +19,41 @@ pub struct Model {
     pub updated_at: DateTime<Utc>,
 }
 
-impl Into<User> for Model {
-    fn into(self) -> User {
+impl From<Model> for User {
+    fn from(model: Model) -> Self {
         User {
-            id: self.id,
-            name: self.name,
-            email: self.email,
-            password_hash: self.password_hash,
-            access_level: self.access_level.into(),
-            bio: self.bio,
-            avatar_url: self.avatar_url,
-            nickname: self.nickname,
+            id: model.id,
+            name: model.name,
+            email: model.email,
+            password_hash: model.password_hash,
+            access_level: model.access_level.into(),
+            bio: model.bio,
+            avatar_url: model.avatar_url,
+            nickname: model.nickname,
             // guarantees that the years of experience is a positive number
-            years_of_experience: self
+            years_of_experience: model
                 .years_of_experience
                 .map(|years| years.try_into().unwrap_or_default()),
-            account_creation_date: self.created_at,
+            account_creation_date: model.created_at,
             favorite_game_systems: None,
             statistics: None,
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Type)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Type, Default)]
 #[sqlx(rename_all = "lowercase")]
 #[sqlx(type_name = "access_level")]
 pub enum AccessLevelModel {
     Admin,
     Moderator,
+    #[default]
     User,
 }
 
-impl Default for AccessLevelModel {
-    fn default() -> Self {
-        AccessLevelModel::User
-    }
-}
-
-impl Into<AccessLevel> for AccessLevelModel {
-    fn into(self) -> AccessLevel {
-        match self {
+impl From<AccessLevelModel> for AccessLevel {
+    fn from(value: AccessLevelModel) -> Self {
+        match value {
             AccessLevelModel::Admin => AccessLevel::Admin,
             AccessLevelModel::Moderator => AccessLevel::Moderator,
             AccessLevelModel::User => AccessLevel::User,
@@ -66,9 +61,9 @@ impl Into<AccessLevel> for AccessLevelModel {
     }
 }
 
-impl Into<AccessLevelModel> for AccessLevel {
-    fn into(self) -> AccessLevelModel {
-        match self {
+impl From<AccessLevel> for AccessLevelModel {
+    fn from(level: AccessLevel) -> Self {
+        match level {
             AccessLevel::Admin => AccessLevelModel::Admin,
             AccessLevel::Moderator => AccessLevelModel::Moderator,
             AccessLevel::User => AccessLevelModel::User,

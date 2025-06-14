@@ -30,10 +30,7 @@ pub async fn get_available_tables(
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
     let tables = app_state.table_service.get(filters).await?;
 
-    let tables = tables
-        .iter()
-        .map(|table| AvaliableTableResponse::from(table))
-        .collect();
+    let tables = tables.iter().map(AvaliableTableResponse::from).collect();
 
     Ok(Json(tables))
 }
