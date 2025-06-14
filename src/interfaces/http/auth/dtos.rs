@@ -27,11 +27,11 @@ pub struct LoginDto {
     pub password: String,
 }
 
-impl Into<LoginUserCommand> for LoginDto {
-    fn into(self) -> LoginUserCommand {
+impl From<LoginDto> for LoginUserCommand {
+    fn from(dto: LoginDto) -> LoginUserCommand {
         LoginUserCommand {
-            email: self.email,
-            password: self.password,
+            email: dto.email,
+            password: dto.password,
         }
     }
 }
@@ -72,9 +72,9 @@ pub enum InvalidImageError {
 
 #[derive(Debug, Validate, Deserialize)]
 pub struct UpdateProfile {
-    #[validate(length(min = 2, max = 32))]
+    #[validate(length(min = MIN_NICKNAME_LENGTH, max = MAX_NICKNAME_LENGTH))]
     pub nickname: Option<String>,
-    #[validate(length(min = 2, max = 128))]
+    #[validate(length(min = MIN_BIO_LENGTH, max = MAX_BIO_LENGTH))]
     pub bio: Option<String>,
     pub gender: Option<Gender>,
     #[validate(range(min = 0, max = 70))]
@@ -86,13 +86,13 @@ pub struct UpdateProfileWithAvatar {
     pub avatar: Option<Multipart>,
 }
 
-impl Into<CreateUserCommand> for SignupDto {
-    fn into(self) -> CreateUserCommand {
+impl From<SignupDto> for CreateUserCommand {
+    fn from(dto: SignupDto) -> CreateUserCommand {
         CreateUserCommand {
-            name: self.name,
-            email: self.email,
-            password: self.password,
-            confirm_password: self.confirm_password,
+            name: dto.name,
+            email: dto.email,
+            password: dto.password,
+            confirm_password: dto.confirm_password,
         }
     }
 }

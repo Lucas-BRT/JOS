@@ -18,9 +18,9 @@ pub enum RepositoryError {
     UserNotFound,
 }
 
-impl Into<Error> for RepositoryError {
-    fn into(self) -> Error {
-        Error::Repository(self)
+impl From<RepositoryError> for Error {
+    fn from(err: RepositoryError) -> Self {
+        Error::Repository(err)
     }
 }
 
@@ -29,46 +29,46 @@ impl IntoResponse for RepositoryError {
         match self {
             Self::DatabaseError(err) => {
                 tracing::error!("Database error: {}", err);
-                return (
+                (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(json!({
                         "message": "Internal Server Error"
                     })),
                 )
-                    .into_response();
+                    .into_response()
             }
             Self::UsernameAlreadyTaken(username) => {
                 tracing::error!("Username already taken: {}", username);
-                return (
+                (
                     StatusCode::BAD_REQUEST,
                     Json(json!({
                         "message": "Username already taken",
                         "value": username
                     })),
                 )
-                    .into_response();
+                    .into_response()
             }
             Self::EmailAlreadyTaken(email) => {
                 tracing::error!("Email already taken: {}", email);
-                return (
+                (
                     StatusCode::BAD_REQUEST,
                     Json(json!({
                         "message": "Email already taken",
                         "value": email
                     })),
                 )
-                    .into_response();
+                    .into_response()
             }
             Self::UserNotFound => {
                 tracing::warn!("User not found");
 
-                return (
+                (
                     StatusCode::NOT_FOUND,
                     Json(json!({
                         "message": "not found"
                     })),
                 )
-                    .into_response();
+                    .into_response()
             }
         }
     }

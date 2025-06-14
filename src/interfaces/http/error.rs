@@ -18,13 +18,13 @@ impl IntoResponse for ValidationError {
         match self {
             ValidationError::PasswordMismatch => {
                 tracing::error!("Password confirmation mismatch");
-                return (
+                (
                     StatusCode::BAD_REQUEST,
                     Json(json!({
                         "password_confirmation": ["Passwords do not match"]
                     })),
                 )
-                    .into_response();
+                    .into_response()
             }
             ValidationError::Other(errors) => {
                 let errors = errors

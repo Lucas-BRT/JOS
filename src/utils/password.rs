@@ -31,7 +31,7 @@ pub async fn verify_hash(password: String, hash: String) -> Result<bool> {
     let result = tokio::task::spawn_blocking(move || {
         let parsed_hash = PasswordHash::new(&hash).map_err(|_| {
             tracing::error!("failed to parse hash");
-            return Error::InternalServerError;
+            Error::InternalServerError
         })?;
 
         match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {

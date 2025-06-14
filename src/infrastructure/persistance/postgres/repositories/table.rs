@@ -6,11 +6,12 @@ use crate::{Db, Result};
 use async_trait::async_trait;
 use uuid::Uuid;
 
+#[allow(unused)]
 pub struct PostgresTableRepository {
     pool: Db,
 }
 
-impl<'a> PostgresTableRepository {
+impl PostgresTableRepository {
     pub fn new(pool: Db) -> Self {
         Self { pool }
     }
@@ -18,27 +19,27 @@ impl<'a> PostgresTableRepository {
 
 #[async_trait]
 impl TableRepository for PostgresTableRepository {
-    async fn create(&self, table_data: &CreateTableCommand) -> Result<String> {
+    async fn create(&self, _table_data: &CreateTableCommand) -> Result<String> {
         todo!()
     }
 
-    async fn update(&self, table_id: &Uuid, update_data: &UpdateTableCommand) -> Result<()> {
+    async fn update(&self, _table_id: &Uuid, _update_data: &UpdateTableCommand) -> Result<()> {
         todo!()
     }
 
-    async fn delete(&self, table_id: &Uuid) -> Result<()> {
+    async fn delete(&self, _table_id: &Uuid) -> Result<()> {
         todo!()
     }
 
-    async fn get(&self, options: Option<TableFilters>) -> Result<Vec<Table>> {
+    async fn get(&self, _options: Option<TableFilters>) -> Result<Vec<Table>> {
         todo!()
     }
 
-    async fn find_by_id(&self, table_id: &Uuid) -> Result<Option<Table>> {
+    async fn find_by_id(&self, _table_id: &Uuid) -> Result<Option<Table>> {
         todo!()
     }
 
-    async fn find_by_gm_id(&self, gm_id: &Uuid, pagination: &Pagination) -> Result<Vec<Table>> {
+    async fn find_by_gm_id(&self, _gm_id: &Uuid, _pagination: &Pagination) -> Result<Vec<Table>> {
         todo!()
     }
 }

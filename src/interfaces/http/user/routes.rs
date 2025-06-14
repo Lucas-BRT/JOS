@@ -16,10 +16,10 @@ const MAX_IMAGE_SIZE: usize = 1024 * 1024 * 5; // 5MB
 const ALLOWED_IMAGE_TYPES: [&str; 2] = ["image/jpeg", "image/png"];
 
 pub async fn upload_image(
-    State(app_state): State<Arc<AppState>>,
+    State(_app_state): State<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    while let Some(field_result) = multipart.next_field().await.transpose() {
+    if let Some(field_result) = multipart.next_field().await.transpose() {
         let field = match field_result {
             Ok(f) => f,
             Err(e) => {
@@ -46,10 +46,6 @@ pub async fn upload_image(
             .into_response();
         }
 
-        let file_name = field
-            .file_name()
-            .map(|s| s.to_string())
-            .unwrap_or("image".to_string());
         let timestamp = Utc::now().timestamp();
         let uuid = Uuid::new_v4();
         let final_name = format!("{}_{}.png", uuid, timestamp);

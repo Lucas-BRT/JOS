@@ -77,11 +77,15 @@ jobs:
 
       - name: Run clippy (lint)
         env:
-          SQLX_OFFLINE: true
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo clippy --workspace -- -D warnings
 
       - name: Check formatting
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo fmt --all -- --check
 
       - name: Build documentation
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
         run: cargo doc --no-deps --workspace --verbose
