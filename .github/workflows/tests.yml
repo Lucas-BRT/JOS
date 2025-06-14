@@ -15,6 +15,19 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -26,9 +39,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-postgres-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-
+            ${{ runner.os }}-cargo-postgres-
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -39,10 +52,11 @@ jobs:
       - name: Run cargo test
         env:
           DATABASE_URL: "postgres://testuser:testpassword@localhost:5432/testdb"
-          SQLX_OFFLINE: true
         run: cargo test --workspace --verbose
 
       - name: Run cargo clippy
+        env:
+          DATABASE_URL: "postgres://testuser:testpassword@localhost:5432/testdb"
         run: cargo clippy --workspace --verbose -- -D warnings
 
       - name: Run cargo fmt
