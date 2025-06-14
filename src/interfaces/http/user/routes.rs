@@ -19,7 +19,7 @@ pub async fn upload_image(
     State(app_state): State<Arc<AppState>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    while let Some(field_result) = multipart.next_field().await.transpose() {
+    if let Some(field_result) = multipart.next_field().await.transpose() {
         let field = match field_result {
             Ok(f) => f,
             Err(e) => {

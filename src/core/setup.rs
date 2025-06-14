@@ -38,7 +38,7 @@ impl From<SetupError> for Error {
 }
 
 pub async fn setup_services() -> Result<Arc<AppState>> {
-    let _ = FmtSubscriber::builder()
+    FmtSubscriber::builder()
         .with_max_level(Level::INFO)
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_target(true)
