@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    name: Build, Test, Lint, Audit, Docs
+    name: Build, Test, Lint, Docs
     runs-on: ubuntu-latest
 
     steps:
