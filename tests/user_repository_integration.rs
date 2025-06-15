@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-mod user_creation {
+mod create {
     use super::*;
 
     #[sqlx::test(migrations = "./migrations")]
@@ -89,7 +89,7 @@ mod user_creation {
     }
 }
 
-mod user_search {
+mod read {
     use super::*;
 
     #[sqlx::test(migrations = "./migrations")]
@@ -187,6 +187,87 @@ mod user_search {
         let non_existent_username = "nonexistent";
 
         let result = user_repo.find_by_username(non_existent_username).await;
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            Error::Repository(RepositoryError::UserNotFound) => {
+                // Success, the expected error was returned.
+            }
+            err => panic!("Unexpected error: {:?}", err),
+        }
+    }
+}
+
+mod update {
+    use jos::domain::user::dtos::UpdateUserCommand;
+
+    use super::*;
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_update_user_success(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let user_data = CreateUserCommand {
+            name: "update_me".to_string(),
+            email: "update@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&user_data).await.unwrap();
+
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            name: None,
+            email: None,
+            password: None,
+            bio: None,
+            avatar_url: None,
+            nickname: Some("updated_nickname".to_string()),
+            years_of_experience: Some(5),
+        };
+        let result = user_repo.update(&updated_user_data).await;
+
+        assert!(result.is_ok());
+
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+
+        assert_eq!(
+            found_user.nickname,
+            Some(updated_user_data.nickname.unwrap())
+        );
+    }
+}
+
+mod delete {
+    use super::*;
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_delete_user_success(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "delete_me".to_string(),
+            email: "delete@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let result = user_repo.delete(&created_user.id).await;
+
+        assert!(result.is_ok());
+
+        let deleted_user = user_repo.find_by_id(&created_user.id).await;
+        assert!(
+            deleted_user
+                .is_err_and(|e| matches!(e, Error::Repository(RepositoryError::UserNotFound)))
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_delete_user_not_found(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let non_existent_id = Uuid::new_v4();
+
+        let result = user_repo.delete(&non_existent_id).await;
 
         assert!(result.is_err());
         match result.err().unwrap() {
