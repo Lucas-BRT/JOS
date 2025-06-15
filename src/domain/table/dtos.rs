@@ -1,5 +1,4 @@
-use crate::domain::utils::pagination::Pagination;
-use serde::{Deserialize, Serialize};
+use crate::domain::{table::entity::PlayerExperience, utils::update::Update};
 use uuid::Uuid;
 
 pub struct CreateTableCommand {
@@ -9,49 +8,17 @@ pub struct CreateTableCommand {
     pub game_system_id: Uuid,
     pub is_public: bool,
     pub player_slots: u32,
-    pub occupied_slots: u32,
     pub bg_image_link: Option<String>,
+    pub recommended_player_experience: Option<PlayerExperience>,
 }
 
 pub struct UpdateTableCommand {
-    pub title: String,
-    pub description: String,
-    pub is_public: bool,
-    pub player_slots: u32,
-    pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct TableFilters {
-    pub title: Option<String>,
-    pub game_system_id: Option<Uuid>,
-    pub is_public: Option<bool>,
-    pub player_slots: Option<u32>,
-    pub occupied_slots: Option<u32>,
-    pub bg_image_link: Option<String>,
-}
-
-#[allow(unused)]
-pub struct TableGetOptions {
-    pagination: Option<Pagination>,
-    filters: Option<TableFilters>,
-}
-
-impl TableGetOptions {
-    pub fn new(pagination: Option<Pagination>, filters: Option<TableFilters>) -> Self {
-        Self {
-            pagination,
-            filters,
-        }
-    }
-}
-
-impl Default for TableGetOptions {
-    fn default() -> Self {
-        Self {
-            pagination: Some(Pagination::default()),
-            filters: None,
-        }
-    }
+    pub id: Uuid,
+    pub title: Update<String>,
+    pub description: Update<String>,
+    pub game_system_id: Update<Uuid>,
+    pub is_public: Update<bool>,
+    pub player_slots: Update<u32>,
+    pub recommended_player_experience: Update<Option<PlayerExperience>>,
+    pub bg_image_link: Update<Option<String>>,
 }

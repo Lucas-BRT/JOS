@@ -158,10 +158,6 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
-    async fn get_all(&self) -> Result<Vec<User>> {
-        todo!()
-    }
-
     async fn find_by_username(&self, name: &str) -> Result<User> {
         let result = sqlx::query_as!(
             UserModel,

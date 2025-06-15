@@ -56,10 +56,6 @@ impl UserService {
         self.user_repository.find_by_username(username).await
     }
 
-    pub async fn get(&self) -> Result<Vec<User>> {
-        self.user_repository.get_all().await
-    }
-
     pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
         self.user_repository.find_by_id(id).await
     }

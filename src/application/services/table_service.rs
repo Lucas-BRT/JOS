@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableCommand};
+use crate::domain::table::dtos::{CreateTableCommand, UpdateTableCommand};
 use crate::domain::table::{entity::Table, table_repository::TableRepository};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -24,18 +24,8 @@ impl TableService {
         self.table_repository.find_by_id(table_id).await
     }
 
-    pub async fn get(&self, options: Option<TableFilters>) -> Result<Vec<Table>> {
-        self.table_repository.get(options).await
-    }
-
-    pub async fn update(
-        &self,
-        table_id: &Uuid,
-        table_to_update: &UpdateTableCommand,
-    ) -> Result<()> {
-        self.table_repository
-            .update(table_id, table_to_update)
-            .await?;
+    pub async fn update(&self, table_to_update: &UpdateTableCommand) -> Result<()> {
+        self.table_repository.update(table_to_update).await?;
 
         Ok(())
     }

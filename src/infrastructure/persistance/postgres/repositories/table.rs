@@ -1,4 +1,4 @@
-use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableCommand};
+use crate::domain::table::dtos::{CreateTableCommand, UpdateTableCommand};
 use crate::domain::table::entity::Table;
 use crate::domain::table::table_repository::TableRepository;
 use crate::domain::utils::pagination::Pagination;
@@ -23,15 +23,11 @@ impl TableRepository for PostgresTableRepository {
         todo!()
     }
 
-    async fn update(&self, _table_id: &Uuid, _update_data: &UpdateTableCommand) -> Result<()> {
+    async fn update(&self, _update_data: &UpdateTableCommand) -> Result<()> {
         todo!()
     }
 
     async fn delete(&self, _table_id: &Uuid) -> Result<()> {
-        todo!()
-    }
-
-    async fn get(&self, _options: Option<TableFilters>) -> Result<Vec<Table>> {
         todo!()
     }
 
