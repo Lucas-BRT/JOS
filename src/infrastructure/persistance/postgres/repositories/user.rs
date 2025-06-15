@@ -4,6 +4,7 @@ use crate::domain::user::dtos::CreateUserCommand;
 use crate::domain::user::dtos::UpdateUserCommand;
 use crate::domain::user::entity::User;
 use crate::domain::user::user_repository::UserRepository;
+use crate::domain::utils::update::Update;
 use crate::infrastructure::persistance::postgres::models::user::AccessLevelModel;
 use crate::infrastructure::persistance::postgres::models::user::Model as UserModel;
 use crate::infrastructure::persistance::postgres::repositories::error::RepositoryError;
@@ -103,15 +104,15 @@ impl UserRepository for PostgresUserRepository {
             separated = true;
         };
 
-        if let Some(name) = &data.name {
+        if let Update::Change(name) = &data.name {
             add_separator(&mut query_builder);
             query_builder.push("name = ").push_bind(name);
         }
-        if let Some(email) = &data.email {
+        if let Update::Change(email) = &data.email {
             add_separator(&mut query_builder);
             query_builder.push("email = ").push_bind(email);
         }
-        if let Some(password) = &data.password {
+        if let Update::Change(password) = &data.password {
             add_separator(&mut query_builder);
             // todo: refact generate_hash to avoid cloning the String
             let hashed_password = generate_hash(password.clone()).await?;
@@ -119,23 +120,23 @@ impl UserRepository for PostgresUserRepository {
                 .push("password_hash = ")
                 .push_bind(hashed_password);
         }
-        if let Some(bio) = &data.bio {
+        if let Update::Change(bio) = &data.bio {
             add_separator(&mut query_builder);
             query_builder.push("bio = ").push_bind(bio);
         }
-        if let Some(avatar_url) = &data.avatar_url {
+        if let Update::Change(avatar_url) = &data.avatar_url {
             add_separator(&mut query_builder);
             query_builder.push("avatar_url = ").push_bind(avatar_url);
         }
-        if let Some(nickname) = &data.nickname {
+        if let Update::Change(nickname) = &data.nickname {
             add_separator(&mut query_builder);
             query_builder.push("nickname = ").push_bind(nickname);
         }
-        if let Some(years) = &data.years_of_experience {
+        if let Update::Change(years) = data.years_of_experience {
             add_separator(&mut query_builder);
             query_builder
                 .push("years_of_experience = ")
-                .push_bind(*years as i32);
+                .push_bind(years.map(|value| value as i32));
         }
 
         if !separated {

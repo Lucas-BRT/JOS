@@ -1,3 +1,4 @@
+use crate::domain::utils::update::Update;
 use uuid::Uuid;
 
 pub struct CreateUserCommand {
@@ -15,11 +16,11 @@ pub struct LoginUserCommand {
 #[derive(Debug, Default)]
 pub struct UpdateUserCommand {
     pub id: Uuid,
-    pub name: Option<String>,
-    pub email: Option<String>,
-    pub password: Option<String>,
-    pub bio: Option<String>,
-    pub avatar_url: Option<String>,
-    pub nickname: Option<String>,
-    pub years_of_experience: Option<u32>,
+    pub name: Update<String>,
+    pub email: Update<String>,
+    pub password: Update<String>,
+    pub bio: Update<Option<String>>,
+    pub avatar_url: Update<Option<String>>,
+    pub nickname: Update<Option<String>>,
+    pub years_of_experience: Update<Option<u32>>,
 }
