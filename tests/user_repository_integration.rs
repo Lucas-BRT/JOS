@@ -6,7 +6,7 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
-mod user_creation {
+mod create {
     use super::*;
 
     #[sqlx::test(migrations = "./migrations")]
@@ -89,7 +89,7 @@ mod user_creation {
     }
 }
 
-mod user_search {
+mod read {
     use super::*;
 
     #[sqlx::test(migrations = "./migrations")]
@@ -187,6 +187,296 @@ mod user_search {
         let non_existent_username = "nonexistent";
 
         let result = user_repo.find_by_username(non_existent_username).await;
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            Error::Repository(RepositoryError::UserNotFound) => {
+                // Success, the expected error was returned.
+            }
+            err => panic!("Unexpected error: {:?}", err),
+        }
+    }
+}
+
+mod update {
+    use jos::domain::{user::dtos::UpdateUserCommand, utils::update::Update};
+
+    use super::*;
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_update_user_success(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let user_data = CreateUserCommand {
+            name: "update_me".to_string(),
+            email: "update@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&user_data).await.unwrap();
+
+        let new_nickname = "updated_nickname".to_string();
+
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            nickname: Update::Change(Some(new_nickname.clone())),
+            years_of_experience: Update::Change(Some(5u32)),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+
+        assert!(result.is_ok());
+
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+
+        assert_eq!(found_user.nickname, Some(new_nickname));
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_update_user_email(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "update_email".to_string(),
+            email: "update@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let new_email = "new_email@example.com".to_string();
+
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            email: Update::Change(new_email.clone()),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+
+        assert!(result.is_ok());
+
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+
+        assert_ne!(found_user.email, created_user.email);
+        assert_eq!(Some(found_user.email), Some(new_email));
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_update_user_password(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "update_password".to_string(),
+            email: "update_password@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            password: Update::Change("new_password".to_string()),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+
+        assert!(result.is_ok());
+
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+
+        assert_ne!(found_user.password_hash, created_user.password_hash)
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_remove_user_bio(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+
+        // Create a new user and add a bio
+        let new_user_data = CreateUserCommand {
+            name: "update_bio".to_string(),
+            email: "update@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        // Update the user's bio
+        let new_bio = "I play RPG games from 18 years, i am a game master with 10 years of experience and I love to play with my friends.".to_string();
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            bio: Update::Change(Some(new_bio.clone())),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.bio, Some(new_bio.clone()));
+
+        // Remove the user's bio
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            bio: Update::Change(None),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the bio is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.bio, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_remove_user_avatar(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "avatar_user".to_string(),
+            email: "avatar@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let avatar_url = "https://www.pudim.com.br/pudim.jpg".to_string();
+
+        // Update the user's avatar
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            avatar_url: Update::Change(Some(avatar_url.clone())),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user and assert that the avatar is set
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.avatar_url, Some(avatar_url.clone()));
+
+        // Remove the user's avatar
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            avatar_url: Update::Change(None),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the avatar is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.avatar_url, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn remove_user_nickname(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "delete_me".to_string(),
+            email: "delete@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let new_nickname = "DragonSlayer".to_string();
+
+        // Add the user's nickname
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            nickname: Update::Change(Some(new_nickname.to_string())),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the nickname is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.nickname, Some(new_nickname.to_string()));
+
+        // Remove the user's nickname
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            nickname: Update::Change(None),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the nickname is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.nickname, None);
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_remove_user_experience_years(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "delete_me".to_string(),
+            email: "delete@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let new_experience_years: u32 = 7;
+
+        // Add the user's years of experience
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            years_of_experience: Update::Change(Some(new_experience_years)),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the years of experience is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.years_of_experience, Some(new_experience_years));
+
+        // Remove the user's years of experience
+        let updated_user_data = UpdateUserCommand {
+            id: created_user.id,
+            years_of_experience: Update::Change(None),
+            ..Default::default()
+        };
+        let result = user_repo.update(&updated_user_data).await;
+        assert!(result.is_ok());
+
+        // Retrieve the updated user again and assert that the years of experience is now None
+        let found_user = user_repo.find_by_id(&created_user.id).await.unwrap();
+        assert_eq!(found_user.years_of_experience, None);
+    }
+}
+
+mod delete {
+    use super::*;
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_delete_user_success(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let new_user_data = CreateUserCommand {
+            name: "delete_me".to_string(),
+            email: "delete@example.com".to_string(),
+            password: "password123".to_string(),
+            confirm_password: "password123".to_string(),
+        };
+        let created_user = user_repo.create(&new_user_data).await.unwrap();
+
+        let result = user_repo.delete(&created_user.id).await;
+
+        assert!(result.is_ok());
+
+        let deleted_user = user_repo.find_by_id(&created_user.id).await;
+        assert!(
+            deleted_user
+                .is_err_and(|e| matches!(e, Error::Repository(RepositoryError::UserNotFound)))
+        );
+    }
+
+    #[sqlx::test(migrations = "./migrations")]
+    async fn test_delete_user_not_found(pool: PgPool) {
+        let user_repo = PostgresUserRepository::new(Arc::new(pool));
+        let non_existent_id = Uuid::new_v4();
+
+        let result = user_repo.delete(&non_existent_id).await;
 
         assert!(result.is_err());
         match result.err().unwrap() {
