@@ -65,92 +65,158 @@ where
         let mut player_slots = None;
         let mut image_file = None;
         let mut recommended_player_experience = None;
+        let mut error: Option<ValidationError> = None;
 
         while let Some(field) = multipart.next_field().await.unwrap_or(None) {
             let name = field.name().unwrap_or("").to_string();
 
             match name.as_str() {
-                "gm_id" => {
-                    let value = field.text().await.unwrap_or_default();
-                    gm_id = Some(Uuid::parse_str(&value).map_err(|e| {
-                        Error::Validation(ValidationError::InvalidGmId(e.to_string()))
-                    })?);
-                }
-                "title" => {
-                    title = Some(field.text().await.unwrap_or_default());
-                }
-                "description" => {
-                    description = Some(field.text().await.unwrap_or_default());
-                }
-                "game_system_id" => {
-                    let value = field.text().await.unwrap_or_default();
-                    game_system_id = Some(Uuid::parse_str(&value).map_err(|e| {
-                        Error::Validation(ValidationError::InvalidGameId(e.to_string()))
-                    })?);
-                }
-                "is_public" => {
-                    let value = field.text().await.unwrap_or_default();
-                    is_public = Some(value.parse::<bool>().map_err(|_| {
-                        Error::Validation(ValidationError::BadRequest(
-                            "is_public must be true or false".to_string(),
-                        ))
-                    })?);
-                }
-                "player_slots" => {
-                    let value = field.text().await.unwrap_or_default();
-                    player_slots = Some(value.parse::<u32>().map_err(|_| {
-                        Error::Validation(ValidationError::BadRequest(
-                            "player_slots must be an integer".to_string(),
-                        ))
-                    })?);
-                }
-                "recommended_player_experience" => {
-                    let value = field.text().await.unwrap_or_default();
-                    recommended_player_experience = match value.to_lowercase().as_str() {
-                        "beginner" => Some(PlayerExperience::Beginner),
-                        "intermediate" => Some(PlayerExperience::Intermediate),
-                        "advanced" => Some(PlayerExperience::Advanced),
-                        "expert" => Some(PlayerExperience::Expert),
-                        _ => None,
-                    };
-                }
-                "image" => {
-                    let content_type = field.content_type().unwrap_or("").to_string();
-                    if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
-                        return Err(Error::Validation(ValidationError::BadRequest(
-                            "Invalid image type".to_string(),
+                "gm_id" => match gm_id {
+                    Some(_) => {
+                        tracing::error!("gm_id already loaded");
+                        error = Some(ValidationError::DuplicatedFieldError("gm_id".to_string()));
+                    }
+                    None => {
+                        let value = field.text().await.unwrap_or_default();
+                        gm_id = Some(Uuid::parse_str(&value).map_err(|e| {
+                            Error::Validation(ValidationError::InvalidGmId(e.to_string()))
+                        })?);
+                    }
+                },
+                "title" => match title {
+                    Some(_) => {
+                        tracing::error!("title already loaded");
+                        error = Some(ValidationError::DuplicatedFieldError("title".to_string()));
+                    }
+                    None => {
+                        title = Some(field.text().await.unwrap_or_default());
+                    }
+                },
+                "description" => match description {
+                    Some(_) => {
+                        tracing::error!("description already loaded");
+                        error = Some(ValidationError::DuplicatedFieldError(
+                            "description".to_string(),
+                        ));
+                    }
+                    None => {
+                        description = Some(field.text().await.unwrap_or_default());
+                    }
+                },
+                "game_system_id" => match game_system_id {
+                    Some(_) => {
+                        tracing::error!("game_system_id already loaded");
+                        error = Some(ValidationError::DuplicatedFieldError(
+                            "game_system_id".to_string(),
+                        ));
+                    }
+                    None => {
+                        let value = field.text().await.unwrap_or_default();
+                        game_system_id = Some(Uuid::parse_str(&value).map_err(|e| {
+                            Error::Validation(ValidationError::InvalidGameId(e.to_string()))
+                        })?);
+                    }
+                },
+                "is_public" => match is_public {
+                    Some(_) => {
+                        tracing::error!("is_public already loaded");
+                        error = Some(ValidationError::DuplicatedFieldError(
+                            "is_public".to_string(),
+                        ));
+                    }
+                    None => {
+                        let value = field.text().await.unwrap_or_default();
+                        is_public = Some(value.parse::<bool>().map_err(|_| {
+                            Error::Validation(ValidationError::BadRequest(
+                                "is_public must be a boolean value".to_string(),
+                            ))
+                        })?);
+                    }
+                },
+                "player_slots" => match player_slots {
+                    Some(_) => {
+                        tracing::error!("player_slots already loaded");
+                        return Err(Error::Validation(ValidationError::DuplicatedFieldError(
+                            "player_slots".to_string(),
                         )));
                     }
-
-                    let file_name = field.file_name().unwrap_or("upload").to_string();
-
-                    let mut data = bytes::BytesMut::new();
-                    let mut field_stream = field;
-
-                    while let Some(chunk) = field_stream.chunk().await.map_err(|_| {
-                        Error::Validation(ValidationError::BadRequest(
-                            "Failed to read image data".to_string(),
-                        ))
-                    })? {
-                        tracing::info!("Received chunk of size {}", chunk.len());
-                        if (data.len() + chunk.len()) > MAX_IMAGE_SIZE {
+                    None => {
+                        let value = field.text().await.unwrap_or_default();
+                        player_slots = Some(value.parse::<u32>().map_err(|_| {
+                            Error::Validation(ValidationError::BadRequest(
+                                "player_slots must be an unsigned integer".to_string(),
+                            ))
+                        })?);
+                    }
+                },
+                "recommended_player_experience" => match recommended_player_experience {
+                    Some(_) => {
+                        tracing::error!("recommended_player_experience already loaded");
+                        return Err(Error::Validation(ValidationError::DuplicatedFieldError(
+                            "recommended_player_experience".to_string(),
+                        )));
+                    }
+                    None => {
+                        let value = field.text().await.unwrap_or_default();
+                        recommended_player_experience = match value.to_lowercase().as_str() {
+                            "beginner" => Some(PlayerExperience::Beginner),
+                            "intermediate" => Some(PlayerExperience::Intermediate),
+                            "advanced" => Some(PlayerExperience::Advanced),
+                            "expert" => Some(PlayerExperience::Expert),
+                            _ => None,
+                        };
+                    }
+                },
+                "image" => match image_file {
+                    Some(_) => {
+                        tracing::error!("image already loaded");
+                        return Err(Error::Validation(ValidationError::DuplicatedFieldError(
+                            "image".to_string(),
+                        )));
+                    }
+                    None => {
+                        let content_type = field.content_type().unwrap_or("").to_string();
+                        if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
                             return Err(Error::Validation(ValidationError::BadRequest(
-                                "Image size exceeds 5MB limit".to_string(),
+                                "Invalid image type".to_string(),
                             )));
                         }
-                        data.extend_from_slice(&chunk);
-                    }
 
-                    if !data.is_empty() {
-                        image_file = Some(ImageFile {
-                            filename: file_name,
-                            content_type,
-                            data: data.freeze(),
-                        });
+                        let file_name = field.file_name().unwrap_or("upload").to_string();
+
+                        let mut data = bytes::BytesMut::new();
+                        let mut field_stream = field;
+
+                        while let Some(chunk) = field_stream.chunk().await.map_err(|_| {
+                            Error::Validation(ValidationError::BadRequest(
+                                "Failed to read image data".to_string(),
+                            ))
+                        })? {
+                            tracing::info!("Received chunk of size {}", chunk.len());
+                            if (data.len() + chunk.len()) > MAX_IMAGE_SIZE {
+                                tracing::error!("Image size exceeds 5MB limit");
+                                return Err(Error::Validation(ValidationError::BadRequest(
+                                    "Image size exceeds 5MB limit".to_string(),
+                                )));
+                            }
+                            data.extend_from_slice(&chunk);
+                        }
+
+                        if !data.is_empty() {
+                            image_file = Some(ImageFile {
+                                filename: file_name,
+                                content_type,
+                                data: data.freeze(),
+                            });
+                        }
                     }
-                }
+                },
                 _ => {}
             }
+        }
+
+        if let Some(err) = error {
+            return Err(Error::Validation(err));
         }
 
         let dto = CreateTableDto {

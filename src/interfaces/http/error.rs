@@ -7,6 +7,8 @@ use serde_json::json;
 
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
+    #[error("Field already provided: {0}")]
+    DuplicatedFieldError(String),
     #[error("Invalid image format: {0}")]
     InvalidImageFormat(String),
     #[error("Image too big: {0}")]
@@ -32,6 +34,13 @@ pub enum ValidationError {
 impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         match self {
+            Self::DuplicatedFieldError(field) => (
+                StatusCode::BAD_REQUEST,
+                Json(json!({
+                    "error": field
+                })),
+            )
+                .into_response(),
             Self::ImageTooBig(msg) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({

@@ -19,7 +19,7 @@ const MAX_NICKNAME_LENGTH: u64 = 100;
 const MIN_BIO_LENGTH: u64 = 2;
 const MAX_BIO_LENGTH: u64 = 200;
 
-#[derive(Validate, Deserialize)]
+#[derive(Validate, Deserialize, Clone)]
 pub struct LoginDto {
     #[validate(email)]
     pub email: String,
