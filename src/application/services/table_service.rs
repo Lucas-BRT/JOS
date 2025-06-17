@@ -1,8 +1,7 @@
 use crate::Result;
 use crate::domain::table::dtos::{CreateTableCommand, UpdateTableCommand};
-use crate::domain::table::{entity::Table, table_repository::TableRepository};
+use crate::domain::table::table_repository::TableRepository;
 use std::sync::Arc;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct TableService {
@@ -18,10 +17,6 @@ impl TableService {
         let created_table = self.table_repository.create(new_table_data).await?;
 
         Ok(created_table.to_string())
-    }
-
-    pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Option<Table>> {
-        self.table_repository.find_by_id(table_id).await
     }
 
     pub async fn update(&self, table_to_update: &UpdateTableCommand) -> Result<()> {

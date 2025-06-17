@@ -1,7 +1,6 @@
 use crate::domain::table::dtos::{CreateTableCommand, UpdateTableCommand};
 use crate::domain::table::entity::Table;
 use crate::domain::table::table_repository::TableRepository;
-use crate::domain::utils::pagination::Pagination;
 use crate::{Db, Result};
 use async_trait::async_trait;
 use uuid::Uuid;
@@ -31,11 +30,11 @@ impl TableRepository for PostgresTableRepository {
         todo!()
     }
 
-    async fn find_by_id(&self, _table_id: &Uuid) -> Result<Option<Table>> {
+    async fn find_by_gm_id(&self, _gm_id: &Uuid) -> Result<Vec<Table>> {
         todo!()
     }
 
-    async fn find_by_gm_id(&self, _gm_id: &Uuid, _pagination: &Pagination) -> Result<Vec<Table>> {
+    async fn find_by_title(&self, _title: &str) -> Result<Option<Vec<Table>>> {
         todo!()
     }
 }
