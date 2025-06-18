@@ -1,7 +1,8 @@
 use crate::{
     domain::{table::entity::PlayerExperience, utils::image_file::ImageFile},
-    interfaces::http::error::ValidationError,
+    interfaces::http::{error::ValidationError, utils::TryFromField},
 };
+use async_trait::async_trait;
 use axum::extract::{FromRequest, Multipart, multipart::Field};
 use std::future::Future;
 use uuid::Uuid;
@@ -16,8 +17,9 @@ const MAX_PLAYER_SLOTS: u32 = 30;
 const ALLOWED_IMAGE_TYPES: [&str; 2] = ["image/jpeg", "image/png"];
 const MAX_IMAGE_SIZE: usize = 5 * 1024 * 1024; // 5 MB
 
-impl ImageFile {
-    pub async fn from_field(mut field: Field<'_>) -> Result<Self, ValidationError> {
+#[async_trait]
+impl TryFromField for ImageFile {
+    async fn try_from_field(mut field: Field<'_>) -> Result<Self, ValidationError> {
         let content_type = field.content_type().unwrap_or("").to_string();
         if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
             return Err(ValidationError::BadRequest {
@@ -215,7 +217,7 @@ where
                 }
                 "image" => {
                     parse_unique_field(&mut image_file, "image", || async {
-                        ImageFile::from_field(field).await
+                        ImageFile::try_from_field(field).await
                     })
                     .await?;
                 }
