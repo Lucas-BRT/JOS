@@ -11,8 +11,8 @@ pub enum ValidationError {
     DuplicatedFieldError(String),
     #[error("Invalid image format: {0}")]
     InvalidImageFormat(String),
-    #[error("Image too big: {0}")]
-    ImageTooBig(String),
+    #[error("Image size too big: {limit}")]
+    InvalidImageSize { limit: u64 },
     #[error("Missing field: {0}")]
     MissingField(String),
     #[error("Invalid player slots: {0}")]
@@ -34,19 +34,19 @@ pub enum ValidationError {
 impl IntoResponse for ValidationError {
     fn into_response(self) -> Response {
         match self {
-            Self::DuplicatedFieldError(field) => (
+            Self::InvalidImageSize { limit } => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
-                    "error": field
+                    "error": "invalid-image-size",
+                    "reason": format!("maxium allowed image size: {}", limit)
                 })),
             )
                 .into_response(),
-            Self::ImageTooBig(msg) => (
+            Self::DuplicatedFieldError(field) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
-                    "errors": {
-                        "image": [msg]
-                    }
+                    "error": "duplicated-field",
+                    "reason": field
                 })),
             )
                 .into_response(),
@@ -68,7 +68,7 @@ impl IntoResponse for ValidationError {
                 })),
             )
                 .into_response(),
-            ValidationError::PasswordMismatch => {
+            Self::PasswordMismatch => {
                 tracing::error!("Password confirmation mismatch");
                 (
                     StatusCode::BAD_REQUEST,
@@ -78,7 +78,7 @@ impl IntoResponse for ValidationError {
                 )
                     .into_response()
             }
-            ValidationError::Other(errors) => {
+            Self::Other(errors) => {
                 let errors = errors
                     .errors()
                     .clone()
@@ -96,35 +96,35 @@ impl IntoResponse for ValidationError {
                 )
                     .into_response()
             }
-            ValidationError::BadRequest(message) => (
+            Self::BadRequest(message) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": message
                 })),
             )
                 .into_response(),
-            ValidationError::InvalidGmId(message) => (
+            Self::InvalidGmId(message) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": message
                 })),
             )
                 .into_response(),
-            ValidationError::InvalidPlayerSlots(message) => (
+            Self::InvalidPlayerSlots(message) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": message
                 })),
             )
                 .into_response(),
-            ValidationError::InvalidBooleanValue(message) => (
+            Self::InvalidBooleanValue(message) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": message
                 })),
             )
                 .into_response(),
-            ValidationError::InvalidGameId(message) => (
+            Self::InvalidGameId(message) => (
                 StatusCode::BAD_REQUEST,
                 Json(json!({
                     "error": message
