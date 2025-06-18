@@ -20,7 +20,9 @@ impl ImageFile {
     pub async fn from_field(mut field: Field<'_>) -> Result<Self, ValidationError> {
         let content_type = field.content_type().unwrap_or("").to_string();
         if !ALLOWED_IMAGE_TYPES.contains(&content_type.as_str()) {
-            return Err(ValidationError::BadRequest("Invalid image type".into()));
+            return Err(ValidationError::BadRequest {
+                reason: "Invalid image type".to_string(),
+            });
         }
 
         let file_name = field.file_name().unwrap_or("upload").to_string();
@@ -29,12 +31,14 @@ impl ImageFile {
         while let Some(chunk) = field
             .chunk()
             .await
-            .map_err(|_| ValidationError::BadRequest("Failed to read image data".into()))?
+            .map_err(|_| ValidationError::BadRequest {
+                reason: "Failed to read image data".to_string(),
+            })?
         {
             if (data.len() + chunk.len()) > MAX_IMAGE_SIZE {
-                return Err(ValidationError::BadRequest(
-                    "Image size exceeds 5MB limit".into(),
-                ));
+                return Err(ValidationError::BadRequest {
+                    reason: "Image size exceeds 5Mb limit".to_string(),
+                });
             }
             data.extend_from_slice(&chunk);
         }
@@ -57,9 +61,9 @@ where
     Fut: Future<Output = Result<T, ValidationError>>,
 {
     if current.is_some() {
-        return Err(ValidationError::DuplicatedFieldError(
-            field_name.to_string(),
-        ));
+        return Err(ValidationError::DuplicatedFieldError {
+            field: field_name.to_string(),
+        });
     }
 
     let value = f().await?;
@@ -104,9 +108,12 @@ where
         req: axum::extract::Request,
         state: &S,
     ) -> std::result::Result<Self, Self::Rejection> {
-        let mut multipart = Multipart::from_request(req, state)
-            .await
-            .map_err(|_| ValidationError::BadRequest("Invalid multipart".to_string()))?;
+        let mut multipart =
+            Multipart::from_request(req, state)
+                .await
+                .map_err(|_| ValidationError::BadRequest {
+                    reason: "Invalid multipart".to_string(),
+                })?;
 
         let mut gm_id = None;
         let mut title = None;
@@ -124,8 +131,9 @@ where
                 "gm_id" => {
                     parse_unique_field(&mut gm_id, "gm_id", || async {
                         let value = field.text().await.unwrap_or_default();
-                        Uuid::parse_str(&value)
-                            .map_err(|e| ValidationError::InvalidGmId(e.to_string()))
+                        Uuid::parse_str(&value).map_err(|e| ValidationError::InvalidGmId {
+                            value: e.to_string(),
+                        })
                     })
                     .await?;
                 }
@@ -144,8 +152,11 @@ where
                 "game_system_id" => {
                     parse_unique_field(&mut game_system_id, "game_system_id", || async {
                         let value = field.text().await.unwrap_or_default();
-                        let id = Uuid::parse_str(&value)
-                            .map_err(|e| ValidationError::InvalidGameId(e.to_string()))?;
+                        let id = Uuid::parse_str(&value).map_err(|e| {
+                            ValidationError::InvalidGameId {
+                                value: e.to_string(),
+                            }
+                        })?;
 
                         Ok(id)
                     })
@@ -154,11 +165,12 @@ where
                 "is_public" => {
                     parse_unique_field(&mut is_public, "is_public", || async {
                         let value = field.text().await.unwrap_or_default();
-                        let is_public = value.parse::<bool>().map_err(|_| {
-                            ValidationError::BadRequest(
-                                "is_public must be a boolean value".to_string(),
-                            )
-                        })?;
+                        let is_public =
+                            value
+                                .parse::<bool>()
+                                .map_err(|_| ValidationError::BadRequest {
+                                    reason: "is_public must be a boolean value".to_string(),
+                                })?;
 
                         Ok(is_public)
                     })
@@ -167,11 +179,12 @@ where
                 "player_slots" => {
                     parse_unique_field(&mut player_slots, "player_slots", || async {
                         let value = field.text().await.unwrap_or_default();
-                        let player_slots = value.parse::<u32>().map_err(|_| {
-                            ValidationError::BadRequest(
-                                "player_slots must be an unsigned integer".to_string(),
-                            )
-                        })?;
+                        let player_slots =
+                            value
+                                .parse::<u32>()
+                                .map_err(|_| ValidationError::BadRequest {
+                                    reason: "player_slots must be an unsigned integer".to_string(),
+                                })?;
 
                         Ok(player_slots)
                     })
@@ -190,9 +203,9 @@ where
                                 "advanced" => PlayerExperience::Advanced,
                                 "expert" => PlayerExperience::Expert,
                                 _ => {
-                                    return Err(ValidationError::BadRequest(
-                                        "invalid recommended player experiene".to_string(),
-                                    ));
+                                    return Err(ValidationError::BadRequest {
+                                        reason: "invalid recommended player experiene".to_string(),
+                                    });
                                 }
                             };
                             Ok(recommended_player_experience)
@@ -213,21 +226,31 @@ where
         }
 
         let dto = CreateTableDto {
-            gm_id: gm_id.ok_or(ValidationError::MissingField("gm_id".to_string()))?,
-            title: title.ok_or(ValidationError::MissingField("title".to_string()))?,
-            description: description
-                .ok_or(ValidationError::MissingField("description".to_string()))?,
-            game_system_id: game_system_id
-                .ok_or(ValidationError::MissingField("game_system_id".to_string()))?,
-            is_public: is_public.ok_or(ValidationError::MissingField("is_public".to_string()))?,
-            player_slots: player_slots
-                .ok_or(ValidationError::MissingField("player_slots".to_string()))?,
+            gm_id: gm_id.ok_or(ValidationError::MissingField {
+                field: "gm_id".to_string(),
+            })?,
+            title: title.ok_or(ValidationError::MissingField {
+                field: "title".to_string(),
+            })?,
+            description: description.ok_or(ValidationError::MissingField {
+                field: "description".to_string(),
+            })?,
+            game_system_id: game_system_id.ok_or(ValidationError::MissingField {
+                field: "game_system_id".to_string(),
+            })?,
+            is_public: is_public.ok_or(ValidationError::MissingField {
+                field: "is_public".to_string(),
+            })?,
+            player_slots: player_slots.ok_or(ValidationError::MissingField {
+                field: "player_slots".to_string(),
+            })?,
             image_file,
             recommended_player_experience,
         };
 
-        dto.validate()
-            .map_err(|e| ValidationError::BadRequest(format!("Validation error: {}", e)))?;
+        dto.validate().map_err(|e| ValidationError::BadRequest {
+            reason: format!("Validation error: {}", e),
+        })?;
 
         Ok(dto)
     }
