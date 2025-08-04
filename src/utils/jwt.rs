@@ -1,4 +1,4 @@
-use crate::{Error, Result, config::JWT_SECRET, domain::user::entity::AccessLevel};
+use crate::{Error, Result, config::JWT_SECRET, domain::user::role::Role};
 use axum::{
     Json, RequestPartsExt,
     extract::FromRequestParts,
@@ -20,7 +20,7 @@ pub struct Claims {
     pub sub: Uuid,
     pub exp: usize,
     pub iat: usize,
-    pub access_level: AccessLevel,
+    pub role: Role,
 }
 
 impl Claims {
@@ -28,7 +28,7 @@ impl Claims {
         user_id: Uuid,
         jwt_secret: &str,
         jwt_expiration_duration: Duration,
-        user_access_level: AccessLevel,
+        user_role: Role,
     ) -> Result<String> {
         let expiration = Utc::now()
             .checked_add_signed(jwt_expiration_duration)
@@ -39,7 +39,7 @@ impl Claims {
             sub: user_id,
             exp: expiration as usize,
             iat: Utc::now().timestamp() as usize,
-            access_level: user_access_level,
+            role: user_role,
         };
 
         encode(

@@ -2,10 +2,9 @@ use super::config::Config;
 use super::state::AppState;
 use crate::application::services::table_service::TableService;
 use crate::application::services::user_service::UserService;
-use crate::infrastructure::persistance::postgres::create_postgres_pool;
-use crate::infrastructure::persistance::postgres::migrations::run_postgres_migrations;
-use crate::infrastructure::persistance::postgres::repositories::PostgresTableRepository;
-use crate::infrastructure::persistance::postgres::repositories::user::PostgresUserRepository;
+use crate::infrastructure::create_postgres_pool;
+use crate::infrastructure::prelude::*;
+use crate::infrastructure::run_postgres_migrations;
 use crate::interfaces::http::create_router;
 use crate::{Error, Result};
 use std::sync::Arc;
@@ -51,10 +50,10 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
 
     run_postgres_migrations(pool.clone()).await?;
 
-    let user_repo = PostgresUserRepository::new(pool.clone());
+    let user_repo = UserRepository::new(pool.clone());
     let user_service = UserService::new(Arc::new(user_repo));
 
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let table_repo = TableRepository::new(pool.clone());
     let table_service = TableService::new(Arc::new(table_repo));
 
     let state = AppState::new(config, user_service, table_service);

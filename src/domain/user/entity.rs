@@ -1,16 +1,7 @@
+use crate::domain::user::role::Role;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-
-use crate::domain::game_system::GameSystem;
-
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, Default)]
-pub enum AccessLevel {
-    Admin,
-    Moderator,
-    #[default]
-    User,
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct UserStatistics {
@@ -25,12 +16,7 @@ pub struct User {
     pub name: String,
     pub email: String,
     pub password_hash: String,
-    pub access_level: AccessLevel,
-    pub bio: Option<String>,
-    pub avatar_url: Option<String>,
-    pub nickname: Option<String>,
-    pub years_of_experience: Option<u32>,
-    pub account_creation_date: DateTime<Utc>,
-    pub favorite_game_systems: Option<Vec<GameSystem>>,
-    pub statistics: Option<Vec<UserStatistics>>,
+    pub role: Role,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
 }

@@ -92,7 +92,6 @@ impl From<SignupDto> for CreateUserCommand {
             name: dto.name,
             email: dto.email,
             password: dto.password,
-            confirm_password: dto.confirm_password,
         }
     }
 }

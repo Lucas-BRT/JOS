@@ -1,8 +1,6 @@
 use super::dtos::CreateTableDto;
 use crate::{
-    Result,
-    core::state::AppState,
-    domain::table::dtos::{CreateTableCommand, TableFilters},
+    Result, core::state::AppState, domain::table::dtos::CreateTableCommand,
     interfaces::http::table::dtos::AvaliableTableResponse,
 };
 use axum::{
@@ -26,9 +24,8 @@ pub async fn create_table(
 #[axum::debug_handler]
 pub async fn get_available_tables(
     State(app_state): State<Arc<AppState>>,
-    Json(filters): Json<Option<TableFilters>>,
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state.table_service.get(filters).await?;
+    let tables = app_state.table_service.get().await?;
 
     let tables = tables.iter().map(AvaliableTableResponse::from).collect();
 

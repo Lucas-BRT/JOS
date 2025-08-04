@@ -24,8 +24,8 @@ impl TableService {
         self.table_repository.find_by_id(table_id).await
     }
 
-    pub async fn get(&self, options: Option<TableFilters>) -> Result<Vec<Table>> {
-        self.table_repository.get(options).await
+    pub async fn get(&self) -> Result<Vec<Table>> {
+        self.table_repository.get().await
     }
 
     pub async fn update(

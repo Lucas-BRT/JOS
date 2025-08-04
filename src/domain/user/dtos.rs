@@ -5,7 +5,6 @@ pub struct CreateUserCommand {
     pub name: String,
     pub email: String,
     pub password: String,
-    pub confirm_password: String,
 }
 
 pub struct LoginUserCommand {
@@ -22,5 +21,4 @@ pub struct UpdateUserCommand {
     pub bio: Update<Option<String>>,
     pub avatar_url: Update<Option<String>>,
     pub nickname: Update<Option<String>>,
-    pub years_of_experience: Update<Option<u32>>,
 }

@@ -39,12 +39,8 @@ impl UserService {
             .await?;
 
         if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
-            let jwt_token = Claims::create_jwt(
-                user.id,
-                jwt_secret,
-                jwt_expiration_duration,
-                user.access_level,
-            )?;
+            let jwt_token =
+                Claims::create_jwt(user.id, jwt_secret, jwt_expiration_duration, user.role)?;
 
             Ok(jwt_token)
         } else {

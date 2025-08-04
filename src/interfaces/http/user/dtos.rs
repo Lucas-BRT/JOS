@@ -1,7 +1,4 @@
-use crate::domain::{
-    game_system::GameSystem,
-    user::entity::{AccessLevel, User, UserStatistics},
-};
+use crate::domain::user::{entity::User, role::Role};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -13,14 +10,9 @@ pub struct MeResponse {
     pub id: Uuid,
     pub email: String,
     pub name: String,
-    pub access_level: AccessLevel,
-    pub bio: Option<String>,
-    pub avatar_url: Option<String>,
-    pub nickname: Option<String>,
-    pub years_of_experience: Option<u32>,
-    pub account_creation_date: DateTime<Utc>,
-    pub favorite_game_systems: Option<Vec<GameSystem>>,
-    pub statistics: Option<Vec<UserStatistics>>,
+    pub role: Role,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 impl From<User> for MeResponse {
@@ -29,14 +21,9 @@ impl From<User> for MeResponse {
             id: value.id,
             email: value.email,
             name: value.name,
-            access_level: value.access_level,
-            bio: value.bio,
-            avatar_url: value.avatar_url,
-            nickname: value.nickname,
-            years_of_experience: value.years_of_experience,
-            account_creation_date: value.account_creation_date,
-            favorite_game_systems: value.favorite_game_systems,
-            statistics: value.statistics,
+            role: value.role,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
         }
     }
 }

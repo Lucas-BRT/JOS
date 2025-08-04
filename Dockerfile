@@ -1,28 +1,22 @@
-# Stage 1: build with musl
-FROM rust:1.85 as builder
+FROM rust:1.85-alpine AS builder
 
-# Add target musl
-RUN rustup target add x86_64-unknown-linux-musl
+RUN apk add --no-cache build-base jpeg-dev libpng-dev
 
 WORKDIR /app
 
-# Copy the code and build the final binary
-COPY . .
-RUN cargo build --release --target x86_64-unknown-linux-musl
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs && cargo build --release --locked
 
-# Stage 2: runtime with alpine
-FROM alpine:3.18
+COPY src ./src
+COPY migrations ./migrations
 
-# Install PostgreSQL dependencies
-RUN apk add libpq
+RUN rm -f target/release/deps/jos* && cargo build --release --locked
 
-WORKDIR /app
 
-# Copy the binary from the builder stage
-COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/JOS ./JOS
+FROM alpine:latest
 
-# Export port
+COPY --from=builder /app/target/release/jos /usr/local/bin/
+
 EXPOSE 3000
 
-# Executar o binário
-CMD ["./JOS"]
+CMD ["jos"]

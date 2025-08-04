@@ -1,73 +1,114 @@
--- ENUMs
-CREATE TYPE access_level AS ENUM ('user', 'admin', 'moderator');
-
-CREATE TYPE attendance_status AS ENUM ('unknown', 'confirmed', 'absent');
-
-CREATE TYPE session_status AS ENUM ('planned', 'confirmed', 'cancelled', 'finished');
-
-CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected', 'cancelled');
-
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    access_level access_level NOT NULL,
-    bio TEXT,
-    avatar_url TEXT,
-    nickname TEXT,
-    years_of_experience INTEGER,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+CREATE TYPE "e_roles" AS ENUM (
+	'admin',
+	'moderator',
+	'user'
 );
 
--- Table for game systems
-CREATE TABLE IF NOT EXISTS game_systems (
-    id UUID PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    description TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+CREATE TYPE "e_table_visibility" AS ENUM (
+	'private',
+	'public'
 );
 
--- Tables table
-CREATE TABLE IF NOT EXISTS tables (
-    id UUID PRIMARY KEY,
-    gm_id UUID NOT NULL REFERENCES users (id),
-    title TEXT NOT NULL,
-    game_system_id UUID NOT NULL REFERENCES game_systems (id),
-    is_public BOOLEAN NOT NULL DEFAULT FALSE,
-    description TEXT NOT NULL,
-    player_slots INTEGER NOT NULL CHECK (player_slots >= 0),
-    occupied_slots INTEGER NOT NULL CHECK (
-        occupied_slots >= 0
-        AND occupied_slots <= player_slots
-    ),
-    bg_image_link TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+CREATE TYPE "e_intent_status" AS ENUM (
+	'yes',
+	'no',
+	'maybe'
 );
 
--- Requests table
-CREATE TABLE IF NOT EXISTS requests (
-    id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES users (id),
-    table_id UUID NOT NULL REFERENCES tables (id),
-    status request_status NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+CREATE TABLE "t_users" (
+	"id" UUID NOT NULL,
+	"name" TEXT NOT NULL UNIQUE,
+	"email" TEXT NOT NULL UNIQUE,
+	"password_hash" TEXT NOT NULL,
+	"role" E_ROLES NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
 );
 
--- Sessions table
-CREATE TABLE IF NOT EXISTS sessions (
-    id UUID PRIMARY KEY,
-    table_id UUID NOT NULL REFERENCES tables (id),
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    start_time TIMESTAMPTZ NOT NULL,
-    end_time TIMESTAMPTZ,
-    status session_status NOT NULL DEFAULT 'planned',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW (),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW ()
+
+
+
+CREATE TABLE "t_rpg_tables" (
+	"id" UUID NOT NULL,
+	"gm_id" UUID NOT NULL,
+	"title" TEXT NOT NULL,
+	"visibility" E_TABLE_VISIBILITY NOT NULL,
+	"description" TEXT NOT NULL,
+	"game_system_id" UUID NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
 );
+
+
+
+
+CREATE TABLE "t_game_system" (
+	"id" UUID NOT NULL,
+	"name" TEXT NOT NULL UNIQUE,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ NOT NULL,
+	PRIMARY KEY("id")
+);
+
+
+
+
+CREATE TABLE "t_sessions" (
+	"id" UUID NOT NULL,
+	"name" TEXT NOT NULL,
+	"table_id" UUID NOT NULL,
+	"accepting_intents" BOOLEAN NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
+);
+
+
+CREATE INDEX "t_sessions_index_0"
+ON "t_sessions" ("table_id");
+
+CREATE TABLE "t_session_intents" (
+	"id" UUID NOT NULL,
+	"user_id" UUID NOT NULL,
+	"session_id" UUID NOT NULL,
+	"intent_status" E_INTENT_STATUS NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("user_id", "session_id")
+);
+
+
+CREATE INDEX "t_session_intents_index_0"
+ON "t_session_intents" ("session_id");
+
+CREATE TABLE "t_session_checkins" (
+	"id" UUID NOT NULL,
+	"session_intent_id" UUID NOT NULL,
+	"attendance" BOOLEAN NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
+);
+
+
+
+ALTER TABLE "t_rpg_tables"
+ADD FOREIGN KEY("gm_id") REFERENCES "t_users"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;
+ALTER TABLE "t_rpg_tables"
+ADD FOREIGN KEY("game_system_id") REFERENCES "t_game_system"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;
+ALTER TABLE "t_sessions"
+ADD FOREIGN KEY("table_id") REFERENCES "t_rpg_tables"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;
+ALTER TABLE "t_session_intents"
+ADD FOREIGN KEY("user_id") REFERENCES "t_users"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;
+ALTER TABLE "t_session_checkins"
+ADD FOREIGN KEY("session_intent_id") REFERENCES "t_session_intents"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;
+ALTER TABLE "t_session_intents"
+ADD FOREIGN KEY("session_id") REFERENCES "t_sessions"("id")
+ON UPDATE NO ACTION ON DELETE CASCADE;

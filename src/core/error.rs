@@ -1,6 +1,5 @@
 use crate::{
-    application::error::ApplicationError,
-    infrastructure::persistance::postgres::repositories::error::RepositoryError,
+    application::error::ApplicationError, infrastructure::repositories::error::RepositoryError,
     interfaces::http::error::ValidationError, setup::SetupError,
 };
 use axum::{http::StatusCode, response::IntoResponse};
