@@ -48,8 +48,8 @@ pub async fn upload_image(
 
         let timestamp = Utc::now().timestamp();
         let uuid = Uuid::new_v4();
-        let final_name = format!("{}_{}.png", uuid, timestamp);
-        let file_path = format!("./public/uploads/{}", final_name);
+        let final_name = format!("{uuid}_{timestamp}.png");
+        let file_path = format!("./public/uploads/{final_name}");
 
         let mut data = Vec::new();
         let mut stream = field;

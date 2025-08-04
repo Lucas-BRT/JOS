@@ -1,5 +1,5 @@
 use crate::Result;
-use crate::domain::table::dtos::{CreateTableCommand, TableFilters, UpdateTableCommand};
+use crate::domain::table::dtos::{CreateTableCommand, UpdateTableCommand};
 use crate::domain::table::{entity::Table, table_repository::TableRepository};
 use std::sync::Arc;
 use uuid::Uuid;

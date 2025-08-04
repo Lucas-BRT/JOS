@@ -28,7 +28,7 @@ impl Config {
             .parse()
             .map_err(|e: ParseIntError| SetupError::FailedToParsePort(e.to_string()))?;
 
-        let addr = SocketAddr::from_str(format!("127.0.0.1:{}", server_port).as_str())
+        let addr = SocketAddr::from_str(format!("127.0.0.1:{server_port}").as_str())
             .map_err(|err| SetupError::FailedToSetupServerAddress(err.to_string()))?;
 
         let jwt_secret = JWT_SECRET.deref().clone();
