@@ -1,20 +1,10 @@
--- Drop tables na ordem inversa para respeitar FKs
-DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS t_session_checkins;
+DROP TABLE IF EXISTS t_session_intents;
+DROP TABLE IF EXISTS t_sessions;
+DROP TABLE IF EXISTS t_rpg_tables;
+DROP TABLE IF EXISTS t_game_system;
+DROP TABLE IF EXISTS t_users;
 
-DROP TABLE IF EXISTS requests;
-
-DROP TABLE IF EXISTS tables;
-
-DROP TABLE IF EXISTS users;
-
--- Drop types ENUM
-DROP TYPE IF EXISTS request_status;
-
-DROP TYPE IF EXISTS session_status;
-
-DROP TYPE IF EXISTS attendance_status;
-
-DROP TYPE IF EXISTS access_level;
-
--- Drop extension pgcrypto (normalmente não se remove, mas para completo)
-DROP EXTENSION IF EXISTS "pgcrypto";
+DROP TYPE IF EXISTS e_intent_status;
+DROP TYPE IF EXISTS e_table_visibility;
+DROP TYPE IF EXISTS e_roles;

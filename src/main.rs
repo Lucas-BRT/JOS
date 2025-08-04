@@ -1,5 +1,3 @@
-#![allow(incomplete_features)]
-
 use jos::{
     Result,
     setup::{launch_server, setup_services},
