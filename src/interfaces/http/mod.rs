@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod error;
+pub mod openapi;
 pub mod routers;
 pub mod table;
 pub mod table_request;

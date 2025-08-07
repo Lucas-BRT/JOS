@@ -1,11 +1,22 @@
 use jos::{
     Result,
     setup::{launch_server, setup_services},
+    Error,
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let state = setup_services().await?;
-
-    launch_server(state).await
+    match setup_services().await {
+        Ok(state) => {
+            launch_server(state).await
+        }
+        Err(Error::Setup(setup_error)) => {
+            eprintln!("\n{}", setup_error.user_friendly_message());
+            std::process::exit(1);
+        }
+        Err(other_error) => {
+            eprintln!("\n❌ Application error: {}", other_error);
+            std::process::exit(1);
+        }
+    }
 }

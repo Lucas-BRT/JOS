@@ -4,6 +4,7 @@ use crate::domain::user::{
 };
 use axum::{Json, extract::Multipart, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -19,7 +20,7 @@ const MAX_NICKNAME_LENGTH: u64 = 100;
 const MIN_BIO_LENGTH: u64 = 2;
 const MAX_BIO_LENGTH: u64 = 200;
 
-#[derive(Validate, Deserialize)]
+#[derive(Validate, Deserialize, ToSchema)]
 pub struct LoginDto {
     #[validate(email)]
     pub email: String,
@@ -42,7 +43,7 @@ pub struct RecoveryDto {
     pub email: String,
 }
 
-#[derive(Validate, Deserialize)]
+#[derive(Validate, Deserialize, ToSchema)]
 pub struct SignupDto {
     #[validate(length(min = MIN_USERNAME_LENGTH, max = MAX_USERNAME_LENGTH))]
     pub name: String,
@@ -96,8 +97,9 @@ impl From<SignupDto> for CreateUserCommand {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UserSignupResponse {
+    #[schema(value_type = String, format = "uuid")]
     pub id: Uuid,
     pub name: String,
     pub email: String,

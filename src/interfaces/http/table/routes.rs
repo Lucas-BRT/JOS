@@ -1,7 +1,7 @@
 use super::dtos::CreateTableDto;
 use crate::{
     Result, core::state::AppState, domain::table::dtos::CreateTableCommand,
-    interfaces::http::table::dtos::AvaliableTableResponse,
+    interfaces::http::{table::dtos::AvaliableTableResponse, openapi::{schemas::*, tags::TABLE_TAG}},
 };
 use axum::{
     Json, Router,
@@ -9,7 +9,20 @@ use axum::{
     routing::{get, post},
 };
 use std::sync::Arc;
+use utoipa::OpenApi;
 
+/// Create a new RPG table
+#[utoipa::path(
+    post,
+    path = "/tables",
+    tag = TABLE_TAG,
+    request_body = CreateTableRequest,
+    responses(
+        (status = 201, description = "Table created successfully", body = IdResponse),
+        (status = 400, description = "Validation error", body = ValidationErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
 #[axum::debug_handler]
 pub async fn create_table(
     State(app_state): State<Arc<AppState>>,
@@ -21,6 +34,16 @@ pub async fn create_table(
     Ok(Json(table_id))
 }
 
+/// Get all available RPG tables
+#[utoipa::path(
+    get,
+    path = "/tables",
+    tag = TABLE_TAG,
+    responses(
+        (status = 200, description = "List of available tables", body = Vec<AvailableTableResponse>),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
 #[axum::debug_handler]
 pub async fn get_available_tables(
     State(app_state): State<Arc<AppState>>,

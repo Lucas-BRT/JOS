@@ -5,5 +5,9 @@ pub mod infrastructure;
 pub mod interfaces;
 pub mod utils;
 
+// Re-export commonly used items
+pub use core::error::Error;
+pub use core::setup::SetupError;
+
 // re-export core modules
 pub use core::*;

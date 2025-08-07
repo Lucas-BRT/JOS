@@ -1,8 +1,104 @@
 services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: jos-postgres
+    environment:
+      POSTGRES_DB: jos_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d jos_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jos-network
+
+  # Redis for caching (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: jos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - jos-network
+
+  # API Service
   api:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: jos-api
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@db:5432/join_our_session}
-      - PORT=${PORT:-5000}
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/jos_db
+      - REDIS_URL=redis://redis:6379
+      - PORT=3000
+      - JWT_SECRET=your-super-secret-jwt-key-should-be-at-least-32-characters-long
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+    volumes:
+      - .:/app
+      - cargo_cache:/usr/local/cargo/registry
+      - target_cache:/app/target
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - jos-network
+    restart: unless-stopped
+
+  # pgAdmin for database management (optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: jos-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@jos.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+    networks:
+      - jos-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  cargo_cache:
+    driver: local
+  target_cache:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  jos-network:
+    driver: bridge

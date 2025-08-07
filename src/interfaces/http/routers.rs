@@ -1,6 +1,17 @@
 use crate::core::state::AppState;
-use axum::Router;
+use axum::{Router, Json, routing::get};
 use std::sync::Arc;
+use serde_json::json;
+
+/// Health check endpoint
+async fn health_check() -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "healthy",
+        "timestamp": chrono::Utc::now().to_rfc3339(),
+        "service": "JOS API",
+        "version": env!("CARGO_PKG_VERSION")
+    }))
+}
 
 fn router(app_state: Arc<AppState>) -> Router {
     Router::new()
@@ -11,5 +22,8 @@ fn router(app_state: Arc<AppState>) -> Router {
 }
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
-    Router::new().nest("/v1/", router(app_state.clone()))
+    Router::new()
+        .route("/health", get(health_check))
+        .nest("/v1/", router(app_state.clone()))
+        .merge(super::openapi::routes::routes())
 }

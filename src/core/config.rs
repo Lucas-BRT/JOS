@@ -1,4 +1,4 @@
-use crate::{Result, setup::SetupError};
+use crate::{Result, setup::SetupError, Error};
 use chrono::Duration;
 use std::ops::Deref;
 use std::sync::LazyLock;
@@ -28,10 +28,29 @@ impl Config {
             .parse()
             .map_err(|e: ParseIntError| SetupError::FailedToParsePort(e.to_string()))?;
 
+        // Validate port range
+        if server_port < 1024 || server_port > 65535 {
+            return Err(Error::Setup(SetupError::InvalidConfiguration(
+                format!("Port {} is outside valid range (1024-65535)", server_port)
+            )));
+        }
+
         let addr = SocketAddr::from_str(format!("127.0.0.1:{server_port}").as_str())
             .map_err(|err| SetupError::FailedToSetupServerAddress(err.to_string()))?;
 
         let jwt_secret = JWT_SECRET.deref().clone();
+
+        // Validate JWT secret
+        if jwt_secret.len() < 32 {
+            tracing::warn!("⚠️  JWT_SECRET is shorter than recommended (32+ characters)");
+        }
+
+        // Validate database URL format
+        if !database_url.starts_with("postgres://") && !database_url.starts_with("postgresql://") {
+            return Err(Error::Setup(SetupError::InvalidConfiguration(
+                "DATABASE_URL must start with 'postgres://' or 'postgresql://'".to_string()
+            )));
+        }
 
         Ok(Self {
             database_url,
@@ -39,5 +58,15 @@ impl Config {
             jwt_secret,
             jwt_expiration_duration: JWT_EXPIRATION_DURATION,
         })
+    }
+
+    /// Returns a human-readable description of the configuration
+    pub fn describe(&self) -> String {
+        format!(
+            "Server: {}, Database: {}, JWT Expiration: {} days",
+            self.addr,
+            self.database_url.split('@').last().unwrap_or("unknown"),
+            self.jwt_expiration_duration.num_days()
+        )
     }
 }

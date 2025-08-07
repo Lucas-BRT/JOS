@@ -1,5 +1,5 @@
 use crate::{
-    Result, interfaces::http::user::dtos::MeResponse, state::AppState, utils::jwt::Claims,
+    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, utils::jwt::Claims,
 };
 use axum::{
     Json, Router,
@@ -10,6 +10,7 @@ use axum::{
 use chrono::Utc;
 use serde_json::json;
 use std::sync::Arc;
+use utoipa::OpenApi;
 use uuid::Uuid;
 
 const MAX_IMAGE_SIZE: usize = 1024 * 1024 * 5; // 5MB
@@ -87,6 +88,20 @@ pub async fn upload_image(
     .into_response()
 }
 
+/// Get current user information
+#[utoipa::path(
+    get,
+    path = "/users/me",
+    tag = USER_TAG,
+    security(
+        ("bearer_auth" = [])
+    ),
+    responses(
+        (status = 200, description = "User information retrieved successfully", body = UserResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
 #[axum::debug_handler]
 pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<Json<MeResponse>> {
     let user = app_state.user_service.find_by_id(&user.sub).await?;

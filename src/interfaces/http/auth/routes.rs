@@ -3,13 +3,29 @@ use crate::{
     interfaces::http::{
         auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
         error::ValidationError,
+        openapi::{schemas::*, tags::AUTH_TAG},
     },
     state::AppState,
 };
 use axum::{Json, Router, extract::State, routing::post};
 use std::sync::Arc;
+use utoipa::OpenApi;
 use validator::Validate;
 
+/// Create a new user account
+#[utoipa::path(
+    post,
+    path = "/auth/signup",
+    tag = AUTH_TAG,
+    request_body = SignupDto,
+    responses(
+        (status = 201, description = "User created successfully", body = UserSignupResponse),
+        (status = 400, description = "Validation error", body = ValidationErrorResponse),
+        (status = 400, description = "Password mismatch", body = PasswordMismatchErrorResponse),
+        (status = 409, description = "Email already taken", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
 #[axum::debug_handler]
 async fn signup(
     State(app_state): State<Arc<AppState>>,
@@ -33,6 +49,19 @@ async fn signup(
     Ok(user.into())
 }
 
+/// Authenticate user and get JWT token
+#[utoipa::path(
+    post,
+    path = "/auth/login",
+    tag = AUTH_TAG,
+    request_body = LoginDto,
+    responses(
+        (status = 200, description = "Login successful", body = LoginResponse),
+        (status = 400, description = "Validation error", body = ValidationErrorResponse),
+        (status = 400, description = "Invalid credentials", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
 #[axum::debug_handler]
 async fn login(
     State(app_state): State<Arc<AppState>>,
