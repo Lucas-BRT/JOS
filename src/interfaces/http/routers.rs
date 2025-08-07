@@ -7,6 +7,7 @@ fn router(app_state: Arc<AppState>) -> Router {
         .nest("/auth", super::auth::routes::routes(app_state.clone()))
         .nest("/users", super::user::routes::routes(app_state.clone()))
         .nest("/tables", super::table::routes::routes(app_state.clone()))
+        .nest("/table-requests", super::table_request::routes::routes(app_state.clone()))
 }
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {

@@ -6,4 +6,5 @@ pub mod t_rpg_tables;
 pub mod t_session_checkins;
 pub mod t_session_intents;
 pub mod t_sessions;
+pub mod t_table_requests;
 pub mod t_users;

@@ -10,6 +10,7 @@ pub struct Table {
     pub game_system_id: Uuid,
     pub is_public: bool,
     pub description: String,
+    pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
     pub bg_image_link: Option<String>,
