@@ -1,4 +1,4 @@
-use axum::{Router, Json};
+use axum::{Router};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 use crate::interfaces::http::openapi::schemas::*;
