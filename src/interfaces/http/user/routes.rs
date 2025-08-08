@@ -1,5 +1,5 @@
 use crate::{
-    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, utils::jwt::AuthClaims as Claims,
+    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, domain::jwt::Claims,
 };
 use axum::{
     Json, Router,
