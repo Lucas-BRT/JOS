@@ -1,68 +1,34 @@
-use chrono::{Duration, Utc};
-use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{Error, Result, domain::user::role::Role};
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    pub sub: Uuid,
-    pub exp: usize,
-    pub iat: usize,
-    pub role: Role,
-}
+use crate::{
+    domain::{
+        jwt::{JwtRepository},
+        user::role::Role,
+    },
+    Result,
+};
 
 #[derive(Clone)]
 pub struct JwtService {
-    secret: String,
-    expiration_duration: Duration,
+    jwt_repository: Arc<dyn JwtRepository>,
 }
 
 impl JwtService {
-    pub fn new(secret: String, expiration_duration: Duration) -> Self {
-        Self { secret, expiration_duration }
+    pub fn new(jwt_repository: Arc<dyn JwtRepository>) -> Self {
+        Self { jwt_repository }
     }
 
-    pub fn generate_token(&self, user_id: Uuid, user_role: Role) -> Result<String> {
-        let expiration = Utc::now()
-            .checked_add_signed(self.expiration_duration)
-            .expect("valid timestamp")
-            .timestamp();
-
-        let claims = Claims {
-            sub: user_id,
-            exp: expiration as usize,
-            iat: Utc::now().timestamp() as usize,
-            role: user_role,
-        };
-
-        encode(
-            &Header::default(),
-            &claims,
-            &EncodingKey::from_secret(self.secret.as_ref()),
-        )
-        .map_err(|e| {
-            tracing::error!("failed to generate JWT token {}", e);
-            Error::InternalServerError
-        })
+    pub async fn generate_token(&self, user_id: Uuid, user_role: Role) -> Result<String> {
+        self.jwt_repository.generate_token(user_id, user_role).await
     }
 
-    pub fn decode_token(&self, token: &str) -> Result<Claims> {
-        let token_data = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(self.secret.as_ref()),
-            &Validation::default(),
-        )
-        .map_err(|_e| Error::InternalServerError)?; // map to domain/app error later if needed
-
-        Ok(token_data.claims)
+    pub async fn decode_token(&self, token: &str) -> Result<crate::domain::jwt::Claims> {
+        self.jwt_repository.decode_token(token).await
     }
 }
 
-// Abstraction to access JwtService from generic state
-pub trait ProvidesJwtService {
-    fn jwt_service(&self) -> &JwtService;
-}
+// Re-export Claims for public access
+pub use crate::domain::jwt::Claims;
 
 

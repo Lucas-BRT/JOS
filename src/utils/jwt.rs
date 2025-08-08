@@ -51,6 +51,7 @@ impl FromRequestParts<Arc<AppState>> for Claims {
         state
             .jwt_service
             .decode_token(bearer.token())
+            .await
             .map_err(|_| AuthError::InvalidToken)
     }
 }

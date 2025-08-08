@@ -1,6 +1,6 @@
 use super::config::Config;
 use crate::application::services::{
-    jwt_service::{JwtService, ProvidesJwtService},
+    jwt_service::JwtService,
     table_request_service::TableRequestService,
     table_service::TableService,
     user_service::UserService,
@@ -31,8 +31,4 @@ impl AppState {
             jwt_service,
         }
     }
-}
-
-impl ProvidesJwtService for AppState {
-    fn jwt_service(&self) -> &JwtService { &self.jwt_service }
 }

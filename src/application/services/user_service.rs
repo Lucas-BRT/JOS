@@ -35,7 +35,7 @@ impl UserService {
             .await?;
 
         if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
-            let jwt_token = self.jwt_service.generate_token(user.id, user.role)?;
+            let jwt_token = self.jwt_service.generate_token(user.id, user.role).await?;
             Ok(jwt_token)
         } else {
             Err(Error::Application(ApplicationError::InvalidCredentials))

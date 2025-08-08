@@ -53,10 +53,11 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
     info!("🏗️  Initializing services...");
 
     let user_repo = UserRepository::new(pool.clone());
-    let jwt_service = JwtService::new(
+    let jwt_repo = JwtRepositoryImpl::new(
         config.jwt_secret.clone(),
         config.jwt_expiration_duration,
     );
+    let jwt_service = JwtService::new(Arc::new(jwt_repo));
     let user_service = UserService::new(Arc::new(user_repo), jwt_service.clone());
     info!("✅ User service initialized");
 
