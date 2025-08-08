@@ -1,12 +1,11 @@
 use crate::domain::table::{dtos::CreateTableCommand, entity::Table};
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
+
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate)]
 pub struct CreateTableDto {
-    #[schema(value_type = String, format = "uuid")]
     pub gm_id: Uuid,
     #[validate(length(min = 8, max = 60, message = "Title is empty"))]
     pub title: String,
@@ -16,7 +15,6 @@ pub struct CreateTableDto {
         message = "Description must be between 50 and 1000 characters"
     ))]
     pub description: String,
-    #[schema(value_type = String, format = "uuid")]
     pub game_system_id: Uuid,
     pub is_public: bool,
     #[validate(range(min = 1, max = 20, message = "Max players must be between 1 and 20"))]
@@ -42,13 +40,11 @@ impl From<CreateTableDto> for CreateTableCommand {
     }
 }
 
-#[derive(Debug, Serialize, ToSchema)]
+#[derive(Debug, Serialize)]
 pub struct AvaliableTableResponse {
-    #[schema(value_type = String, format = "uuid")]
     pub gm_id: Uuid,
     pub title: String,
     pub description: String,
-    #[schema(value_type = String, format = "uuid")]
     pub game_system_id: Uuid,
     pub is_public: bool,
     pub max_players: u32,

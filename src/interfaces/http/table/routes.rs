@@ -1,7 +1,8 @@
 use super::dtos::CreateTableDto;
 use crate::{
     Result, core::state::AppState, domain::table::dtos::CreateTableCommand,
-    interfaces::http::{table::dtos::AvaliableTableResponse, openapi::{schemas::*, tags::TABLE_TAG}},
+    interfaces::http::table::dtos::AvaliableTableResponse,
+    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -13,13 +14,16 @@ use std::sync::Arc;
 /// Create a new RPG table
 #[utoipa::path(
     post,
-    path = "/tables",
-    tag = TABLE_TAG,
-    request_body = CreateTableRequest,
+    path = "/v1/tables",
+    tag = "tables",
+    security(
+        ("bearer_auth" = [])
+    ),
+    request_body = crate::interfaces::http::openapi::schemas::CreateTableDto,
     responses(
-        (status = 201, description = "Table created successfully", body = IdResponse),
-        (status = 400, description = "Validation error", body = ValidationErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 201, description = "Table created successfully", body = String),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -36,11 +40,10 @@ pub async fn create_table(
 /// Get all available RPG tables
 #[utoipa::path(
     get,
-    path = "/tables",
-    tag = TABLE_TAG,
+    path = "/v1/tables",
+    tag = "tables",
     responses(
-        (status = 200, description = "List of available tables", body = Vec<AvailableTableResponse>),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "List of available tables", body = Vec<crate::interfaces::http::openapi::schemas::AvailableTableResponse>)
     )
 )]
 #[axum::debug_handler]

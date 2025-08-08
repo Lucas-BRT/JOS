@@ -7,6 +7,14 @@ const HEALTH_ROUTE: &str = "/health";
 const API_V1_PREFIX: &str = "/v1/";
 
 /// Health check endpoint
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "Service is healthy", body = crate::interfaces::http::openapi::schemas::HealthResponse)
+    )
+)]
 async fn health_check() -> Json<serde_json::Value> {
     Json(json!({
         "status": "healthy",

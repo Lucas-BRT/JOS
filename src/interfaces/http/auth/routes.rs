@@ -3,11 +3,12 @@ use crate::{
     interfaces::http::{
         auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
         error::ValidationError,
-        openapi::{schemas::*, tags::AUTH_TAG},
+        openapi::schemas::{ValidationErrorResponse, SignupDto as OpenApiSignupDto, UserSignupResponse as OpenApiUserSignupResponse, ErrorResponse},
     },
     core::state::AppState,
+    domain::user::{dtos::{CreateUserCommand, LoginUserCommand}, entity::User},
 };
-use axum::{Json, Router, extract::State, routing::{post, get}};
+use axum::{Json, Router, extract::State, routing::{post, get}, response::IntoResponse, http::StatusCode};
 use std::sync::Arc;
 use validator::Validate;
 use serde_json::json;
@@ -15,15 +16,12 @@ use serde_json::json;
 /// Create a new user account
 #[utoipa::path(
     post,
-    path = "/auth/signup",
-    tag = AUTH_TAG,
-    request_body = SignupDto,
+    path = "/v1/auth/signup",
+    tag = "auth",
+    request_body = OpenApiSignupDto,
     responses(
-        (status = 201, description = "User created successfully", body = UserSignupResponse),
-        (status = 400, description = "Validation error", body = ValidationErrorResponse),
-        (status = 400, description = "Password mismatch", body = PasswordMismatchErrorResponse),
-        (status = 409, description = "Email already taken", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 201, description = "User created successfully", body = OpenApiUserSignupResponse),
+        (status = 400, description = "Bad request", body = ValidationErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -52,14 +50,12 @@ async fn signup(
 /// Authenticate user and get JWT token
 #[utoipa::path(
     post,
-    path = "/auth/login",
-    tag = AUTH_TAG,
+    path = "/v1/auth/login",
+    tag = "auth",
     request_body = LoginDto,
     responses(
-        (status = 200, description = "Login successful", body = LoginResponse),
-        (status = 400, description = "Validation error", body = ValidationErrorResponse),
-        (status = 400, description = "Invalid credentials", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "Login successful", body = String),
+        (status = 401, description = "Invalid credentials", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -84,11 +80,10 @@ async fn login(
 /// Get password requirements
 #[utoipa::path(
     get,
-    path = "/auth/password-requirements",
-    tag = AUTH_TAG,
+    path = "/v1/auth/password-requirements",
+    tag = "auth",
     responses(
-        (status = 200, description = "Password requirements"),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "Password requirements", body = crate::interfaces::http::openapi::schemas::PasswordRequirementsResponse)
     )
 )]
 #[axum::debug_handler]
@@ -108,4 +103,40 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .route("/login", post(login))
         .route("/password-requirements", get(get_password_requirements))
         .with_state(state.clone())
+}
+
+// Implementations for conversions
+impl From<SignupDto> for CreateUserCommand {
+    fn from(dto: SignupDto) -> Self {
+        CreateUserCommand {
+            name: dto.name,
+            email: dto.email,
+            password: dto.password,
+        }
+    }
+}
+
+impl From<LoginDto> for LoginUserCommand {
+    fn from(dto: LoginDto) -> Self {
+        LoginUserCommand {
+            email: dto.email,
+            password: dto.password,
+        }
+    }
+}
+
+impl From<User> for UserSignupResponse {
+    fn from(user: User) -> Self {
+        UserSignupResponse {
+            id: user.id.to_string(),
+            name: user.name,
+            email: user.email,
+        }
+    }
+}
+
+impl IntoResponse for UserSignupResponse {
+    fn into_response(self) -> axum::response::Response {
+        (StatusCode::CREATED, Json(self)).into_response()
+    }
 }

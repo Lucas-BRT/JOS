@@ -1,7 +1,7 @@
 use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
 use crate::{
     Result, core::state::AppState, domain::table_request::dtos::CreateTableRequestCommand,
-    interfaces::http::openapi::{schemas::*, tags::TABLE_REQUEST_TAG},
+    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -14,13 +14,16 @@ use uuid::Uuid;
 /// Create a new table request
 #[utoipa::path(
     post,
-    path = "/table-requests",
-    tag = TABLE_REQUEST_TAG,
-    request_body = CreateTableRequestRequest,
+    path = "/v1/table-requests",
+    tag = "table-requests",
+    security(
+        ("bearer_auth" = [])
+    ),
+    request_body = crate::interfaces::http::openapi::schemas::CreateTableRequestDto,
     responses(
-        (status = 201, description = "Table request created successfully", body = IdResponse),
-        (status = 400, description = "Validation error", body = ValidationErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 201, description = "Request created successfully", body = String),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -37,11 +40,14 @@ pub async fn create_table_request(
 /// Get all table requests
 #[utoipa::path(
     get,
-    path = "/table-requests",
-    tag = TABLE_REQUEST_TAG,
+    path = "/v1/table-requests",
+    tag = "table-requests",
+    security(
+        ("bearer_auth" = [])
+    ),
     responses(
-        (status = 200, description = "List of table requests", body = Vec<TableRequestResponse>),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "List of table requests", body = Vec<crate::interfaces::http::openapi::schemas::TableRequestResponse>),
+        (status = 401, description = "Unauthorized", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -58,15 +64,14 @@ pub async fn get_table_requests(
 /// Get a specific table request by ID
 #[utoipa::path(
     get,
-    path = "/table-requests/{id}",
-    tag = TABLE_REQUEST_TAG,
+    path = "/v1/table-requests/{id}",
+    tag = "table-requests",
     params(
         ("id" = String, Path, description = "Table request ID")
     ),
     responses(
-        (status = 200, description = "Table request found", body = TableRequestResponse),
-        (status = 404, description = "Table request not found", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "Table request details", body = Option<crate::interfaces::http::openapi::schemas::TableRequestResponse>),
+        (status = 404, description = "Table request not found", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -84,17 +89,16 @@ pub async fn get_table_request_by_id(
 /// Update a table request status
 #[utoipa::path(
     put,
-    path = "/table-requests/{id}",
-    tag = TABLE_REQUEST_TAG,
+    path = "/v1/table-requests/{id}",
+    tag = "table-requests",
     params(
         ("id" = String, Path, description = "Table request ID")
     ),
-    request_body = UpdateTableRequestRequest,
+    request_body = crate::interfaces::http::openapi::schemas::UpdateTableRequestDto,
     responses(
-        (status = 200, description = "Table request updated successfully", body = SuccessResponse),
-        (status = 400, description = "Validation error", body = ValidationErrorResponse),
-        (status = 404, description = "Table request not found", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "Table request updated successfully", body = ()),
+        (status = 400, description = "Bad request", body = ErrorResponse),
+        (status = 404, description = "Table request not found", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
@@ -114,15 +118,14 @@ pub async fn update_table_request(
 /// Delete a table request
 #[utoipa::path(
     delete,
-    path = "/table-requests/{id}",
-    tag = TABLE_REQUEST_TAG,
+    path = "/v1/table-requests/{id}",
+    tag = "table-requests",
     params(
         ("id" = String, Path, description = "Table request ID")
     ),
     responses(
-        (status = 200, description = "Table request deleted successfully", body = SuccessResponse),
-        (status = 404, description = "Table request not found", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "Table request deleted successfully", body = ()),
+        (status = 404, description = "Table request not found", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]

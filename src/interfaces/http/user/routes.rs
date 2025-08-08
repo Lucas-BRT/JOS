@@ -1,5 +1,6 @@
 use crate::{
-    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, domain::jwt::Claims,
+    Result, interfaces::http::user::dtos::MeResponse, state::AppState, domain::jwt::Claims,
+    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -90,15 +91,14 @@ pub async fn upload_image(
 /// Get current user information
 #[utoipa::path(
     get,
-    path = "/users/me",
-    tag = USER_TAG,
+    path = "/v1/users/me",
+    tag = "users",
     security(
         ("bearer_auth" = [])
     ),
     responses(
-        (status = 200, description = "User information retrieved successfully", body = UserResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse),
-        (status = 500, description = "Internal server error", body = ErrorResponse)
+        (status = 200, description = "User information", body = crate::interfaces::http::openapi::schemas::MeResponse),
+        (status = 401, description = "Unauthorized", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
