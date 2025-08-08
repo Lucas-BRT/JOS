@@ -3,6 +3,9 @@ use axum::{Router, Json, routing::get};
 use std::sync::Arc;
 use serde_json::json;
 
+const HEALTH_ROUTE: &str = "/health";
+const API_V1_PREFIX: &str = "/v1/";
+
 /// Health check endpoint
 async fn health_check() -> Json<serde_json::Value> {
     Json(json!({
@@ -23,7 +26,7 @@ fn router(app_state: Arc<AppState>) -> Router {
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/health", get(health_check))
-        .nest("/v1/", router(app_state.clone()))
+        .route(HEALTH_ROUTE, get(health_check))
+        .nest(API_V1_PREFIX, router(app_state.clone()))
         .merge(super::openapi::routes::routes())
 }

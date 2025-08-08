@@ -9,7 +9,6 @@ use crate::{
 };
 use axum::{Json, Router, extract::State, routing::post};
 use std::sync::Arc;
-use utoipa::OpenApi;
 use validator::Validate;
 
 /// Create a new user account
@@ -75,11 +74,7 @@ async fn login(
 
     let jwt_token = app_state
         .user_service
-        .login(
-            &login_payload.into(),
-            &app_state.config.jwt_secret,
-            app_state.config.jwt_expiration_duration,
-        )
+        .login(&login_payload.into())
         .await?;
 
     Ok(jwt_token)

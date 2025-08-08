@@ -9,7 +9,6 @@ use axum::{
     routing::{get, post},
 };
 use std::sync::Arc;
-use utoipa::OpenApi;
 
 /// Create a new RPG table
 #[utoipa::path(

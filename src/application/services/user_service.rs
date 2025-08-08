@@ -6,20 +6,21 @@ use crate::{
         entity::User,
         user_repository::UserRepository,
     },
-    utils::{jwt::Claims, password::verify_hash},
+    application::services::jwt_service::JwtService,
+    utils::password::verify_hash,
 };
-use chrono::Duration;
 use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct UserService {
     user_repository: Arc<dyn UserRepository>,
+    jwt_service: JwtService,
 }
 
 impl UserService {
-    pub fn new(user_repository: Arc<dyn UserRepository>) -> Self {
-        Self { user_repository }
+    pub fn new(user_repository: Arc<dyn UserRepository>, jwt_service: JwtService) -> Self {
+        Self { user_repository, jwt_service }
     }
 
     pub async fn signup(&self, new_user_data: &CreateUserCommand) -> Result<User> {
@@ -27,21 +28,14 @@ impl UserService {
         Ok(user)
     }
 
-    pub async fn login(
-        &self,
-        login_payload: &LoginUserCommand,
-        jwt_secret: &str,
-        jwt_expiration_duration: Duration,
-    ) -> Result<String> {
+    pub async fn login(&self, login_payload: &LoginUserCommand) -> Result<String> {
         let user = self
             .user_repository
             .find_by_email(&login_payload.email)
             .await?;
 
         if verify_hash(login_payload.password.clone(), user.password_hash.clone()).await? {
-            let jwt_token =
-                Claims::create_jwt(user.id, jwt_secret, jwt_expiration_duration, user.role)?;
-
+            let jwt_token = self.jwt_service.generate_token(user.id, user.role)?;
             Ok(jwt_token)
         } else {
             Err(Error::Application(ApplicationError::InvalidCredentials))

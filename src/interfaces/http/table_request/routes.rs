@@ -9,7 +9,6 @@ use axum::{
     routing::{get, post, put, delete},
 };
 use std::sync::Arc;
-use utoipa::OpenApi;
 use uuid::Uuid;
 
 /// Create a new table request

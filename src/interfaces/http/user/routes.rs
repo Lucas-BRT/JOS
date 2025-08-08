@@ -1,5 +1,5 @@
 use crate::{
-    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, utils::jwt::Claims,
+    Result, interfaces::http::{user::dtos::MeResponse, openapi::{schemas::*, tags::USER_TAG}}, state::AppState, utils::jwt::AuthClaims as Claims,
 };
 use axum::{
     Json, Router,
@@ -10,10 +10,9 @@ use axum::{
 use chrono::Utc;
 use serde_json::json;
 use std::sync::Arc;
-use utoipa::OpenApi;
 use uuid::Uuid;
 
-const MAX_IMAGE_SIZE: usize = 1024 * 1024 * 5; // 5MB
+const MAX_IMAGE_SIZE_BYTES: usize = 5 * 1024 * 1024; // 5MB
 const ALLOWED_IMAGE_TYPES: [&str; 2] = ["image/jpeg", "image/png"];
 
 pub async fn upload_image(
@@ -68,7 +67,7 @@ pub async fn upload_image(
             };
 
             data.extend_from_slice(&chunk);
-            if data.len() > MAX_IMAGE_SIZE {
+            if data.len() > MAX_IMAGE_SIZE_BYTES {
                 tracing::warn!("imagem excedeu limite de tamanho");
                 return Json(json!({
                     "error": "image too large",

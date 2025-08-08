@@ -6,11 +6,14 @@ pub struct Pagination {
     pub page_size: u32,
 }
 
+pub const DEFAULT_PAGE: u32 = 1;
+pub const DEFAULT_PAGE_SIZE: u32 = 10;
+
 impl Default for Pagination {
     fn default() -> Self {
         Self {
-            page: 1,
-            page_size: 10,
+            page: DEFAULT_PAGE,
+            page_size: DEFAULT_PAGE_SIZE,
         }
     }
 }
