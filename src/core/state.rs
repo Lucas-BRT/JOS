@@ -1,6 +1,7 @@
 use super::config::Config;
 use crate::application::services::{
     jwt_service::JwtService,
+    password_service::PasswordService,
     table_request_service::TableRequestService,
     table_service::TableService,
     user_service::UserService,
@@ -13,6 +14,7 @@ pub struct AppState {
     pub table_service: TableService,
     pub table_request_service: TableRequestService,
     pub jwt_service: JwtService,
+    pub password_service: PasswordService,
 }
 
 impl AppState {
@@ -22,6 +24,7 @@ impl AppState {
         table_service: TableService,
         table_request_service: TableRequestService,
         jwt_service: JwtService,
+        password_service: PasswordService,
     ) -> Self {
         Self {
             config,
@@ -29,6 +32,7 @@ impl AppState {
             table_service,
             table_request_service,
             jwt_service,
+            password_service,
         }
     }
 }

@@ -8,13 +8,11 @@ use std::sync::Arc;
 use tracing::{info, warn};
 use crate::application::services::{
     jwt_service::JwtService,
-    table_request_service::TableRequestService,
-    table_service::TableService,
-    user_service::UserService,
+    password_service::PasswordService,
+    table_request_service::TableRequestService, table_service::TableService, user_service::UserService,
 };
 use crate::infrastructure::{create_postgres_pool, run_postgres_migrations};
 use crate::infrastructure::prelude::*;
-use crate::infrastructure::repositories::prelude::TableRequestRepository;
 use crate::Result;
 use crate::core::config::Config;
 use crate::core::state::AppState;
@@ -57,8 +55,11 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
         config.jwt_secret.clone(),
         config.jwt_expiration_duration,
     );
+    let password_repo = PasswordRepositoryImpl::new();
+    
     let jwt_service = JwtService::new(Arc::new(jwt_repo));
-    let user_service = UserService::new(Arc::new(user_repo), jwt_service.clone());
+    let password_service = PasswordService::new(Arc::new(password_repo));
+    let user_service = UserService::new(Arc::new(user_repo), jwt_service.clone(), password_service.clone());
     info!("✅ User service initialized");
 
     let table_repo = TableRepository::new(pool.clone());
@@ -70,14 +71,9 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
     info!("✅ Table request service initialized");
 
     info!("✅ JWT service initialized");
+    info!("✅ Password service initialized");
 
-    let state = AppState::new(
-        config,
-        user_service,
-        table_service,
-        table_request_service,
-        jwt_service,
-    );
+    let state = AppState::new(config, user_service, table_service, table_request_service, jwt_service, password_service);
     info!("✅ Application state initialized");
 
     info!("🎉 Application setup completed successfully!");

@@ -7,6 +7,8 @@ use crate::Error;
 pub enum ApplicationError {
     #[error("invalid credentials")]
     InvalidCredentials,
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
 }
 
 impl From<ApplicationError> for Error {
@@ -25,6 +27,17 @@ impl IntoResponse for ApplicationError {
                     StatusCode::BAD_REQUEST,
                     Json(json!({
                         "message": "invalid credentials"
+                    })),
+                )
+                    .into_response()
+            }
+            Self::InvalidInput(message) => {
+                tracing::warn!("invalid input: {}", message);
+
+                (
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({
+                        "message": message
                     })),
                 )
                     .into_response()

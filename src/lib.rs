@@ -3,7 +3,6 @@ pub mod core;
 pub mod domain;
 pub mod infrastructure;
 pub mod interfaces;
-pub mod utils;
 
 // Re-export commonly used items
 pub use core::error::Error;

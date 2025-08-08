@@ -5,11 +5,12 @@ use crate::{
         error::ValidationError,
         openapi::{schemas::*, tags::AUTH_TAG},
     },
-    state::AppState,
+    core::state::AppState,
 };
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{Json, Router, extract::State, routing::{post, get}};
 use std::sync::Arc;
 use validator::Validate;
+use serde_json::json;
 
 /// Create a new user account
 #[utoipa::path(
@@ -80,9 +81,31 @@ async fn login(
     Ok(jwt_token)
 }
 
+/// Get password requirements
+#[utoipa::path(
+    get,
+    path = "/auth/password-requirements",
+    tag = AUTH_TAG,
+    responses(
+        (status = 200, description = "Password requirements"),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+async fn get_password_requirements(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<serde_json::Value>> {
+    let requirements = state.password_service.get_requirements().await;
+    
+    Ok(Json(json!({
+        "requirements": requirements
+    })))
+}
+
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/signup", post(signup))
         .route("/login", post(login))
+        .route("/password-requirements", get(get_password_requirements))
         .with_state(state.clone())
 }
