@@ -1,5 +1,6 @@
 use crate::core::state::AppState;
 use axum::{Router, Json, routing::get};
+use tower_http::cors::{Any, CorsLayer};
 use std::sync::Arc;
 use serde_json::json;
 
@@ -12,7 +13,7 @@ const API_V1_PREFIX: &str = "/v1/";
     path = "/health",
     tag = "health",
     responses(
-        (status = 200, description = "Service is healthy", body = crate::interfaces::http::openapi::schemas::HealthResponse)
+        (status = 200, description = "Service is healthy", body = serde_json::Value)
     )
 )]
 async fn health_check() -> Json<serde_json::Value> {
@@ -33,8 +34,14 @@ fn router(app_state: Arc<AppState>) -> Router {
 }
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
+
     Router::new()
         .route(HEALTH_ROUTE, get(health_check))
         .nest(API_V1_PREFIX, router(app_state.clone()))
         .merge(super::openapi::routes::routes())
+        .layer(cors)
 }

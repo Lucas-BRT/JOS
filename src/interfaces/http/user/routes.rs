@@ -1,6 +1,5 @@
 use crate::{
     Result, interfaces::http::user::dtos::MeResponse, state::AppState, domain::jwt::Claims,
-    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -97,8 +96,8 @@ pub async fn upload_image(
         ("bearer_auth" = [])
     ),
     responses(
-        (status = 200, description = "User information", body = crate::interfaces::http::openapi::schemas::MeResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse)
+        (status = 200, description = "User information", body = crate::interfaces::http::user::dtos::MeResponse),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]

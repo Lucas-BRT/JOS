@@ -5,7 +5,7 @@ use axum::{
 };
 use serde_json::json;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq)]
 pub enum ValidationError {
     #[error("password and password_confirmation mismatch")]
     PasswordMismatch,

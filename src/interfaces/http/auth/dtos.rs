@@ -6,6 +6,8 @@ use utoipa::ToSchema;
 pub struct SignupDto {
     #[validate(length(min = 4, max = 100))]
     pub name: String,
+    #[validate(length(min = 4, max = 100))]
+    pub nickname: String,
     #[validate(email)]
     pub email: String,
     #[validate(length(min = 8, max = 200))]
@@ -22,19 +24,19 @@ pub struct LoginDto {
     pub password: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct UserSignupResponse {
     pub id: String,
     pub name: String,
     pub email: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct LoginResponse {
     pub token: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct UserResponse {
     pub id: String,
     pub name: String,
@@ -44,7 +46,7 @@ pub struct UserResponse {
     pub updated_at: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct MeResponse {
     pub id: String,
     pub name: String,

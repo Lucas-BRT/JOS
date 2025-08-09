@@ -3,7 +3,6 @@ use crate::{
     interfaces::http::{
         auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
         error::ValidationError,
-        openapi::schemas::{ValidationErrorResponse, SignupDto as OpenApiSignupDto, UserSignupResponse as OpenApiUserSignupResponse, ErrorResponse},
     },
     core::state::AppState,
     domain::user::{dtos::{CreateUserCommand, LoginUserCommand}, entity::User},
@@ -18,10 +17,10 @@ use serde_json::json;
     post,
     path = "/v1/auth/signup",
     tag = "auth",
-    request_body = OpenApiSignupDto,
+    request_body = crate::interfaces::http::auth::dtos::SignupDto,
     responses(
-        (status = 201, description = "User created successfully", body = OpenApiUserSignupResponse),
-        (status = 400, description = "Bad request", body = ValidationErrorResponse)
+        (status = 201, description = "User created successfully", body = crate::interfaces::http::auth::dtos::UserSignupResponse),
+        (status = 400, description = "Bad request", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -55,7 +54,7 @@ async fn signup(
     request_body = LoginDto,
     responses(
         (status = 200, description = "Login successful", body = String),
-        (status = 401, description = "Invalid credentials", body = ErrorResponse)
+        (status = 401, description = "Invalid credentials", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -83,7 +82,7 @@ async fn login(
     path = "/v1/auth/password-requirements",
     tag = "auth",
     responses(
-        (status = 200, description = "Password requirements", body = crate::interfaces::http::openapi::schemas::PasswordRequirementsResponse)
+        (status = 200, description = "Password requirements", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -110,6 +109,7 @@ impl From<SignupDto> for CreateUserCommand {
     fn from(dto: SignupDto) -> Self {
         CreateUserCommand {
             name: dto.name,
+            nickname: dto.nickname,
             email: dto.email,
             password: dto.password,
         }

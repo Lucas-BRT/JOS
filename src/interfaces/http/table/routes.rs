@@ -2,7 +2,6 @@ use super::dtos::CreateTableDto;
 use crate::{
     Result, core::state::AppState, domain::table::dtos::CreateTableCommand,
     interfaces::http::table::dtos::AvaliableTableResponse,
-    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -19,11 +18,11 @@ use std::sync::Arc;
     security(
         ("bearer_auth" = [])
     ),
-    request_body = crate::interfaces::http::openapi::schemas::CreateTableDto,
+    request_body = crate::interfaces::http::table::dtos::CreateTableDto,
     responses(
         (status = 201, description = "Table created successfully", body = String),
-        (status = 400, description = "Bad request", body = ErrorResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse)
+        (status = 400, description = "Bad request", body = serde_json::Value),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -43,7 +42,7 @@ pub async fn create_table(
     path = "/v1/tables",
     tag = "tables",
     responses(
-        (status = 200, description = "List of available tables", body = Vec<crate::interfaces::http::openapi::schemas::AvailableTableResponse>)
+        (status = 200, description = "List of available tables", body = Vec<crate::interfaces::http::table::dtos::AvaliableTableResponse>)
     )
 )]
 #[axum::debug_handler]

@@ -10,16 +10,21 @@ use jos::infrastructure::repositories::error::RepositoryError;
 use sqlx::PgPool;
 use std::sync::Arc;
 
+fn create_test_user_data(name: &str, nickname: &str, email: &str, password: &str) -> CreateUserCommand {
+    CreateUserCommand {
+        name: name.to_string(),
+        nickname: nickname.to_string(),
+        email: email.to_string(),
+        password: password.to_string(),
+    }
+}
+
 
 #[sqlx::test]
 async fn test_create_user_success(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let result = repo.create(&user_data).await;
     assert!(result.is_ok());
@@ -32,45 +37,35 @@ async fn test_create_user_success(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_create_user_duplicate_username(pool: PgPool) {
+async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     // Create first user
     let result1 = repo.create(&user_data).await;
     assert!(result1.is_ok());
 
+    let user_data2 = create_test_user_data("testuser", "testuser", "test2@example.com", "password123");
+
     // Try to create second user with same username
-    let result2 = repo.create(&user_data).await;
+    let result2 = repo.create(&user_data2).await;
+
     assert!(result2.is_err());
-    
-    if let Err(jos::Error::Repository(RepositoryError::UsernameAlreadyTaken(name))) = result2 {
-        assert_eq!(name, "testuser");
-    } else {
-        panic!("Expected UsernameAlreadyTaken error");
+
+    match result2 {
+        Err(jos::Error::Repository(RepositoryError::UsernameAlreadyTaken)) => (),
+        _ => panic!("Unexpected error: {:?}", result2),
     }
 }
 
 #[sqlx::test]
-async fn test_create_user_duplicate_email(pool: PgPool) {
+async fn test_create_user_duplicate_email_should_fail(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data1 = CreateUserCommand {
-        name: "testuser1".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data1 = create_test_user_data("testuser1", "testuser1", "test@example.com", "password123");
 
-    let user_data2 = CreateUserCommand {
-        name: "testuser2".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password456".to_string(),
-    };
+    let user_data2 = create_test_user_data("testuser2", "testuser2", "test@example.com", "password456");
 
     // Create first user
     let result1 = repo.create(&user_data1).await;
@@ -79,11 +74,10 @@ async fn test_create_user_duplicate_email(pool: PgPool) {
     // Try to create second user with same email
     let result2 = repo.create(&user_data2).await;
     assert!(result2.is_err());
-    
-    if let Err(jos::Error::Repository(RepositoryError::EmailAlreadyTaken(email))) = result2 {
-        assert_eq!(email, "test@example.com");
-    } else {
-        panic!("Expected EmailAlreadyTaken error");
+
+    match result2 {
+        Err(jos::Error::Repository(RepositoryError::EmailAlreadyTaken)) => (),
+        _ => panic!("Unexpected error: {:?}", result2),
     }
 }
 
@@ -91,11 +85,7 @@ async fn test_create_user_duplicate_email(pool: PgPool) {
 async fn test_find_by_id(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let created_user = repo.create(&user_data).await.unwrap();
     let found_user = repo.find_by_id(&created_user.id).await;
@@ -126,11 +116,7 @@ async fn test_find_by_id_not_found(pool: PgPool) {
 async fn test_find_by_username(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     repo.create(&user_data).await.unwrap();
     let found_user = repo.find_by_username("testuser").await;
@@ -145,11 +131,7 @@ async fn test_find_by_username(pool: PgPool) {
 async fn test_find_by_email(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     repo.create(&user_data).await.unwrap();
     let found_user = repo.find_by_email("test@example.com").await;
@@ -164,17 +146,9 @@ async fn test_find_by_email(pool: PgPool) {
 async fn test_get_all(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data1 = CreateUserCommand {
-        name: "testuser1".to_string(),
-        email: "test1@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data1 = create_test_user_data("testuser1", "testuser1", "test1@example.com", "password123");
 
-    let user_data2 = CreateUserCommand {
-        name: "testuser2".to_string(),
-        email: "test2@example.com".to_string(),
-        password: "password456".to_string(),
-    };
+    let user_data2 = create_test_user_data("testuser2", "testuser2", "test2@example.com", "password456");
 
     repo.create(&user_data1).await.unwrap();
     repo.create(&user_data2).await.unwrap();
@@ -191,11 +165,7 @@ async fn test_get_all(pool: PgPool) {
 async fn test_update_user_name(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let created_user = repo.create(&user_data).await.unwrap();
     
@@ -221,11 +191,7 @@ async fn test_update_user_name(pool: PgPool) {
 async fn test_update_user_email(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let created_user = repo.create(&user_data).await.unwrap();
     
@@ -251,11 +217,7 @@ async fn test_update_user_email(pool: PgPool) {
 async fn test_update_user_password(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let created_user = repo.create(&user_data).await.unwrap();
     
@@ -306,17 +268,9 @@ async fn test_update_user_duplicate_username(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
     // Create two users
-    let user_data1 = CreateUserCommand {
-        name: "testuser1".to_string(),
-        email: "test1@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data1 = create_test_user_data("testuser1", "testuser1", "test1@example.com", "password123");
 
-    let user_data2 = CreateUserCommand {
-        name: "testuser2".to_string(),
-        email: "test2@example.com".to_string(),
-        password: "password456".to_string(),
-    };
+    let user_data2 = create_test_user_data("testuser2", "testuser2", "test2@example.com", "password456");
 
     let user1 = repo.create(&user_data1).await.unwrap();
     repo.create(&user_data2).await.unwrap();
@@ -335,10 +289,9 @@ async fn test_update_user_duplicate_username(pool: PgPool) {
     let result = repo.update(&update_data).await;
     assert!(result.is_err());
     
-    if let Err(jos::Error::Repository(RepositoryError::UsernameAlreadyTaken(name))) = result {
-        assert_eq!(name, "testuser2");
-    } else {
-        panic!("Expected UsernameAlreadyTaken error");
+    match result {
+        Err(jos::Error::Repository(RepositoryError::UsernameAlreadyTaken)) => (),
+        _ => panic!("Unexpected error: {:?}", result),
     }
 }
 
@@ -346,11 +299,7 @@ async fn test_update_user_duplicate_username(pool: PgPool) {
 async fn test_delete_user(pool: PgPool) {
     let repo = UserRepository::new(Arc::new(pool));
     
-    let user_data = CreateUserCommand {
-        name: "testuser".to_string(),
-        email: "test@example.com".to_string(),
-        password: "password123".to_string(),
-    };
+    let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let created_user = repo.create(&user_data).await.unwrap();
     
@@ -391,11 +340,7 @@ async fn test_concurrent_user_operations(pool: PgPool) {
     let handles: Vec<_> = (0..5)
         .map(|i| {
             let repo = repo.clone();
-            let user_data = CreateUserCommand {
-                name: format!("testuser{}", i),
-                email: format!("test{}@example.com", i),
-                password: format!("password{}", i),
-            };
+            let user_data = create_test_user_data(&format!("testuser{}", i), &format!("testuser{}", i), &format!("test{}@example.com", i), &format!("password{}", i));
             tokio::spawn(async move { repo.create(&user_data).await })
         })
         .collect();

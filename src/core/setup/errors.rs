@@ -1,6 +1,6 @@
 use crate::Error;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum SetupError {
     #[error("Failed to get environment variable: {0}")]
     FailedToGetEnvironmentVariable(String),

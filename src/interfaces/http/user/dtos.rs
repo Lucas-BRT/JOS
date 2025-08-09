@@ -6,7 +6,7 @@ use serde_with::skip_serializing_none;
 use uuid::Uuid;
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, utoipa::ToSchema)]
 pub struct MeResponse {
     pub id: Uuid,
     pub email: String,

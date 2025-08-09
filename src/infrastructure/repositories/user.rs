@@ -4,7 +4,7 @@ use crate::domain::user::{
     dtos::CreateUserCommand, entity::User, user_repository::UserRepository as UserRepositoryTrait,
 };
 use crate::infrastructure::entities::{t_users::Model as UserModel, enums::ERoles};
-use crate::infrastructure::repositories::error::RepositoryError;
+use crate::infrastructure::repositories::{error::RepositoryError, constraint_mapper};
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -56,58 +56,35 @@ impl UserRepository {
 #[async_trait::async_trait]
 impl UserRepositoryTrait for UserRepository {
     async fn create(&self, user: &CreateUserCommand) -> Result<User> {
-        // Verificar se o username já existe
-        let existing_user = sqlx::query_as::<_, UserModel>(
-            "SELECT * FROM t_users WHERE name = $1"
-        )
-        .bind(&user.name)
-        .fetch_optional(&*self.pool)
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
-
-        if existing_user.is_some() {
-            return Err(RepositoryError::UsernameAlreadyTaken(user.name.clone()).into());
-        }
-
-        // Verificar se o email já existe
-        let existing_email = sqlx::query_as::<_, UserModel>(
-            "SELECT * FROM t_users WHERE email = $1"
-        )
-        .bind(&user.email)
-        .fetch_optional(&*self.pool)
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
-
-        if existing_email.is_some() {
-            return Err(RepositoryError::EmailAlreadyTaken(user.email.clone()).into());
-        }
 
         let id = Uuid::new_v4();
         let now = Utc::now();
 
         let created_user = sqlx::query_as::<_, UserModel>(
             r#"
-            INSERT INTO t_users (id, name, email, password_hash, role, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO t_users (id, name, nickname, email, password_hash, role, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#
         )
         .bind(id)
         .bind(&user.name)
+        .bind(&user.nickname)
         .bind(&user.email)
         .bind(&user.password)
-        .bind(ERoles::User) // Default role
+        .bind(ERoles::User)
         .bind(now)
         .bind(now)
-        .fetch_one(&*self.pool)
+        .fetch_one(self.pool.as_ref())
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
+
 
         Ok(Self::map_model_to_entity(created_user))
     }
 
     async fn update(&self, data: &UpdateUserCommand) -> Result<()> {
-        // Verificar se o usuário existe
+        // Verify if the user exists
         let existing_user = sqlx::query_as::<_, UserModel>(
             "SELECT * FROM t_users WHERE id = $1"
         )
@@ -120,9 +97,9 @@ impl UserRepositoryTrait for UserRepository {
             return Err(RepositoryError::UserNotFound.into());
         }
 
-        // Atualizar campos individualmente
+        // Update fields individually
         if let crate::domain::utils::update::Update::Change(name) = &data.name {
-            // Verificar se o nome já existe para outro usuário
+            // Verify if the name already exists for another user
             let existing_name = sqlx::query_as::<_, UserModel>(
                 "SELECT * FROM t_users WHERE name = $1 AND id != $2"
             )
@@ -133,7 +110,7 @@ impl UserRepositoryTrait for UserRepository {
             .map_err(RepositoryError::DatabaseError)?;
 
             if existing_name.is_some() {
-                return Err(RepositoryError::UsernameAlreadyTaken(name.clone()).into());
+                return Err(RepositoryError::UsernameAlreadyTaken.into());
             }
 
             sqlx::query("UPDATE t_users SET name = $1, updated_at = $2 WHERE id = $3")
@@ -146,7 +123,7 @@ impl UserRepositoryTrait for UserRepository {
         }
 
         if let crate::domain::utils::update::Update::Change(email) = &data.email {
-            // Verificar se o email já existe para outro usuário
+            // Verify if the email already exists for another user
             let existing_email = sqlx::query_as::<_, UserModel>(
                 "SELECT * FROM t_users WHERE email = $1 AND id != $2"
             )
@@ -157,7 +134,7 @@ impl UserRepositoryTrait for UserRepository {
             .map_err(RepositoryError::DatabaseError)?;
 
             if existing_email.is_some() {
-                return Err(RepositoryError::EmailAlreadyTaken(email.clone()).into());
+                return Err(RepositoryError::EmailAlreadyTaken.into());
             }
 
             sqlx::query("UPDATE t_users SET email = $1, updated_at = $2 WHERE id = $3")
@@ -233,10 +210,10 @@ impl UserRepositoryTrait for UserRepository {
     }
 
     async fn delete(&self, user_id: &Uuid) -> Result<User> {
-        // Primeiro buscar o usuário para retorná-lo
+        // First find the user to return it
         let user = self.find_by_id(user_id).await?;
 
-        // Deletar o usuário
+        // Delete the user
         sqlx::query("DELETE FROM t_users WHERE id = $1")
             .bind(user_id)
             .execute(&*self.pool)

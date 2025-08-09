@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 pub struct CreateUserCommand {
     pub name: String,
+    pub nickname: String,
     pub email: String,
     pub password: String,
 }

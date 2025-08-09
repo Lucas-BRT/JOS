@@ -1,7 +1,6 @@
 use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
 use crate::{
     Result, core::state::AppState, domain::table_request::dtos::CreateTableRequestCommand,
-    interfaces::http::openapi::schemas::ErrorResponse,
 };
 use axum::{
     Json, Router,
@@ -19,11 +18,11 @@ use uuid::Uuid;
     security(
         ("bearer_auth" = [])
     ),
-    request_body = crate::interfaces::http::openapi::schemas::CreateTableRequestDto,
+    request_body = crate::interfaces::http::table_request::dtos::CreateTableRequestDto,
     responses(
         (status = 201, description = "Request created successfully", body = String),
-        (status = 400, description = "Bad request", body = ErrorResponse),
-        (status = 401, description = "Unauthorized", body = ErrorResponse)
+        (status = 400, description = "Bad request", body = serde_json::Value),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -46,8 +45,8 @@ pub async fn create_table_request(
         ("bearer_auth" = [])
     ),
     responses(
-        (status = 200, description = "List of table requests", body = Vec<crate::interfaces::http::openapi::schemas::TableRequestResponse>),
-        (status = 401, description = "Unauthorized", body = ErrorResponse)
+        (status = 200, description = "List of table requests", body = Vec<crate::interfaces::http::table_request::dtos::TableRequestResponse>),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -70,8 +69,8 @@ pub async fn get_table_requests(
         ("id" = String, Path, description = "Table request ID")
     ),
     responses(
-        (status = 200, description = "Table request details", body = Option<crate::interfaces::http::openapi::schemas::TableRequestResponse>),
-        (status = 404, description = "Table request not found", body = ErrorResponse)
+        (status = 200, description = "Table request details", body = Option<crate::interfaces::http::table_request::dtos::TableRequestResponse>),
+        (status = 404, description = "Table request not found", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -94,11 +93,11 @@ pub async fn get_table_request_by_id(
     params(
         ("id" = String, Path, description = "Table request ID")
     ),
-    request_body = crate::interfaces::http::openapi::schemas::UpdateTableRequestDto,
+    request_body = crate::interfaces::http::table_request::dtos::UpdateTableRequestDto,
     responses(
         (status = 200, description = "Table request updated successfully", body = ()),
-        (status = 400, description = "Bad request", body = ErrorResponse),
-        (status = 404, description = "Table request not found", body = ErrorResponse)
+        (status = 400, description = "Bad request", body = serde_json::Value),
+        (status = 404, description = "Table request not found", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]
@@ -125,7 +124,7 @@ pub async fn update_table_request(
     ),
     responses(
         (status = 200, description = "Table request deleted successfully", body = ()),
-        (status = 404, description = "Table request not found", body = ErrorResponse)
+        (status = 404, description = "Table request not found", body = serde_json::Value)
     )
 )]
 #[axum::debug_handler]

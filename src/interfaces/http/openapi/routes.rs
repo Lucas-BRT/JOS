@@ -1,7 +1,6 @@
 use axum::{Router};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
-use crate::interfaces::http::openapi::schemas::*;
 
 /// JOS API - Join Our Session
 /// 
@@ -24,22 +23,15 @@ use crate::interfaces::http::openapi::schemas::*;
     ),
     components(
         schemas(
-            SignupDto,
-            LoginDto,
-            UserSignupResponse,
-            LoginResponse,
-            UserResponse,
-            MeResponse,
-            PasswordRequirementsResponse,
-            CreateTableDto,
-            AvailableTableResponse,
-            CreateTableRequestDto,
-            TableRequestResponse,
-            UpdateTableRequestDto,
-            HealthResponse,
-            ErrorResponse,
-            ValidationErrorResponse,
-            FieldError
+            crate::interfaces::http::auth::dtos::SignupDto,
+            crate::interfaces::http::auth::dtos::LoginDto,
+            crate::interfaces::http::auth::dtos::UserSignupResponse,
+            crate::interfaces::http::user::dtos::MeResponse,
+            crate::interfaces::http::table::dtos::CreateTableDto,
+            crate::interfaces::http::table::dtos::AvaliableTableResponse,
+            crate::interfaces::http::table_request::dtos::CreateTableRequestDto,
+            crate::interfaces::http::table_request::dtos::TableRequestResponse,
+            crate::interfaces::http::table_request::dtos::UpdateTableRequestDto
         )
     ),
     tags(
@@ -48,10 +40,6 @@ use crate::interfaces::http::openapi::schemas::*;
         (name = "tables", description = "RPG table management endpoints"),
         (name = "table-requests", description = "Table request management endpoints"),
         (name = "health", description = "Health check endpoints")
-    ),
-    servers(
-        (url = "http://localhost:3000", description = "Development server"),
-        (url = "https://api.jos.com", description = "Production server")
     ),
     info(
         title = "JOS API",

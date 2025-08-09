@@ -18,6 +18,7 @@ CREATE TYPE e_intent_status AS ENUM (
 CREATE TABLE t_users (
 	"id" UUID NOT NULL,
 	"name" TEXT NOT NULL UNIQUE,
+	"nickname" TEXT NOT NULL,
 	"email" TEXT NOT NULL UNIQUE,
 	"password_hash" TEXT NOT NULL,
 	"role" e_roles NOT NULL,
@@ -39,6 +40,7 @@ CREATE TABLE t_rpg_tables (
 	"gm_id" UUID NOT NULL,
 	"title" TEXT NOT NULL,
 	"visibility" e_table_visibility NOT NULL,
+	"max_players" INTEGER NOT NULL,
 	"description" TEXT NOT NULL,
 	"game_system_id" UUID NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
@@ -51,6 +53,7 @@ CREATE TABLE t_rpg_tables (
 CREATE TABLE t_sessions (
 	"id" UUID NOT NULL,
 	"name" TEXT NOT NULL,
+	"description" TEXT NOT NULL,
 	"table_id" UUID NOT NULL,
 	"accepting_intents" BOOLEAN NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,

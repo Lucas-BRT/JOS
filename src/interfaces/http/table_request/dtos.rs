@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct CreateTableRequestDto {
     pub user_id: Uuid,
     pub table_id: Uuid,
@@ -22,13 +22,13 @@ impl From<CreateTableRequestDto> for CreateTableRequestCommand {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Validate)]
+#[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct UpdateTableRequestDto {
     #[validate(length(min = 1, message = "Status cannot be empty"))]
     pub status: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct TableRequestResponse {
     pub id: Uuid,
     pub user_id: Uuid,
