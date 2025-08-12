@@ -9,17 +9,21 @@ use utoipa::{OpenApi};
 #[openapi(
     paths(
         crate::interfaces::http::health::health_check,
+
         crate::interfaces::http::auth::routes::signup,
         crate::interfaces::http::auth::routes::login,
         crate::interfaces::http::auth::routes::get_password_requirements,
+
         crate::interfaces::http::user::routes::me,
         crate::interfaces::http::user::routes::get_user_by_id,
+
         crate::interfaces::http::table::routes::create_table,
         crate::interfaces::http::table::routes::get_available_tables,
         crate::interfaces::http::table::routes::delete_table,
+
+        crate::interfaces::http::table_request::routes::get_table_requests_by_table_id,
         crate::interfaces::http::table_request::routes::create_table_request,
         crate::interfaces::http::table_request::routes::get_table_requests,
-        crate::interfaces::http::table_request::routes::get_table_request_by_id,
         crate::interfaces::http::table_request::routes::update_table_request,
         crate::interfaces::http::table_request::routes::delete_table_request,
     ),

@@ -1,21 +1,21 @@
 use crate::domain::table_request::{dtos::CreateTableRequestCommand, entity::TableRequest};
 use serde::{Deserialize, Serialize};
-
 use uuid::Uuid;
 use validator::Validate;
+use chrono::{DateTime, Utc};
+
 
 #[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct CreateTableRequestDto {
-    pub user_id: Uuid,
     pub table_id: Uuid,
     #[validate(length(max = 500, message = "Message must be less than 500 characters"))]
     pub message: Option<String>,
 }
 
-impl From<CreateTableRequestDto> for CreateTableRequestCommand {
-    fn from(dto: CreateTableRequestDto) -> Self {
+impl CreateTableRequestCommand {
+    pub fn from_dto(dto: CreateTableRequestDto, user_id: Uuid) -> Self {
         CreateTableRequestCommand {
-            user_id: dto.user_id,
+            user_id,
             table_id: dto.table_id,
             message: dto.message,
         }
@@ -35,8 +35,8 @@ pub struct TableRequestResponse {
     pub table_id: Uuid,
     pub message: Option<String>,
     pub status: String,
-    pub created_at: chrono::DateTime<chrono::Utc>,
-    pub updated_at: Option<chrono::DateTime<chrono::Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
 
 impl From<&TableRequest> for TableRequestResponse {

@@ -11,7 +11,6 @@ pub struct CreateTableCommand {
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
 }
 
 pub struct UpdateTableCommand {
@@ -21,18 +20,13 @@ pub struct UpdateTableCommand {
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TableFilters {
     pub title: Option<String>,
     pub game_system_id: Option<Uuid>,
-    pub is_public: Option<bool>,
     pub max_players: Option<u32>,
-    pub player_slots: Option<u32>,
-    pub occupied_slots: Option<u32>,
-    pub bg_image_link: Option<String>,
 }
 
 #[allow(unused)]

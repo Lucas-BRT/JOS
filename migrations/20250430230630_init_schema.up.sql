@@ -15,6 +15,12 @@ CREATE TYPE e_intent_status AS ENUM (
 	'maybe'
 );
 
+CREATE TYPE e_table_request_status AS ENUM (
+	'pending',
+	'approved',
+	'rejected'
+);
+
 CREATE TABLE t_users (
 	"id" UUID NOT NULL,
 	"name" TEXT NOT NULL UNIQUE,
@@ -49,6 +55,19 @@ CREATE TABLE t_rpg_tables (
 	FOREIGN KEY("gm_id") REFERENCES t_users("id") ON UPDATE NO ACTION ON DELETE CASCADE,
 	FOREIGN KEY("game_system_id") REFERENCES "t_game_system"("id") ON UPDATE NO ACTION ON DELETE CASCADE
 );
+
+CREATE TABLE t_table_requests (
+	"id" UUID NOT NULL,
+	"user_id" UUID NOT NULL REFERENCES t_users("id") ON UPDATE NO ACTION ON DELETE CASCADE,
+	"table_id" UUID NOT NULL REFERENCES t_rpg_tables("id") ON UPDATE NO ACTION ON DELETE CASCADE,
+	"message" TEXT,
+	"status" e_table_request_status NOT NULL,
+	"created_at" TIMESTAMPTZ NOT NULL,
+	"updated_at" TIMESTAMPTZ,
+	PRIMARY KEY("id")
+);
+
+CREATE INDEX t_table_requests_index_0 ON t_table_requests ("table_id");
 
 CREATE TABLE t_sessions (
 	"id" UUID NOT NULL,

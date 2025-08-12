@@ -19,7 +19,6 @@ pub struct CreateTableDto {
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
 }
 
 impl CreateTableCommand {
@@ -33,7 +32,6 @@ impl CreateTableCommand {
             max_players: dto.max_players,
             player_slots: dto.player_slots,
             occupied_slots: dto.occupied_slots,
-            bg_image_link: dto.bg_image_link,
         }
     }
 }

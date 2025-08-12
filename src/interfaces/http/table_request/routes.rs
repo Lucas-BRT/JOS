@@ -1,16 +1,15 @@
 use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
 use crate::{
-    Result, core::state::AppState, domain::table_request::dtos::CreateTableRequestCommand,
+    application::error::ApplicationError, core::state::AppState, domain::{jwt::Claims, table_request::dtos::{CreateTableRequestCommand, UpdateTableRequestCommand}}, infrastructure::prelude::RepositoryError, Error, Result
 };
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::{get, post, put, delete},
+    routing::{delete, get, post, put},
 };
 use std::sync::Arc;
 use uuid::Uuid;
 
-/// Create a new table request
 #[utoipa::path(
     post,
     path = "/v1/table-requests",
@@ -18,25 +17,25 @@ use uuid::Uuid;
     security(
         ("bearer_auth" = [])
     ),
-    request_body = crate::interfaces::http::table_request::dtos::CreateTableRequestDto,
+    request_body = CreateTableRequestDto,
     responses(
         (status = 201, description = "Request created successfully", body = String),
-        (status = 400, description = "Bad request", body = serde_json::Value),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
+        (status = 400, description = "Bad request", body = Value),
+        (status = 401, description = "Unauthorized", body = Value)
     )
 )]
 #[axum::debug_handler]
 pub async fn create_table_request(
+    user: Claims,
     State(app_state): State<Arc<AppState>>,
-    Json(new_request_payload): Json<CreateTableRequestDto>,
+    Json(payload): Json<CreateTableRequestDto>,
 ) -> Result<Json<String>> {
-    let request = CreateTableRequestCommand::from(new_request_payload);
+    let request = CreateTableRequestCommand::from_dto(payload, user.sub);
     let request_id = app_state.table_request_service.create(&request).await?;
 
     Ok(Json(request_id))
 }
 
-/// Get all table requests
 #[utoipa::path(
     get,
     path = "/v1/table-requests",
@@ -45,59 +44,71 @@ pub async fn create_table_request(
         ("bearer_auth" = [])
     ),
     responses(
-        (status = 200, description = "List of table requests", body = Vec<crate::interfaces::http::table_request::dtos::TableRequestResponse>),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
+        (status = 200, description = "List of table requests", body = Vec<TableRequestResponse>),
+        (status = 401, description = "Unauthorized", body = Value)
     )
 )]
 #[axum::debug_handler]
 pub async fn get_table_requests(
+    user: Claims,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TableRequestResponse>>> {
-    let requests = app_state.table_request_service.get().await?;
-
+    let requests = app_state.table_request_service.find_by_user_id(&user.sub).await?;
     let requests = requests.iter().map(TableRequestResponse::from).collect();
 
     Ok(Json(requests))
 }
 
-/// Get a specific table request by ID
 #[utoipa::path(
     get,
-    path = "/v1/table-requests/{id}",
+    path = "/v1/table-requests/table/{id}",
     tag = "table-requests",
     params(
-        ("id" = String, Path, description = "Table request ID")
+        ("id" = Uuid, Path, description = "Table ID")
+    ),
+    security(
+        ("bearer_auth" = [])
     ),
     responses(
-        (status = 200, description = "Table request details", body = Option<crate::interfaces::http::table_request::dtos::TableRequestResponse>),
-        (status = 404, description = "Table request not found", body = serde_json::Value)
+        (status = 200, description = "List of table requests of a table", body = Vec<TableRequestResponse>),
+        (status = 401, description = "Unauthorized", body = Value)
     )
 )]
 #[axum::debug_handler]
-pub async fn get_table_request_by_id(
+pub async fn get_table_requests_by_table_id(
+    user: Claims,
     State(app_state): State<Arc<AppState>>,
-    Path(request_id): Path<Uuid>,
-) -> Result<Json<Option<TableRequestResponse>>> {
-    let request = app_state.table_request_service.find_by_id(&request_id).await?;
+    Path(table_id): Path<Uuid>,
+) -> Result<Json<Vec<TableRequestResponse>>> {
 
-    let response = request.as_ref().map(TableRequestResponse::from);
+    let table = app_state.table_service.find_by_id(&table_id).await?;
 
-    Ok(Json(response))
+    if table.is_none() {
+        return Err(Error::Repository(RepositoryError::TableNotFound));
+    }
+
+    if table.unwrap().gm_id != user.sub {
+        return Err(Error::Application(ApplicationError::InvalidCredentials));
+    }
+
+    let requests = app_state.table_request_service.find_by_table_id(&table_id).await?;
+    let requests = requests.iter().map(TableRequestResponse::from).collect();
+
+    Ok(Json(requests))
 }
 
-/// Update a table request status
 #[utoipa::path(
     put,
     path = "/v1/table-requests/{id}",
     tag = "table-requests",
     params(
-        ("id" = String, Path, description = "Table request ID")
+        ("id" = Uuid, Path, description = "Table request ID")
     ),
-    request_body = crate::interfaces::http::table_request::dtos::UpdateTableRequestDto,
+    request_body = UpdateTableRequestDto,
     responses(
         (status = 200, description = "Table request updated successfully", body = ()),
-        (status = 400, description = "Bad request", body = serde_json::Value),
-        (status = 404, description = "Table request not found", body = serde_json::Value)
+        (status = 400, description = "Bad request", body = Value),
+        (status = 404, description = "Table request not found", body = Value)
     )
 )]
 #[axum::debug_handler]
@@ -106,7 +117,7 @@ pub async fn update_table_request(
     Path(request_id): Path<Uuid>,
     Json(update_payload): Json<UpdateTableRequestDto>,
 ) -> Result<Json<()>> {
-    let update_command = crate::domain::table_request::dtos::UpdateTableRequestCommand {
+    let update_command = UpdateTableRequestCommand {
         status: update_payload.status,
     };
     app_state.table_request_service.update(&request_id, &update_command).await?;
@@ -114,17 +125,16 @@ pub async fn update_table_request(
     Ok(Json(()))
 }
 
-/// Delete a table request
 #[utoipa::path(
     delete,
     path = "/v1/table-requests/{id}",
     tag = "table-requests",
     params(
-        ("id" = String, Path, description = "Table request ID")
+        ("id" = Uuid, Path, description = "Table request ID")
     ),
     responses(
         (status = 200, description = "Table request deleted successfully", body = ()),
-        (status = 404, description = "Table request not found", body = serde_json::Value)
+        (status = 404, description = "Table request not found", body = Value)
     )
 )]
 #[axum::debug_handler]
@@ -141,7 +151,6 @@ pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_table_requests))
         .route("/", post(create_table_request))
-        .route("/{id}", get(get_table_request_by_id))
         .route("/{id}", put(update_table_request))
         .route("/{id}", delete(delete_table_request))
         .with_state(state.clone())

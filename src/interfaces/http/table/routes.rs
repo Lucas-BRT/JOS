@@ -6,7 +6,6 @@ use axum::{
 use uuid::Uuid;
 use std::sync::Arc;
 use crate::Error;
-use serde_json::Value;
 
 
 #[utoipa::path(
@@ -91,7 +90,6 @@ pub async fn delete_table(
 
     Ok(Json(()))
 }
-
 
 
 pub fn routes(state: Arc<AppState>) -> Router {
