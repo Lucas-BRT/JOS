@@ -28,6 +28,7 @@ impl PasswordRepositoryImpl {
 #[async_trait]
 impl PasswordRepository for PasswordRepositoryImpl {
     async fn generate_hash(&self, password: String) -> Result<String> {
+        tracing::info!("Generating hash for password: {}", password);
         // Validate password before hashing
         self.validator.validate(&password)
             .map_err(|e| {
@@ -38,10 +39,13 @@ impl PasswordRepository for PasswordRepositoryImpl {
         tokio::task::spawn_blocking(move || {
             let salt = SaltString::generate(&mut OsRng);
             let argon2 = Argon2::default();
-
+            tracing::info!("Hashing password with Argon2");
             argon2
                 .hash_password(password.as_bytes(), &salt)
-                .map(|hash| hash.to_string())
+                .map(|hash| {
+                    tracing::info!("Hash generated successfully");
+                    hash.to_string()
+                })
                 .map_err(|_| {
                     tracing::error!("failed to hash password");
                     Error::InternalServerError
@@ -55,15 +59,24 @@ impl PasswordRepository for PasswordRepositoryImpl {
     }
 
     async fn verify_hash(&self, password: String, hash: String) -> Result<bool> {
+        tracing::info!("Verifying hash for password: {}", password);
+        tracing::info!("Hash: {}", hash);
+
         tokio::task::spawn_blocking(move || {
-            let parsed_hash = PasswordHash::new(&hash).map_err(|_| {
-                tracing::error!("failed to parse hash");
+            let parsed_hash = PasswordHash::new(&hash).map_err(|e| {
+                tracing::error!("failed to parse hash: {}", e);
                 Error::InternalServerError
             })?;
 
             match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
-                Ok(_) => Ok(true),
-                Err(Password) => Ok(false),
+                Ok(_) => {
+                    tracing::info!("Password verified successfully");
+                    Ok(true)
+                }
+                Err(Password) => {
+                    tracing::info!("Password verification failed");
+                    Ok(false)
+                }
                 Err(e) => {
                     tracing::error!("unexpected error during password verification: {}", e);
                     Err(Error::InternalServerError)

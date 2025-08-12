@@ -1,13 +1,7 @@
 use crate::{
-    Error, Result,
-    application::error::ApplicationError,
-    domain::user::{
-        dtos::{CreateUserCommand, LoginUserCommand},
-        entity::User,
-        user_repository::UserRepository,
-        role::Role,
-    },
-    application::services::{jwt_service::JwtService, password_service::PasswordService},
+    application::{error::ApplicationError, services::{jwt_service::JwtService, password_service::PasswordService}}, domain::user::{
+        dtos::{CreateUserCommand, LoginUserCommand}, entity::User, role::Role, user_repository::UserRepository
+    }, interfaces::http::auth::dtos::SignupDto, Error, Result
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -29,12 +23,18 @@ impl UserService {
         Self { user_repository, jwt_service, password_service }
     }
 
-    pub async fn signup(&self, new_user_data: &CreateUserCommand) -> Result<User> {
-        let user = self.user_repository.create(new_user_data).await?;
+    pub async fn signup(&self, user_data: SignupDto) -> Result<User> {
+        let password_hash = self.password_service.generate_hash(user_data.password.clone()).await?;
+        let user_data = CreateUserCommand {
+            password_hash,
+            ..user_data.into()
+        };
+
+        let user = self.user_repository.create(user_data).await?;
         Ok(user)
     }
 
-    pub async fn login(&self, login_payload: &LoginUserCommand) -> Result<String> {
+    pub async fn login(&self, login_payload: LoginUserCommand) -> Result<String> {
         let user = self
             .user_repository
             .find_by_email(&login_payload.email)
@@ -58,29 +58,5 @@ impl UserService {
 
     pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
         self.user_repository.find_by_id(id).await
-    }
-
-    pub async fn create_user(&self, user_data: &CreateUserCommand) -> Result<User> {
-        // Validate password before creating user
-        self.password_service.validate_password(&user_data.password)
-            .await
-            .map_err(|e| {
-                tracing::error!("Password validation failed: {}", e.message);
-                Error::Application(ApplicationError::InvalidInput(e.message))
-            })?;
-
-        let password_hash = self.password_service.generate_hash(user_data.password.clone()).await?;
-
-        let user = User {
-            id: Uuid::new_v4(),
-            name: user_data.name.clone(),
-            email: user_data.email.clone(),
-            password_hash,
-            role: Role::User, // Default role
-            created_at: Utc::now(),
-            updated_at: None,
-        };
-
-        self.user_repository.create(user_data).await
     }
 }

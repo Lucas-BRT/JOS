@@ -26,21 +26,17 @@ use serde_json::json;
 #[axum::debug_handler]
 async fn signup(
     State(app_state): State<Arc<AppState>>,
-    Json(new_user_payload): Json<SignupDto>,
+    Json(payload): Json<SignupDto>,
 ) -> Result<UserSignupResponse> {
-    if let Err(sanitization_error) = new_user_payload.validate() {
+    if let Err(sanitization_error) = payload.validate() {
         return Err(Error::Validation(ValidationError::Other(
             sanitization_error,
         )));
     }
 
-    if new_user_payload.password != new_user_payload.confirm_password {
-        return Err(Error::Validation(ValidationError::PasswordMismatch));
-    }
-
     let user = app_state
         .user_service
-        .signup(&new_user_payload.into())
+        .signup(payload)
         .await?;
 
     Ok(user.into())
@@ -63,6 +59,7 @@ async fn login(
     Json(login_payload): Json<LoginDto>,
 ) -> Result<String> {
     if let Err(sanitization_error) = login_payload.validate() {
+        tracing::error!("Validation error: {:?}", sanitization_error);
         return Err(Error::Validation(ValidationError::Other(
             sanitization_error,
         )));
@@ -70,7 +67,7 @@ async fn login(
 
     let jwt_token = app_state
         .user_service
-        .login(&login_payload.into())
+        .login(login_payload.into())
         .await?;
 
     Ok(jwt_token)
@@ -108,10 +105,10 @@ pub fn routes(state: Arc<AppState>) -> Router {
 impl From<SignupDto> for CreateUserCommand {
     fn from(dto: SignupDto) -> Self {
         CreateUserCommand {
-            name: dto.name,
-            nickname: dto.nickname,
+            username: dto.name,
+            display_name: dto.nickname,
             email: dto.email,
-            password: dto.password,
+            password_hash: dto.password,
         }
     }
 }

@@ -55,7 +55,7 @@ impl UserRepository {
 
 #[async_trait::async_trait]
 impl UserRepositoryTrait for UserRepository {
-    async fn create(&self, user: &CreateUserCommand) -> Result<User> {
+    async fn create(&self, user: CreateUserCommand) -> Result<User> {
 
         let id = Uuid::new_v4();
         let now = Utc::now();
@@ -68,10 +68,10 @@ impl UserRepositoryTrait for UserRepository {
             "#
         )
         .bind(id)
-        .bind(&user.name)
-        .bind(&user.nickname)
+        .bind(&user.username)
+        .bind(&user.display_name)
         .bind(&user.email)
-        .bind(&user.password)
+        .bind(&user.password_hash)
         .bind(ERoles::User)
         .bind(now)
         .bind(now)
@@ -83,7 +83,7 @@ impl UserRepositoryTrait for UserRepository {
         Ok(Self::map_model_to_entity(created_user))
     }
 
-    async fn update(&self, data: &UpdateUserCommand) -> Result<()> {
+    async fn update(&self, data: UpdateUserCommand) -> Result<()> {
         // Verify if the user exists
         let existing_user = sqlx::query_as::<_, UserModel>(
             "SELECT * FROM t_users WHERE id = $1"
@@ -98,7 +98,7 @@ impl UserRepositoryTrait for UserRepository {
         }
 
         // Update fields individually
-        if let crate::domain::utils::update::Update::Change(name) = &data.name {
+        if let crate::domain::utils::update::Update::Change(name) = &data.display_name {
             // Verify if the name already exists for another user
             let existing_name = sqlx::query_as::<_, UserModel>(
                 "SELECT * FROM t_users WHERE name = $1 AND id != $2"
