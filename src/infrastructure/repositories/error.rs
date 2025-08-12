@@ -24,6 +24,8 @@ pub enum RepositoryError {
     DatabaseError(#[from] sqlx::Error),
     #[error("user not found")]
     UserNotFound,
+    #[error("table not found")]
+    TableNotFound,
 }
 
 impl From<RepositoryError> for Error {
@@ -116,6 +118,16 @@ impl IntoResponse for RepositoryError {
                     StatusCode::NOT_FOUND,
                     Json(json!({
                         "message": "not found"
+                    })),
+                )
+                    .into_response()
+            }
+            Self::TableNotFound => {
+                tracing::warn!("Table not found");
+                (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({
+                        "message": "Table not found"
                     })),
                 )
                     .into_response()

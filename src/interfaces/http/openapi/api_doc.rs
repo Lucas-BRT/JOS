@@ -16,11 +16,12 @@ use utoipa::{OpenApi};
         crate::interfaces::http::user::routes::get_user_by_id,
         crate::interfaces::http::table::routes::create_table,
         crate::interfaces::http::table::routes::get_available_tables,
+        crate::interfaces::http::table::routes::delete_table,
         crate::interfaces::http::table_request::routes::create_table_request,
         crate::interfaces::http::table_request::routes::get_table_requests,
         crate::interfaces::http::table_request::routes::get_table_request_by_id,
         crate::interfaces::http::table_request::routes::update_table_request,
-        crate::interfaces::http::table_request::routes::delete_table_request
+        crate::interfaces::http::table_request::routes::delete_table_request,
     ),
     components(
         schemas(
@@ -33,7 +34,7 @@ use utoipa::{OpenApi};
             AvaliableTableResponse,
             CreateTableRequestDto,
             TableRequestResponse,
-            UpdateTableRequestDto
+            UpdateTableRequestDto            
         )
     ),
     modifiers(&BearerAuth),

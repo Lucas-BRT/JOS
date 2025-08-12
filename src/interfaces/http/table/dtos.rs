@@ -1,12 +1,10 @@
 use crate::domain::table::{dtos::CreateTableCommand, entity::Table};
 use serde::{Deserialize, Serialize};
-
 use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct CreateTableDto {
-    pub gm_id: Uuid,
     #[validate(length(min = 8, max = 60, message = "Title is empty"))]
     pub title: String,
     #[validate(length(
@@ -24,10 +22,10 @@ pub struct CreateTableDto {
     pub bg_image_link: Option<String>,
 }
 
-impl From<CreateTableDto> for CreateTableCommand {
-    fn from(dto: CreateTableDto) -> Self {
-        CreateTableCommand {
-            gm_id: dto.gm_id,
+impl CreateTableCommand {
+    pub fn from_dto(dto: CreateTableDto, gm_id: Uuid) -> Self {
+        Self {
+            gm_id,
             title: dto.title,
             description: dto.description,
             game_system_id: dto.game_system_id,

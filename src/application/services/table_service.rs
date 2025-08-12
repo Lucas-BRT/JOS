@@ -20,6 +20,12 @@ impl TableService {
         Ok(created_table.to_string())
     }
 
+    pub async fn delete(&self, table_id: &Uuid) -> Result<()> {
+        self.table_repository.delete(table_id).await?;
+
+        Ok(())
+    }
+
     pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Option<Table>> {
         self.table_repository.find_by_id(table_id).await
     }
