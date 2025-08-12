@@ -50,7 +50,6 @@ pub struct AvaliableTableResponse {
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
 }
 
 impl From<&Table> for AvaliableTableResponse {
@@ -64,7 +63,6 @@ impl From<&Table> for AvaliableTableResponse {
             max_players: table.max_players,
             player_slots: table.player_slots,
             occupied_slots: table.occupied_slots,
-            bg_image_link: table.bg_image_link.clone(),
         }
     }
 }

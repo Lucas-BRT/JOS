@@ -357,10 +357,7 @@ async fn test_concurrent_user_operations(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_role_mapping(pool: PgPool) {
-    let repo = UserRepository::new(Arc::new(pool));
-    
-    // Test mapping of roles
+async fn test_role_mapping() {
     assert_eq!(
         UserRepository::map_role_to_entity(ERoles::Admin),
         Role::Admin

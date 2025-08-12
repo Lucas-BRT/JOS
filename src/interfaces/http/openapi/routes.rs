@@ -1,6 +1,10 @@
 use axum::{Router};
-use utoipa::OpenApi;
+use utoipa::openapi::security::{Http, SecurityScheme, HttpAuthScheme};
+use utoipa::{Modify, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
+use crate::interfaces::http::auth::dtos::*;
+use crate::interfaces::http::table::dtos::*;
+use crate::interfaces::http::table_request::dtos::*;
 
 /// JOS API - Join Our Session
 /// 
@@ -23,17 +27,18 @@ use utoipa_swagger_ui::SwaggerUi;
     ),
     components(
         schemas(
-            crate::interfaces::http::auth::dtos::SignupDto,
-            crate::interfaces::http::auth::dtos::LoginDto,
-            crate::interfaces::http::auth::dtos::UserSignupResponse,
-            crate::interfaces::http::user::dtos::MeResponse,
-            crate::interfaces::http::table::dtos::CreateTableDto,
-            crate::interfaces::http::table::dtos::AvaliableTableResponse,
-            crate::interfaces::http::table_request::dtos::CreateTableRequestDto,
-            crate::interfaces::http::table_request::dtos::TableRequestResponse,
-            crate::interfaces::http::table_request::dtos::UpdateTableRequestDto
+            SignupDto,
+            LoginDto,
+            UserSignupResponse,
+            MeResponse,
+            CreateTableDto,
+            AvaliableTableResponse,
+            CreateTableRequestDto,
+            TableRequestResponse,
+            UpdateTableRequestDto
         )
     ),
+    modifiers(&BearerAuth),
     tags(
         (name = "auth", description = "Authentication endpoints"),
         (name = "users", description = "User management endpoints"),
@@ -52,6 +57,18 @@ pub struct ApiDoc;
 /// JWT Bearer token security scheme
 #[derive(utoipa::ToSchema)]
 pub struct BearerAuth;
+
+impl Modify for BearerAuth {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        let components = openapi.components.get_or_insert_default();
+        let http_auth = Http::new(HttpAuthScheme::Bearer);
+        let security_scheme = SecurityScheme::Http(http_auth);
+
+        components.add_security_scheme("bearer_auth", security_scheme)
+    }
+}
+
+
 
 pub fn routes() -> Router {
     Router::new()

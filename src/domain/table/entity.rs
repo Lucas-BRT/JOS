@@ -13,7 +13,6 @@ pub struct Table {
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
-    pub bg_image_link: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
