@@ -1,25 +1,21 @@
 use crate::{
     Error, Result,
-    interfaces::http::{
-        auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
-        error::ValidationError,
-    },
+    interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
     core::state::AppState,
-    domain::user::{dtos::{CreateUserCommand, LoginUserCommand}, entity::User},
 };
-use axum::{Json, Router, extract::State, routing::{post, get}, response::IntoResponse, http::StatusCode};
+use axum::{Json, Router, extract::State, routing::{post, get}};
 use std::sync::Arc;
 use validator::Validate;
 use serde_json::json;
 
-/// Create a new user account
+
 #[utoipa::path(
     post,
     path = "/v1/auth/signup",
     tag = "auth",
-    request_body = crate::interfaces::http::auth::dtos::SignupDto,
+    request_body = SignupDto,
     responses(
-        (status = 201, description = "User created successfully", body = crate::interfaces::http::auth::dtos::UserSignupResponse),
+        (status = 201, description = "User created successfully", body = UserSignupResponse),
         (status = 400, description = "Bad request", body = serde_json::Value)
     )
 )]
@@ -29,9 +25,7 @@ async fn signup(
     Json(payload): Json<SignupDto>,
 ) -> Result<UserSignupResponse> {
     if let Err(sanitization_error) = payload.validate() {
-        return Err(Error::Validation(ValidationError::Other(
-            sanitization_error,
-        )));
+        return Err(Error::Validation(sanitization_error));
     }
 
     let user = app_state
@@ -42,7 +36,7 @@ async fn signup(
     Ok(user.into())
 }
 
-/// Authenticate user and get JWT token
+
 #[utoipa::path(
     post,
     path = "/v1/auth/login",
@@ -59,10 +53,7 @@ async fn login(
     Json(login_payload): Json<LoginDto>,
 ) -> Result<String> {
     if let Err(sanitization_error) = login_payload.validate() {
-        tracing::error!("Validation error: {:?}", sanitization_error);
-        return Err(Error::Validation(ValidationError::Other(
-            sanitization_error,
-        )));
+        return Err(Error::Validation(sanitization_error));
     }
 
     let jwt_token = app_state
@@ -73,7 +64,6 @@ async fn login(
     Ok(jwt_token)
 }
 
-/// Get password requirements
 #[utoipa::path(
     get,
     path = "/v1/auth/password-requirements",
@@ -93,6 +83,7 @@ async fn get_password_requirements(
     })))
 }
 
+
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/signup", post(signup))
@@ -101,39 +92,3 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .with_state(state.clone())
 }
 
-// Implementations for conversions
-impl From<SignupDto> for CreateUserCommand {
-    fn from(dto: SignupDto) -> Self {
-        CreateUserCommand {
-            username: dto.name,
-            display_name: dto.nickname,
-            email: dto.email,
-            password_hash: dto.password,
-        }
-    }
-}
-
-impl From<LoginDto> for LoginUserCommand {
-    fn from(dto: LoginDto) -> Self {
-        LoginUserCommand {
-            email: dto.email,
-            password: dto.password,
-        }
-    }
-}
-
-impl From<User> for UserSignupResponse {
-    fn from(user: User) -> Self {
-        UserSignupResponse {
-            id: user.id.to_string(),
-            name: user.name,
-            email: user.email,
-        }
-    }
-}
-
-impl IntoResponse for UserSignupResponse {
-    fn into_response(self) -> axum::response::Response {
-        (StatusCode::CREATED, Json(self)).into_response()
-    }
-}

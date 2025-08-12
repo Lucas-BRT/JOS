@@ -1,4 +1,4 @@
-use crate::interfaces::http::auth::dtos::*;
+use crate::interfaces::http::{auth::dtos::*, user::dtos::MeResponse};
 use crate::interfaces::http::table::dtos::*;
 use crate::interfaces::http::table_request::dtos::*;
 use crate::interfaces::http::openapi::auth::BearerAuth;
@@ -13,6 +13,7 @@ use utoipa::{OpenApi};
         crate::interfaces::http::auth::routes::login,
         crate::interfaces::http::auth::routes::get_password_requirements,
         crate::interfaces::http::user::routes::me,
+        crate::interfaces::http::user::routes::get_user_by_id,
         crate::interfaces::http::table::routes::create_table,
         crate::interfaces::http::table::routes::get_available_tables,
         crate::interfaces::http::table_request::routes::create_table_request,
@@ -27,6 +28,7 @@ use utoipa::{OpenApi};
             LoginDto,
             UserSignupResponse,
             MeResponse,
+            UserResponse,
             CreateTableDto,
             AvaliableTableResponse,
             CreateTableRequestDto,
