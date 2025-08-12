@@ -12,10 +12,10 @@ use std::sync::Arc;
 
 fn create_test_user_data(name: &str, nickname: &str, email: &str, password: &str) -> CreateUserCommand {
     CreateUserCommand {
-        name: name.to_string(),
-        nickname: nickname.to_string(),
+        username: name.to_string(),
+        display_name: nickname.to_string(),
         email: email.to_string(),
-        password: password.to_string(),
+        password_hash: password.to_string(),
     }
 }
 
@@ -26,7 +26,7 @@ async fn test_create_user_success(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let result = repo.create(&user_data).await;
+    let result = repo.create(user_data).await;
     assert!(result.is_ok());
 
     let user = result.unwrap();
@@ -43,13 +43,13 @@ async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     // Create first user
-    let result1 = repo.create(&user_data).await;
+    let result1 = repo.create(user_data).await;
     assert!(result1.is_ok());
 
     let user_data2 = create_test_user_data("testuser", "testuser", "test2@example.com", "password123");
 
     // Try to create second user with same username
-    let result2 = repo.create(&user_data2).await;
+    let result2 = repo.create(user_data2).await;
 
     assert!(result2.is_err());
 
@@ -68,11 +68,11 @@ async fn test_create_user_duplicate_email_should_fail(pool: PgPool) {
     let user_data2 = create_test_user_data("testuser2", "testuser2", "test@example.com", "password456");
 
     // Create first user
-    let result1 = repo.create(&user_data1).await;
+    let result1 = repo.create(user_data1).await;
     assert!(result1.is_ok());
 
     // Try to create second user with same email
-    let result2 = repo.create(&user_data2).await;
+    let result2 = repo.create(user_data2).await;
     assert!(result2.is_err());
 
     match result2 {
@@ -87,7 +87,7 @@ async fn test_find_by_id(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(user_data).await.unwrap();
     let found_user = repo.find_by_id(&created_user.id).await;
     
     assert!(found_user.is_ok());
@@ -118,7 +118,7 @@ async fn test_find_by_username(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    repo.create(&user_data).await.unwrap();
+    repo.create(user_data).await.unwrap();
     let found_user = repo.find_by_username("testuser").await;
     
     assert!(found_user.is_ok());
@@ -133,7 +133,7 @@ async fn test_find_by_email(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    repo.create(&user_data).await.unwrap();
+    repo.create(user_data).await.unwrap();
     let found_user = repo.find_by_email("test@example.com").await;
     
     assert!(found_user.is_ok());
@@ -150,8 +150,8 @@ async fn test_get_all(pool: PgPool) {
 
     let user_data2 = create_test_user_data("testuser2", "testuser2", "test2@example.com", "password456");
 
-    repo.create(&user_data1).await.unwrap();
-    repo.create(&user_data2).await.unwrap();
+    repo.create(user_data1).await.unwrap();
+    repo.create(user_data2).await.unwrap();
 
     let all_users = repo.get_all().await.unwrap();
     assert_eq!(all_users.len(), 2);
@@ -167,11 +167,11 @@ async fn test_update_user_name(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(user_data).await.unwrap();
     
     let update_data = UpdateUserCommand {
         id: created_user.id,
-        name: Update::Change("newusername".to_string()),
+        display_name: Update::Change("newusername".to_string()),
         email: Update::Keep,
         password: Update::Keep,
         bio: Update::Keep,
@@ -179,7 +179,7 @@ async fn test_update_user_name(pool: PgPool) {
         nickname: Update::Keep,
     };
 
-    let result = repo.update(&update_data).await;
+    let result = repo.update(update_data).await;
     assert!(result.is_ok());
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
@@ -193,11 +193,11 @@ async fn test_update_user_email(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(user_data).await.unwrap();
     
     let update_data = UpdateUserCommand {
         id: created_user.id,
-        name: Update::Keep,
+        display_name: Update::Keep,
         email: Update::Change("newemail@example.com".to_string()),
         password: Update::Keep,
         bio: Update::Keep,
@@ -205,7 +205,7 @@ async fn test_update_user_email(pool: PgPool) {
         nickname: Update::Keep,
     };
 
-    let result = repo.update(&update_data).await;
+    let result = repo.update(update_data).await;
     assert!(result.is_ok());
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
@@ -219,11 +219,11 @@ async fn test_update_user_password(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(user_data).await.unwrap();
     
     let update_data = UpdateUserCommand {
         id: created_user.id,
-        name: Update::Keep,
+        display_name: Update::Keep,
         email: Update::Keep,
         password: Update::Change("newpassword456".to_string()),
         bio: Update::Keep,
@@ -231,7 +231,7 @@ async fn test_update_user_password(pool: PgPool) {
         nickname: Update::Keep,
     };
 
-    let result = repo.update(&update_data).await;
+    let result = repo.update(update_data).await;
     assert!(result.is_ok());
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
@@ -245,7 +245,7 @@ async fn test_update_user_not_found(pool: PgPool) {
     let random_id = uuid::Uuid::new_v4();
     let update_data = UpdateUserCommand {
         id: random_id,
-        name: Update::Change("newusername".to_string()),
+        display_name: Update::Change("newusername".to_string()),
         email: Update::Keep,
         password: Update::Keep,
         bio: Update::Keep,
@@ -253,7 +253,7 @@ async fn test_update_user_not_found(pool: PgPool) {
         nickname: Update::Keep,
     };
 
-    let result = repo.update(&update_data).await;
+    let result = repo.update(update_data).await;
     assert!(result.is_err());
     
     if let Err(jos::Error::Repository(RepositoryError::UserNotFound)) = result {
@@ -272,13 +272,13 @@ async fn test_update_user_duplicate_username(pool: PgPool) {
 
     let user_data2 = create_test_user_data("testuser2", "testuser2", "test2@example.com", "password456");
 
-    let user1 = repo.create(&user_data1).await.unwrap();
-    repo.create(&user_data2).await.unwrap();
+    let user1 = repo.create(user_data1).await.unwrap();
+    repo.create(user_data2).await.unwrap();
 
     // Try to update second user with first user's name
     let update_data = UpdateUserCommand {
         id: user1.id,
-        name: Update::Change("testuser2".to_string()),
+        display_name: Update::Change("testuser2".to_string()),
         email: Update::Keep,
         password: Update::Keep,
         bio: Update::Keep,
@@ -286,7 +286,7 @@ async fn test_update_user_duplicate_username(pool: PgPool) {
         nickname: Update::Keep,
     };
 
-    let result = repo.update(&update_data).await;
+    let result = repo.update(update_data).await;
     assert!(result.is_err());
     
     match result {
@@ -301,7 +301,7 @@ async fn test_delete_user(pool: PgPool) {
     
     let user_data = create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(user_data).await.unwrap();
     
     // Verify that the user exists
     let found_user = repo.find_by_id(&created_user.id).await;
@@ -341,7 +341,7 @@ async fn test_concurrent_user_operations(pool: PgPool) {
         .map(|i| {
             let repo = repo.clone();
             let user_data = create_test_user_data(&format!("testuser{}", i), &format!("testuser{}", i), &format!("test{}@example.com", i), &format!("password{}", i));
-            tokio::spawn(async move { repo.create(&user_data).await })
+            tokio::spawn(async move { repo.create(user_data).await })
         })
         .collect();
 

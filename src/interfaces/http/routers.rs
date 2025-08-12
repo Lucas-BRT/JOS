@@ -1,47 +1,33 @@
 use crate::core::state::AppState;
-use axum::{Router, Json, routing::get};
+use crate::interfaces::http::health::health_check;
+use crate::interfaces::http::auth::routes::routes as auth_routes;
+use crate::interfaces::http::user::routes::routes as user_routes;
+use crate::interfaces::http::table::routes::routes as table_routes;
+use crate::interfaces::http::table_request::routes::routes as table_request_routes;
+use crate::interfaces::http::openapi::OpenApiRoutes;
+use axum::{Router, routing::get};
 use tower_http::cors::{Any, CorsLayer};
 use std::sync::Arc;
-use serde_json::json;
 
-const HEALTH_ROUTE: &str = "/health";
-const API_V1_PREFIX: &str = "/v1/";
-
-/// Health check endpoint
-#[utoipa::path(
-    get,
-    path = "/health",
-    tag = "health",
-    responses(
-        (status = 200, description = "Service is healthy", body = serde_json::Value)
-    )
-)]
-async fn health_check() -> Json<serde_json::Value> {
-    Json(json!({
-        "status": "healthy",
-        "timestamp": chrono::Utc::now().to_rfc3339(),
-        "service": "JOS API",
-        "version": env!("CARGO_PKG_VERSION")
-    }))
-}
 
 fn router(app_state: Arc<AppState>) -> Router {
     Router::new()
-        .nest("/auth", super::auth::routes::routes(app_state.clone()))
-        .nest("/users", super::user::routes::routes(app_state.clone()))
-        .nest("/tables", super::table::routes::routes(app_state.clone()))
-        .nest("/table-requests", super::table_request::routes::routes(app_state.clone()))
+        .nest("/auth", auth_routes(app_state.clone()))
+        .nest("/users", user_routes(app_state.clone()))
+        .nest("/tables", table_routes(app_state.clone()))
+        .nest("/table-requests", table_request_routes(app_state.clone()))
 }
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
+    // TODO: Update later to be more specific (only allow requests from the frontend)
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
         .allow_headers(Any);
 
     Router::new()
-        .route(HEALTH_ROUTE, get(health_check))
-        .nest(API_V1_PREFIX, router(app_state.clone()))
-        .merge(super::openapi::routes::routes())
+        .route("/health", get(health_check))
+        .nest("/v1", router(app_state.clone()))
+        .merge(OpenApiRoutes())
         .layer(cors)
 }
