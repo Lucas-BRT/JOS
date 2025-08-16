@@ -1,47 +1,46 @@
-use async_trait::async_trait;
+use crate::domain::auth::{Claims, TokenProvider};
+use crate::domain::user::Role;
+use crate::{Error, Result};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use uuid::Uuid;
 
-use crate::{
-    Error, Result,
-    domain::jwt::{Claims, JwtRepository},
-};
-
-pub struct JwtRepositoryImpl {
+#[derive(Clone)]
+pub struct JwtTokenProvider {
     secret: String,
     expiration_duration: Duration,
 }
 
-impl JwtRepositoryImpl {
+impl JwtTokenProvider {
     pub fn new(secret: String, expiration_duration: Duration) -> Self {
-        Self { secret, expiration_duration }
+        Self {
+            secret,
+            expiration_duration,
+        }
     }
 }
 
-#[async_trait]
-impl JwtRepository for JwtRepositoryImpl {
-    async fn generate_token(&self, user_id: uuid::Uuid, user_role: crate::domain::user::role::Role) -> Result<String> {
+#[async_trait::async_trait]
+impl TokenProvider for JwtTokenProvider {
+    async fn generate_token(&self, user_id: Uuid, user_role: Role) -> Result<String> {
         let expiration = Utc::now()
             .checked_add_signed(self.expiration_duration)
-            .expect("valid timestamp")
+            .ok_or(Error::InternalServerError)?
             .timestamp();
 
-        let claims = Claims {
-            sub: user_id,
-            exp: expiration as usize,
-            iat: Utc::now().timestamp() as usize,
-            role: user_role,
-        };
+        let claims = Claims::new(
+            user_id,
+            expiration as usize,
+            Utc::now().timestamp() as usize,
+            user_role,
+        );
 
         encode(
             &Header::default(),
             &claims,
             &EncodingKey::from_secret(self.secret.as_ref()),
         )
-        .map_err(|e| {
-            tracing::error!("failed to generate JWT token {}", e);
-            Error::InternalServerError
-        })
+        .map_err(|_| Error::InternalServerError)
     }
 
     async fn decode_token(&self, token: &str) -> Result<Claims> {
@@ -50,7 +49,7 @@ impl JwtRepository for JwtRepositoryImpl {
             &DecodingKey::from_secret(self.secret.as_ref()),
             &Validation::default(),
         )
-        .map_err(|_e| Error::InternalServerError)?;
+        .map_err(|_| Error::InternalServerError)?;
 
         Ok(token_data.claims)
     }

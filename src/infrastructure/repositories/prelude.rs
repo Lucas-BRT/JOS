@@ -1,8 +1,8 @@
 pub use super::error::RepositoryError;
 pub use super::game_system::GameSystemRepository;
-pub use super::jwt::JwtRepositoryImpl;
-pub use super::password::PasswordRepositoryImpl;
+pub use super::jwt::JwtTokenProvider;
+pub use super::password::Argon2PasswordProvider;
 pub use super::session::SessionRepository;
 pub use super::table::TableRepository;
-pub use super::table_request::TableRequestRepository;
-pub use super::user::UserRepository;
+pub use super::table_request::PostgresTableRequestRepository;
+pub use super::user::PostgresUserRepository;

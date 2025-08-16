@@ -1,9 +1,9 @@
-use crate::interfaces::http::{auth::dtos::*, user::dtos::MeResponse};
+use crate::domain::user::dtos::MeResponse;
+use crate::interfaces::http::auth::dtos::*;
+use crate::interfaces::http::openapi::auth::BearerAuth;
 use crate::interfaces::http::table::dtos::*;
 use crate::interfaces::http::table_request::dtos::*;
-use crate::interfaces::http::openapi::auth::BearerAuth;
-use utoipa::{OpenApi};
-
+use utoipa::OpenApi;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -38,7 +38,7 @@ use utoipa::{OpenApi};
             AvaliableTableResponse,
             CreateTableRequestDto,
             TableRequestResponse,
-            UpdateTableRequestDto            
+            UpdateTableRequestDto
         )
     ),
     modifiers(&BearerAuth),

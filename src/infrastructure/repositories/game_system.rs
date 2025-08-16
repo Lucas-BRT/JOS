@@ -1,9 +1,9 @@
 use crate::Result;
-use crate::infrastructure::repositories::{error::RepositoryError, constraint_mapper};
+use crate::infrastructure::repositories::{constraint_mapper, error::RepositoryError};
+use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use chrono::Utc;
 
 #[derive(Clone)]
 pub struct GameSystemRepository {
@@ -26,7 +26,7 @@ impl GameSystemRepository {
             r#"
             INSERT INTO t_game_system (id, name, created_at, updated_at)
             VALUES ($1, $2, $3, $4)
-            "#
+            "#,
         )
         .bind(id)
         .bind(name)
@@ -40,13 +40,11 @@ impl GameSystemRepository {
     }
 
     pub async fn find_by_name(&self, name: &str) -> Result<Option<Uuid>> {
-        let result = sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM t_game_system WHERE name = $1"
-        )
-        .bind(name)
-        .fetch_optional(self.pool.as_ref())
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
+        let result = sqlx::query_scalar::<_, Uuid>("SELECT id FROM t_game_system WHERE name = $1")
+            .bind(name)
+            .fetch_optional(self.pool.as_ref())
+            .await
+            .map_err(RepositoryError::DatabaseError)?;
 
         Ok(result)
     }

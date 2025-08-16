@@ -1,6 +1,9 @@
 use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
 use crate::{
-    application::error::ApplicationError, core::state::AppState, domain::{jwt::Claims, table_request::dtos::{CreateTableRequestCommand, UpdateTableRequestCommand}}, infrastructure::prelude::RepositoryError, Error, Result
+    core::state::AppState, domain::{
+        auth::Claims,
+        table_request::dtos::{CreateTableRequestCommand, DeleteTableRequestCommand, TableRequestFilters, UpdateTableRequestCommand}, utils::pagination::Pagination,
+    }, Result
 };
 use axum::{
     Json, Router,
@@ -30,10 +33,10 @@ pub async fn create_table_request(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequestDto>,
 ) -> Result<Json<String>> {
-    let request = CreateTableRequestCommand::from_dto(payload, user.sub);
-    let request_id = app_state.table_request_service.create(&request).await?;
+    let mut request = CreateTableRequestCommand::from_dto(payload, user.sub);
+    let request = app_state.table_request_service.create(&mut request).await?;
 
-    Ok(Json(request_id))
+    Ok(Json(request.id.to_string()))
 }
 
 #[utoipa::path(
@@ -53,7 +56,10 @@ pub async fn get_table_requests(
     user: Claims,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TableRequestResponse>>> {
-    let requests = app_state.table_request_service.find_by_user_id(&user.sub).await?;
+    let requests = app_state
+        .table_request_service
+        .get(&TableRequestFilters::default(), Pagination::default())
+        .await?;
     let requests = requests.iter().map(TableRequestResponse::from).collect();
 
     Ok(Json(requests))
@@ -81,18 +87,13 @@ pub async fn get_table_requests_by_table_id(
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<Vec<TableRequestResponse>>> {
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.is_none() {
-        return Err(Error::Repository(RepositoryError::TableNotFound));
-    }
-
-    if table.unwrap().gm_id != user.sub {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
-
-    let requests = app_state.table_request_service.find_by_table_id(&table_id).await?;
-    let requests = requests.iter().map(TableRequestResponse::from).collect();
+    let requests = app_state
+        .table_request_service
+        .get_requests_by_table_id(&table_id, &user.sub)
+        .await?
+        .iter()
+        .map(TableRequestResponse::from)
+        .collect();
 
     Ok(Json(requests))
 }
@@ -116,13 +117,16 @@ pub async fn update_table_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
     Json(update_payload): Json<UpdateTableRequestDto>,
-) -> Result<Json<()>> {
+) -> Result<()> {
     let update_command = UpdateTableRequestCommand {
         status: update_payload.status,
     };
-    app_state.table_request_service.update(&request_id, &update_command).await?;
+    app_state
+        .table_request_service
+        .update(&update_command)
+        .await?;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 #[utoipa::path(
@@ -141,10 +145,15 @@ pub async fn update_table_request(
 pub async fn delete_table_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
-) -> Result<Json<()>> {
-    app_state.table_request_service.delete(&request_id).await?;
+    user: Claims,
+) -> Result<()> {
+    let command = DeleteTableRequestCommand {
+        id: request_id,
+        gm_id: user.sub,
+    };
+    app_state.table_request_service.delete(&command).await?;
 
-    Ok(Json(()))
+    Ok(())
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {

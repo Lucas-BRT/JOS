@@ -9,5 +9,3 @@ pub fn init_logging() {
         .with_target(true)
         .init();
 }
-
-

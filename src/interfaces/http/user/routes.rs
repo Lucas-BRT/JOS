@@ -1,8 +1,13 @@
 use crate::{
-    domain::jwt::Claims, interfaces::http::{auth::dtos::UserResponse, user::dtos::MeResponse}, state::AppState, Result
+    Result,
+    domain::{auth::Claims, user::dtos::MeResponse},
+    interfaces::http::auth::dtos::UserResponse,
+    state::AppState,
 };
 use axum::{
-    extract::{Path, State}, routing::get, Json, Router
+    Json, Router,
+    extract::{Path, State},
+    routing::get,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -21,7 +26,7 @@ use uuid::Uuid;
 )]
 #[axum::debug_handler]
 pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<Json<MeResponse>> {
-    let user = app_state.user_service.find_by_id(&user.sub).await?;
+    let user = app_state.user_service.get_self_user_info(&user.sub).await?;
 
     Ok(Json(user.into()))
 }
@@ -41,8 +46,12 @@ pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<
         (status = 401, description = "Unauthorized", body = Value)
     )
 )]
-pub async fn get_user_by_id(State(app_state): State<Arc<AppState>>, _: Claims, Path(user_id): Path<Uuid>  ) -> Result<Json<UserResponse>> {
-    let user = app_state.user_service.find_by_id(&user_id).await?;
+pub async fn get_user_by_id(
+    State(app_state): State<Arc<AppState>>,
+    _: Claims,
+    Path(user_id): Path<Uuid>,
+) -> Result<Json<UserResponse>> {
+    let user = app_state.user_service.get_user(&user_id).await?;
 
     Ok(Json(user.into()))
 }

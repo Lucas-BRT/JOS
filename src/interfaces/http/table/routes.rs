@@ -1,12 +1,26 @@
-use crate::{application::error::ApplicationError, domain::{jwt::Claims, table::dtos::CreateTableCommand}, infrastructure::prelude::RepositoryError, interfaces::http::table::dtos::{AvaliableTableResponse, CreateTableDto}, state::AppState};
-use crate::Result;
-use axum::{
-    extract::{Path, State}, routing::{delete, get, post}, Json, Router
+use crate::application::error::ApplicationError;
+use crate::domain::table::commands::DeleteTableCommand;
+use crate::domain::table::search_filters::TableFilters;
+use crate::domain::utils::pagination::Pagination;
+use crate::domain::{
+    auth::Claims,
+    table::commands::{CreateTableCommand, UpdateTableCommand},
 };
-use uuid::Uuid;
+use crate::infrastructure::prelude::RepositoryError;
+use crate::interfaces::http::{
+    table::dtos::{AvaliableTableResponse, CreateTableDto, UpdateTableDto},
+    table_request::dtos::UpdateTableRequestDto,
+};
+use crate::state::AppState;
+use crate::{Error, Result};
+use axum::extract::Query;
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    routing::{delete, get, post},
+};
 use std::sync::Arc;
-use crate::Error;
-
+use uuid::Uuid;
 
 #[utoipa::path(
     post,
@@ -28,10 +42,10 @@ pub async fn create_table(
     State(app_state): State<Arc<AppState>>,
     Json(new_table_payload): Json<CreateTableDto>,
 ) -> Result<Json<String>> {
-    let table = CreateTableCommand::from_dto(new_table_payload, user.sub);
-    let table_id = app_state.table_service.create(&table).await?;
+    let mut table = CreateTableCommand::from_dto(new_table_payload, user.sub);
+    let table_id = app_state.table_service.create(&mut table).await?.id;
 
-    Ok(Json(table_id))
+    Ok(Json(table_id.to_string()))
 }
 
 #[utoipa::path(
@@ -44,9 +58,12 @@ pub async fn create_table(
 )]
 #[axum::debug_handler]
 pub async fn get_available_tables(
+    user: Claims,
     State(app_state): State<Arc<AppState>>,
+    Query(filters): Query<TableFilters>,
+    Query(pagination): Query<Pagination>,
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state.table_service.get().await?;
+    let tables = app_state.table_service.get(&filters, pagination).await?;
 
     let tables = tables.iter().map(AvaliableTableResponse::from).collect();
 
@@ -75,22 +92,28 @@ pub async fn delete_table(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<()>> {
+    let command = DeleteTableCommand {
+        id: table_id,
+        gm_id: user.sub,
+    };
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.is_none() {
-        return Err(Error::Repository(RepositoryError::TableNotFound));
-    }
-
-    if table.unwrap().gm_id != user.sub {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
-
-    app_state.table_service.delete(&table_id).await?;
+    app_state.table_service.delete(&command).await?;
 
     Ok(Json(()))
 }
 
+pub async fn update_table(
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(update_payload): Json<UpdateTableDto>,
+    user: Claims,
+) -> Result<()> {
+    // let update_command = UpdateTableCommand::from_dto(update_payload, user.sub);
+
+    // app_state.table_service.update(&table_id, &update_command).await?;
+
+    Ok(())
+}
 
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()

@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod error;
 pub mod game_system;
 pub mod jwt;

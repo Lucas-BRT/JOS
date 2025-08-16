@@ -4,16 +4,10 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
-pub struct UserStatistics {
-    pub total_games_played: u32,
-    pub active_games_played: u32,
-    pub completed_games_played: u32,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: Uuid,
-    pub name: String,
+    pub username: String,
+    pub display_name: String,
     pub email: String,
     pub password_hash: String,
     pub role: Role,

@@ -1,12 +1,10 @@
-use std::process::{Command, Stdio};
 use std::io::{self, Write};
+use std::process::{Command, Stdio};
 
 pub async fn start_services() {
     println!("🚀 Starting development services...");
-    
-    let status = Command::new("docker-compose")
-        .args(&["up", "-d"])
-        .status();
+
+    let status = Command::new("docker-compose").args(&["up", "-d"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -26,10 +24,8 @@ pub async fn start_services() {
 
 pub fn stop_services() {
     println!("🛑 Stopping development services...");
-    
-    let status = Command::new("docker-compose")
-        .arg("down")
-        .status();
+
+    let status = Command::new("docker-compose").arg("down").status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -43,20 +39,20 @@ pub fn stop_services() {
 
 pub async fn restart_services() {
     println!("🔄 Restarting development services...");
-    
+
     // Stop services
     stop_services();
-    
+
     // Wait a bit
     std::thread::sleep(std::time::Duration::from_secs(2));
-    
+
     // Start services
     start_services().await;
 }
 
 pub fn show_logs(service: &str) {
     println!("📋 Showing logs for: {}", service);
-    
+
     let args = match service {
         "api" => vec!["logs", "-f", "api"],
         "db" => vec!["logs", "-f", "db"],
@@ -68,7 +64,7 @@ pub fn show_logs(service: &str) {
             return;
         }
     };
-    
+
     let child = Command::new("docker-compose")
         .args(&args)
         .stdout(Stdio::inherit())
@@ -81,8 +77,9 @@ pub fn show_logs(service: &str) {
             ctrlc::set_handler(move || {
                 println!("\n🛑 Stopping logs...");
                 std::process::exit(0);
-            }).expect("Error setting Ctrl-C handler");
-            
+            })
+            .expect("Error setting Ctrl-C handler");
+
             let _ = child.wait();
         }
         Err(e) => {
@@ -94,11 +91,9 @@ pub fn show_logs(service: &str) {
 pub fn show_status() {
     println!("📊 Service Status:");
     println!();
-    
+
     // Show Docker Compose status
-    let output = Command::new("docker-compose")
-        .arg("ps")
-        .output();
+    let output = Command::new("docker-compose").arg("ps").output();
 
     match output {
         Ok(output) => {
@@ -109,9 +104,9 @@ pub fn show_status() {
             eprintln!("❌ Failed to get service status: {}", e);
         }
     }
-    
+
     println!();
-    
+
     // Check health of services
     check_service_health();
 }
@@ -119,7 +114,16 @@ pub fn show_status() {
 fn check_service_health() {
     // Check database
     let db_healthy = Command::new("docker-compose")
-        .args(&["exec", "-T", "db", "pg_isready", "-U", "postgres", "-d", "jos_db"])
+        .args(&[
+            "exec",
+            "-T",
+            "db",
+            "pg_isready",
+            "-U",
+            "postgres",
+            "-d",
+            "jos_db",
+        ])
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false);
@@ -129,7 +133,7 @@ fn check_service_health() {
     } else {
         println!("❌ Database: Unhealthy");
     }
-    
+
     // Check Redis
     let redis_healthy = Command::new("docker-compose")
         .args(&["exec", "-T", "redis", "redis-cli", "ping"])
@@ -142,7 +146,7 @@ fn check_service_health() {
     } else {
         println!("❌ Redis: Unhealthy");
     }
-    
+
     // Check API (if running)
     let api_healthy = Command::new("curl")
         .args(&["-f", "http://localhost:3000/health"])
@@ -162,28 +166,28 @@ pub async fn reset_database() {
     println!("⚠️  This will completely reset the database. All data will be lost!");
     print!("Are you sure? (y/N): ");
     io::stdout().flush().unwrap();
-    
+
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
-    
+
     if input.trim().to_lowercase() == "y" {
         println!("🛑 Stopping services...");
         stop_services();
-        
+
         println!("🗑️ Removing database volumes...");
         let _ = Command::new("docker")
             .args(&["volume", "rm", "jos_postgres_data"])
             .output();
-        
+
         println!("🚀 Starting services...");
         start_services().await;
-        
+
         // Wait for database to be ready
         wait_for_database().await;
-        
+
         println!("🗄️ Running migrations...");
         run_migrations().await;
-        
+
         println!("✅ Database reset complete");
     } else {
         println!("❌ Database reset cancelled");
@@ -192,35 +196,42 @@ pub async fn reset_database() {
 
 async fn wait_for_database() {
     println!("⏳ Waiting for database to be ready...");
-    
+
     let mut attempts = 0;
     let max_attempts = 60;
-    
+
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
-            .args(&["exec", "-T", "db", "pg_isready", "-U", "postgres", "-d", "jos_db"])
+            .args(&[
+                "exec",
+                "-T",
+                "db",
+                "pg_isready",
+                "-U",
+                "postgres",
+                "-d",
+                "jos_db",
+            ])
             .output();
-        
+
         if output.is_ok() && output.unwrap().status.success() {
             println!("✅ Database is ready");
             return;
         }
-        
+
         std::thread::sleep(std::time::Duration::from_secs(1));
         attempts += 1;
         print!(".");
     }
-    
+
     eprintln!("\n❌ Database failed to start within 60 seconds");
     std::process::exit(1);
 }
 
 pub async fn run_migrations() {
     println!("🗄️ Running database migrations...");
-    
-    let status = Command::new("sqlx")
-        .args(&["migrate", "run"])
-        .status();
+
+    let status = Command::new("sqlx").args(&["migrate", "run"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -235,7 +246,7 @@ pub async fn run_migrations() {
 
 pub fn open_db_shell() {
     println!("🐘 Opening PostgreSQL shell...");
-    
+
     let status = Command::new("docker-compose")
         .args(&["exec", "db", "psql", "-U", "postgres", "-d", "jos_db"])
         .status();
@@ -252,7 +263,7 @@ pub fn open_db_shell() {
 
 pub fn open_redis_shell() {
     println!("🔴 Opening Redis shell...");
-    
+
     let status = Command::new("docker-compose")
         .args(&["exec", "redis", "redis-cli"])
         .status();
@@ -269,10 +280,8 @@ pub fn open_redis_shell() {
 
 pub fn run_tests() {
     println!("🧪 Running tests...");
-    
-    let status = Command::new("cargo")
-        .arg("test")
-        .status();
+
+    let status = Command::new("cargo").arg("test").status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -287,10 +296,8 @@ pub fn run_tests() {
 
 pub fn build_project() {
     println!("🔨 Building project...");
-    
-    let status = Command::new("cargo")
-        .arg("build")
-        .status();
+
+    let status = Command::new("cargo").arg("build").status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -305,10 +312,8 @@ pub fn build_project() {
 
 pub fn clean_project() {
     println!("🧹 Cleaning build artifacts...");
-    
-    let status = Command::new("cargo")
-        .arg("clean")
-        .status();
+
+    let status = Command::new("cargo").arg("clean").status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {

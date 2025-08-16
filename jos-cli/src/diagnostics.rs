@@ -96,7 +96,7 @@ pub async fn validate_environment() -> DiagnosticResult {
     ];
 
     let mut missing_vars = Vec::new();
-    
+
     for (var, _description) in required_vars {
         match env::var(var) {
             Ok(value) => {
@@ -115,7 +115,8 @@ pub async fn validate_environment() -> DiagnosticResult {
     }
 
     if !missing_vars.is_empty() {
-        suggestions.push("Create a .env file in the project root with the required variables".to_string());
+        suggestions
+            .push("Create a .env file in the project root with the required variables".to_string());
         suggestions.push("Run 'cargo run -p jos-cli setup' to create a .env template".to_string());
         suggestions.push(format!("Required variables: {}", missing_vars.join(", ")));
     }
@@ -123,8 +124,10 @@ pub async fn validate_environment() -> DiagnosticResult {
     // Validate DATABASE_URL format
     if let Ok(db_url) = env::var("DATABASE_URL") {
         if !db_url.starts_with("postgres://") && !db_url.starts_with("postgresql://") {
-            issues.push("DATABASE_URL must start with 'postgres://' or 'postgresql://'".to_string());
-            suggestions.push("Use format: postgres://username:password@host:port/database".to_string());
+            issues
+                .push("DATABASE_URL must start with 'postgres://' or 'postgresql://'".to_string());
+            suggestions
+                .push("Use format: postgres://username:password@host:port/database".to_string());
         }
     }
 
@@ -152,7 +155,7 @@ pub async fn validate_environment() -> DiagnosticResult {
 
     DiagnosticResult {
         environment_ok: issues.is_empty(),
-        database_ok: false, // Will be checked separately
+        database_ok: false,   // Will be checked separately
         migrations_ok: false, // Will be checked separately
         issues,
         suggestions,
@@ -191,17 +194,26 @@ pub async fn test_database_connection() -> DiagnosticResult {
             match sqlx::query("SELECT 1").execute(&pool).await {
                 Ok(_) => {
                     info!("✅ Database is responding to queries");
-                    
+
                     // Check if database exists
                     if let Some(db_name) = extract_database_name(&db_url) {
-                        match sqlx::query("SELECT current_database()").fetch_one(&pool).await {
+                        match sqlx::query("SELECT current_database()")
+                            .fetch_one(&pool)
+                            .await
+                        {
                             Ok(row) => {
                                 if let Ok(current_db) = row.try_get::<String, _>(0) {
                                     if current_db == db_name {
                                         info!("✅ Connected to correct database: {}", db_name);
                                     } else {
-                                        issues.push(format!("Connected to database '{}' but expected '{}'", current_db, db_name));
-                                        suggestions.push(format!("Update DATABASE_URL to connect to '{}'", db_name));
+                                        issues.push(format!(
+                                            "Connected to database '{}' but expected '{}'",
+                                            current_db, db_name
+                                        ));
+                                        suggestions.push(format!(
+                                            "Update DATABASE_URL to connect to '{}'",
+                                            db_name
+                                        ));
                                     }
                                 }
                             }
@@ -212,21 +224,32 @@ pub async fn test_database_connection() -> DiagnosticResult {
                     }
 
                     // Test permissions
-                    match sqlx::query("CREATE TABLE IF NOT EXISTS test_permissions (id SERIAL PRIMARY KEY)").execute(&pool).await {
+                    match sqlx::query(
+                        "CREATE TABLE IF NOT EXISTS test_permissions (id SERIAL PRIMARY KEY)",
+                    )
+                    .execute(&pool)
+                    .await
+                    {
                         Ok(_) => {
-                            match sqlx::query("DROP TABLE test_permissions").execute(&pool).await {
+                            match sqlx::query("DROP TABLE test_permissions")
+                                .execute(&pool)
+                                .await
+                            {
                                 Ok(_) => {
                                     info!("✅ User has CREATE/DROP permissions");
                                 }
                                 Err(e) => {
                                     issues.push(format!("User cannot drop tables: {}", e));
-                                    suggestions.push("Grant DROP permissions to the database user".to_string());
+                                    suggestions.push(
+                                        "Grant DROP permissions to the database user".to_string(),
+                                    );
                                 }
                             }
                         }
                         Err(e) => {
                             issues.push(format!("User cannot create tables: {}", e));
-                            suggestions.push("Grant CREATE permissions to the database user".to_string());
+                            suggestions
+                                .push("Grant CREATE permissions to the database user".to_string());
                         }
                     }
 
@@ -244,7 +267,10 @@ pub async fn test_database_connection() -> DiagnosticResult {
                         }
                         Err(e) => {
                             issues.push(format!("Migration test failed: {}", e));
-                            suggestions.push("Run 'sqlx migrate run' manually to see detailed errors".to_string());
+                            suggestions.push(
+                                "Run 'sqlx migrate run' manually to see detailed errors"
+                                    .to_string(),
+                            );
                         }
                     }
                 }
@@ -257,11 +283,16 @@ pub async fn test_database_connection() -> DiagnosticResult {
         }
         Err(e) => {
             let error_msg = e.to_string();
-            
+
             if error_msg.contains("password authentication failed") {
-                issues.push("Database authentication failed - wrong username or password".to_string());
+                issues.push(
+                    "Database authentication failed - wrong username or password".to_string(),
+                );
                 suggestions.push("Check username and password in DATABASE_URL".to_string());
-                suggestions.push("Reset PostgreSQL password: ALTER USER username PASSWORD 'new_password';".to_string());
+                suggestions.push(
+                    "Reset PostgreSQL password: ALTER USER username PASSWORD 'new_password';"
+                        .to_string(),
+                );
             } else if error_msg.contains("connection refused") {
                 issues.push("Cannot connect to PostgreSQL - server not running".to_string());
                 suggestions.push("Start PostgreSQL: sudo systemctl start postgresql".to_string());
@@ -272,7 +303,9 @@ pub async fn test_database_connection() -> DiagnosticResult {
                 suggestions.push("Or use Docker with correct database name".to_string());
             } else {
                 issues.push(format!("Database connection failed: {}", error_msg));
-                suggestions.push("Check DATABASE_URL format: postgres://user:pass@host:port/db".to_string());
+                suggestions.push(
+                    "Check DATABASE_URL format: postgres://user:pass@host:port/db".to_string(),
+                );
                 suggestions.push("Verify PostgreSQL is running and accessible".to_string());
             }
         }
@@ -291,7 +324,9 @@ pub async fn test_database_connection() -> DiagnosticResult {
 async fn test_migrations(pool: &PgPool) -> Result<(), DiagnosticError> {
     // Check if migrations directory exists
     if !std::path::Path::new("../migrations").exists() {
-        return Err(DiagnosticError::Migration("migrations directory not found".to_string()));
+        return Err(DiagnosticError::Migration(
+            "migrations directory not found".to_string(),
+        ));
     }
 
     // Try to run migrations (this will fail if they're already applied, which is fine)
@@ -314,7 +349,10 @@ async fn test_migrations(pool: &PgPool) -> Result<(), DiagnosticError> {
 
 /// Extracts database name from DATABASE_URL
 fn extract_database_name(db_url: &str) -> Option<String> {
-    db_url.split('/').last().map(|s| s.split('?').next().unwrap_or(s).to_string())
+    db_url
+        .split('/')
+        .last()
+        .map(|s| s.split('?').next().unwrap_or(s).to_string())
 }
 
 /// Runs a complete system diagnosis
@@ -323,7 +361,7 @@ pub async fn run_full_diagnosis() -> DiagnosticResult {
 
     // Validate environment
     let env_result = validate_environment().await;
-    
+
     if !env_result.environment_ok {
         env_result.print_report();
         return env_result;
@@ -331,11 +369,11 @@ pub async fn run_full_diagnosis() -> DiagnosticResult {
 
     // Test database connection
     let db_result = test_database_connection().await;
-    
+
     // Combine results
     let mut combined_issues = env_result.issues;
     combined_issues.extend(db_result.issues);
-    
+
     let mut combined_suggestions = env_result.suggestions;
     combined_suggestions.extend(db_result.suggestions);
 

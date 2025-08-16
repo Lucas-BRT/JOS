@@ -23,8 +23,8 @@ CREATE TYPE e_table_request_status AS ENUM (
 
 CREATE TABLE t_users (
 	"id" UUID NOT NULL,
-	"name" TEXT NOT NULL UNIQUE,
-	"nickname" TEXT NOT NULL,
+	"username" TEXT NOT NULL UNIQUE,
+	"display_name" TEXT NOT NULL,
 	"email" TEXT NOT NULL UNIQUE,
 	"password_hash" TEXT NOT NULL,
 	"role" e_roles NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE t_rpg_tables (
 	"gm_id" UUID NOT NULL,
 	"title" TEXT NOT NULL,
 	"visibility" e_table_visibility NOT NULL,
-	"max_players" INTEGER NOT NULL,
+	"player_slots" INTEGER NOT NULL,
 	"description" TEXT NOT NULL,
 	"game_system_id" UUID NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,

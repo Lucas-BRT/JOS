@@ -8,7 +8,7 @@ pub async fn run_setup() {
 
     // Check Docker installation
     check_docker();
-    
+
     // Check Docker Compose
     check_docker_compose();
 
@@ -35,20 +35,12 @@ pub async fn run_setup() {
 
 fn check_docker() {
     println!("🐳 Checking Docker installation...");
-    
-    if Command::new("docker")
-        .arg("--version")
-        .output()
-        .is_ok()
-    {
+
+    if Command::new("docker").arg("--version").output().is_ok() {
         println!("✅ Docker is installed");
-        
+
         // Check if Docker is running
-        if Command::new("docker")
-            .arg("info")
-            .output()
-            .is_ok()
-        {
+        if Command::new("docker").arg("info").output().is_ok() {
             println!("✅ Docker is running");
         } else {
             eprintln!("❌ Docker is not running");
@@ -64,16 +56,17 @@ fn check_docker() {
 
 fn check_docker_compose() {
     println!("🐳 Checking Docker Compose...");
-    
+
     // Try both docker-compose and docker compose
     let compose_available = Command::new("docker-compose")
         .arg("--version")
         .output()
-        .is_ok() || Command::new("docker")
-        .args(&["compose", "version"])
-        .output()
-        .is_ok();
-    
+        .is_ok()
+        || Command::new("docker")
+            .args(&["compose", "version"])
+            .output()
+            .is_ok();
+
     if compose_available {
         println!("✅ Docker Compose is available");
     } else {
@@ -85,10 +78,10 @@ fn check_docker_compose() {
 
 fn create_env_file() {
     println!("📝 Setting up environment variables...");
-    
+
     if !Path::new(".env").exists() {
         println!("📝 Creating .env file...");
-        
+
         let env_content = r#"# JOS Development Environment
 # Database Configuration
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/jos_db
@@ -136,12 +129,10 @@ SESSION_TIMEOUT_MINUTES=60
 
 async fn start_services() {
     println!("🚀 Starting development services...");
-    
+
     // Stop any existing containers
-    let _ = Command::new("docker-compose")
-        .arg("down")
-        .output();
-    
+    let _ = Command::new("docker-compose").arg("down").output();
+
     // Start services
     let status = Command::new("docker-compose")
         .args(&["up", "-d", "db", "redis"])
@@ -150,10 +141,10 @@ async fn start_services() {
     match status {
         Ok(exit_status) if exit_status.success() => {
             println!("✅ Services started successfully");
-            
+
             // Wait for database to be ready
             wait_for_database().await;
-            
+
             // Wait for Redis to be ready
             wait_for_redis().await;
         }
@@ -167,68 +158,79 @@ async fn start_services() {
 
 async fn wait_for_database() {
     println!("⏳ Waiting for database to be ready...");
-    
+
     let mut attempts = 0;
     let max_attempts = 60;
-    
+
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
-            .args(&["exec", "-T", "db", "pg_isready", "-U", "postgres", "-d", "jos_db"])
+            .args(&[
+                "exec",
+                "-T",
+                "db",
+                "pg_isready",
+                "-U",
+                "postgres",
+                "-d",
+                "jos_db",
+            ])
             .output();
-        
+
         if output.is_ok() && output.unwrap().status.success() {
             println!("✅ Database is ready");
             return;
         }
-        
+
         std::thread::sleep(std::time::Duration::from_secs(1));
         attempts += 1;
         print!(".");
     }
-    
+
     eprintln!("\n❌ Database failed to start within 60 seconds");
     std::process::exit(1);
 }
 
 async fn wait_for_redis() {
     println!("⏳ Waiting for Redis to be ready...");
-    
+
     let mut attempts = 0;
     let max_attempts = 30;
-    
+
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
             .args(&["exec", "-T", "redis", "redis-cli", "ping"])
             .output();
-        
+
         if output.is_ok() && output.unwrap().status.success() {
             println!("✅ Redis is ready");
             return;
         }
-        
+
         std::thread::sleep(std::time::Duration::from_secs(1));
         attempts += 1;
         print!(".");
     }
-    
+
     eprintln!("\n❌ Redis failed to start within 30 seconds");
     std::process::exit(1);
 }
 
 fn install_rust_dependencies() {
     println!("🔧 Installing Rust dependencies...");
-    
+
     // Install sqlx-cli if not already installed
-    if Command::new("sqlx")
-        .arg("--version")
-        .output()
-        .is_ok()
-    {
+    if Command::new("sqlx").arg("--version").output().is_ok() {
         println!("✅ sqlx-cli is already installed");
     } else {
         println!("📦 Installing sqlx-cli...");
         let status = Command::new("cargo")
-            .args(&["install", "sqlx-cli", "--no-default-features", "--features", "rustls,postgres"])
+            .args(&[
+                "install",
+                "sqlx-cli",
+                "--no-default-features",
+                "--features",
+                "rustls,postgres",
+            ])
             .status();
 
         match status {
@@ -237,11 +239,13 @@ fn install_rust_dependencies() {
             }
             _ => {
                 eprintln!("❌ Failed to install sqlx-cli");
-                eprintln!("   Please install manually: cargo install sqlx-cli --no-default-features --features rustls,postgres");
+                eprintln!(
+                    "   Please install manually: cargo install sqlx-cli --no-default-features --features rustls,postgres"
+                );
             }
         }
     }
-    
+
     // Install cargo-watch for development
     if Command::new("cargo-watch")
         .arg("--version")
@@ -269,9 +273,7 @@ fn install_rust_dependencies() {
 
 fn build_project() {
     println!("🔨 Building project...");
-    let build_status = Command::new("cargo")
-        .arg("build")
-        .status();
+    let build_status = Command::new("cargo").arg("build").status();
 
     match build_status {
         Ok(exit_status) if exit_status.success() => {
@@ -286,13 +288,11 @@ fn build_project() {
 
 async fn run_migrations() {
     println!("🗄️ Running database migrations...");
-    
+
     // Wait a bit more for database to be fully ready
     std::thread::sleep(std::time::Duration::from_secs(2));
-    
-    let status = Command::new("sqlx")
-        .args(&["migrate", "run"])
-        .status();
+
+    let status = Command::new("sqlx").args(&["migrate", "run"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {

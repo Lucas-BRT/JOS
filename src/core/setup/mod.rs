@@ -1,24 +1,23 @@
-mod errors;
-mod env;
 mod database;
+mod env;
+mod errors;
 mod logging;
 mod server;
 
-use std::sync::Arc;
-use tracing::{info, warn};
-use crate::application::services::{
-    jwt_service::JwtService,
-    password_service::PasswordService,
-    table_request_service::TableRequestService, table_service::TableService, user_service::UserService,
-};
-use crate::infrastructure::{create_postgres_pool, run_postgres_migrations};
-use crate::infrastructure::prelude::*;
 use crate::Result;
+use crate::application::*;
 use crate::core::config::Config;
 use crate::core::state::AppState;
+use crate::infrastructure::prelude::*;
+use crate::infrastructure::{
+    create_postgres_pool,
+    repositories::{jwt::JwtTokenProvider, table_request::PostgresTableRequestRepository, user::PostgresUserRepository},
+    run_postgres_migrations,
+};
 pub use errors::SetupError;
 pub use server::launch_server;
-
+use std::sync::Arc;
+use tracing::{info, warn};
 
 pub async fn setup_services() -> Result<Arc<AppState>> {
     logging::init_logging();
@@ -50,34 +49,48 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
 
     info!("🏗️  Initializing services...");
 
-    let user_repo = UserRepository::new(pool.clone());
-    let jwt_repo = JwtRepositoryImpl::new(
-        config.jwt_secret.clone(),
-        config.jwt_expiration_duration,
-    );
-    let password_repo = PasswordRepositoryImpl::new();
-    
-    let jwt_service = JwtService::new(Arc::new(jwt_repo));
-    let password_service = PasswordService::new(Arc::new(password_repo));
-    let user_service = UserService::new(Arc::new(user_repo), jwt_service.clone(), password_service.clone());
+    // User service
+    let user_repo = Arc::new(PostgresUserRepository::new(pool.clone()));
+    let user_service = UserService::new(user_repo.clone());
     info!("✅ User service initialized");
 
-    let table_repo = TableRepository::new(pool.clone());
-    let table_service = TableService::new(Arc::new(table_repo));
-    info!("✅ Table service initialized");
-
-    let table_request_repo = TableRequestRepository::new(pool.clone());
-    let table_request_service = TableRequestService::new(Arc::new(table_request_repo));
-    info!("✅ Table request service initialized");
-
-    info!("✅ JWT service initialized");
+    // Password service
+    let password_repo = Arc::new(Argon2PasswordProvider::new());
+    let password_service = PasswordService::new(password_repo.clone());
     info!("✅ Password service initialized");
 
-    let state = AppState::new(config, user_service, table_service, table_request_service, jwt_service, password_service);
+    // Table service
+    let table_repo = Arc::new(TableRepository::new(pool.clone()));
+    let table_service = TableService::new(table_repo.clone());
+    info!("✅ Table service initialized");
+
+    // Table request service
+    let table_request_repo = Arc::new(PostgresTableRequestRepository::new(pool.clone()));
+    let table_request_service = TableRequestService::new(table_request_repo.clone(), table_repo.clone());
+    info!("✅ Table request service initialized");
+
+    // Auth service
+    let jwt_provider = Arc::new(JwtTokenProvider::new(
+        config.jwt_secret.clone(),
+        config.jwt_expiration_duration,
+    ));
+    let auth_service = AuthService::new(
+        user_repo.clone(),
+        password_repo.clone(),
+        jwt_provider.clone(),
+    );
+    info!("✅ Auth service initialized");
+
+    let state = AppState::new(
+        config,
+        user_service,
+        table_service,
+        table_request_service,
+        auth_service,
+        password_service,
+    );
     info!("✅ Application state initialized");
 
     info!("🎉 Application setup completed successfully!");
     Ok(Arc::new(state))
 }
-
-

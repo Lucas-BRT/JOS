@@ -5,7 +5,6 @@ use axum::{
 };
 use serde_json::json;
 
-
 #[derive(Debug)]
 pub enum AuthError {
     InvalidToken,

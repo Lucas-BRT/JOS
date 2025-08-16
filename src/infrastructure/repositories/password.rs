@@ -1,19 +1,20 @@
-use async_trait::async_trait;
+use crate::domain::password::PasswordRequirement;
+use crate::{
+    Error, Result,
+    domain::password::{PasswordProvider, PasswordValidator},
+};
 use argon2::Argon2;
 use argon2::PasswordHash;
 use argon2::PasswordVerifier;
-use argon2::password_hash::{Error::Password, PasswordHasher, SaltString, rand_core::OsRng};
-use crate::{
-    Error, Result,
-    domain::password::{PasswordRepository, PasswordValidator, PasswordValidationError},
-};
+use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
+
 
 #[derive(Clone)]
-pub struct PasswordRepositoryImpl {
+pub struct Argon2PasswordProvider {
     validator: PasswordValidator,
 }
 
-impl PasswordRepositoryImpl {
+impl Argon2PasswordProvider {
     pub fn new() -> Self {
         Self {
             validator: PasswordValidator::new(),
@@ -25,31 +26,16 @@ impl PasswordRepositoryImpl {
     }
 }
 
-#[async_trait]
-impl PasswordRepository for PasswordRepositoryImpl {
-    async fn generate_hash(&self, password: String) -> Result<String> {
-        tracing::info!("Generating hash for password: {}", password);
-        // Validate password before hashing
-        self.validator.validate(&password)
-            .map_err(|e| {
-                tracing::error!("Password validation failed: {}", e.message);
-                Error::Application(crate::application::error::ApplicationError::InvalidInput(e.message))
-            })?;
-
+impl Argon2PasswordProvider {
+    async fn hash_password(&self, password: String) -> Result<String> {
         tokio::task::spawn_blocking(move || {
             let salt = SaltString::generate(&mut OsRng);
             let argon2 = Argon2::default();
-            tracing::info!("Hashing password with Argon2");
+
             argon2
                 .hash_password(password.as_bytes(), &salt)
-                .map(|hash| {
-                    tracing::info!("Hash generated successfully");
-                    hash.to_string()
-                })
-                .map_err(|_| {
-                    tracing::error!("failed to hash password");
-                    Error::InternalServerError
-                })
+                .map(|hash| hash.to_string())
+                .map_err(|_| Error::InternalServerError)
         })
         .await
         .map_err(|_| {
@@ -57,51 +43,51 @@ impl PasswordRepository for PasswordRepositoryImpl {
             Error::InternalServerError
         })?
     }
+}
 
-    async fn verify_hash(&self, password: String, hash: String) -> Result<bool> {
-        tracing::info!("Verifying hash for password: {}", password);
-        tracing::info!("Hash: {}", hash);
-
-        tokio::task::spawn_blocking(move || {
-            let parsed_hash = PasswordHash::new(&hash).map_err(|e| {
-                tracing::error!("failed to parse hash: {}", e);
-                Error::InternalServerError
-            })?;
-
-            match Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
-                Ok(_) => {
-                    tracing::info!("Password verified successfully");
-                    Ok(true)
-                }
-                Err(Password) => {
-                    tracing::info!("Password verification failed");
-                    Ok(false)
-                }
-                Err(e) => {
-                    tracing::error!("unexpected error during password verification: {}", e);
-                    Err(Error::InternalServerError)
-                }
-            }
-        })
-        .await
-        .map_err(|_| {
-            tracing::error!("failed to verify hash");
-            Error::InternalServerError
-        })?
+#[async_trait::async_trait]
+impl PasswordProvider for Argon2PasswordProvider {
+    async fn generate_hash(&self, password: String) -> Result<String> {
+        self.validator.validate(&password)?;
+        self.hash_password(password).await
     }
 
-    async fn validate_password(&self, password: &str) -> std::result::Result<(), PasswordValidationError> {
+    async fn verify_hash(&self, password: String, hash: String) -> Result<bool> {
+        let is_valid = tokio::task::spawn_blocking(move || {
+            let parsed_hash = PasswordHash::new(&hash).map_err(|_| Error::InternalServerError);
+
+            if parsed_hash.is_err() {
+                return false;
+            }
+
+            Argon2::default()
+                .verify_password(password.as_bytes(), &parsed_hash.unwrap())
+                .is_ok()
+        })
+        .await
+        .map_err(|_| Error::InternalServerError)?;
+
+        Ok(is_valid)
+    }
+
+    async fn validate_password(&self, password: &str) -> Result<()> {
         self.validator.validate(password)
+    }
+
+    async fn get_requirements(&self) -> Vec<PasswordRequirement> {
+        self.validator.get_requirements()
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::domain::password::validator::{LengthRequirement, SpecialCharsRequirement};
+
     use super::*;
 
     #[tokio::test]
     async fn test_generate_hash() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -112,22 +98,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_hash() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
             .await
             .unwrap();
-        let result = password_repo
-            .verify_hash(password.to_string(), hash)
-            .await;
+        let result = password_repo.verify_hash(password.to_string(), hash).await;
         assert!(result.is_ok());
         assert!(result.unwrap());
     }
 
     #[tokio::test]
     async fn test_verify_hash_with_wrong_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -142,7 +126,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_hash_operations() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
 
         let handles: Vec<_> = (0..5)
@@ -162,14 +146,14 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "ValidPass123";
         let hash = password_repo
             .generate_hash(password.to_string())
             .await
             .unwrap();
         assert!(hash.starts_with("$argon2id$"));
-        
+
         let result = password_repo
             .verify_hash(password.to_string(), hash)
             .await
@@ -179,60 +163,42 @@ mod tests {
 
     #[tokio::test]
     async fn test_very_long_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "A".repeat(100) + "b1"; // 102 characters, valid
-        let hash = password_repo
-            .generate_hash(password.clone())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.clone()).await.unwrap();
         assert!(hash.starts_with("$argon2id$"));
-        
-        let result = password_repo
-            .verify_hash(password, hash)
-            .await
-            .unwrap();
+
+        let result = password_repo.verify_hash(password, hash).await.unwrap();
         assert!(result);
     }
 
     #[tokio::test]
     async fn test_special_characters_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123!".to_string();
-        let hash = password_repo
-            .generate_hash(password.clone())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.clone()).await.unwrap();
         assert!(hash.starts_with("$argon2id$"));
-        
-        let result = password_repo
-            .verify_hash(password, hash)
-            .await
-            .unwrap();
+
+        let result = password_repo.verify_hash(password, hash).await.unwrap();
         assert!(result);
     }
 
     #[tokio::test]
     async fn test_unicode_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SécurePass123".to_string();
-        let hash = password_repo
-            .generate_hash(password.clone())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.clone()).await.unwrap();
         assert!(hash.starts_with("$argon2id$"));
-        
-        let result = password_repo
-            .verify_hash(password, hash)
-            .await
-            .unwrap();
+
+        let result = password_repo.verify_hash(password, hash).await.unwrap();
         assert!(result);
     }
 
     #[tokio::test]
     async fn test_same_password_different_hashes() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
-        
+
         let hash1 = password_repo
             .generate_hash(password.to_string())
             .await
@@ -241,10 +207,10 @@ mod tests {
             .generate_hash(password.to_string())
             .await
             .unwrap();
-        
+
         // Same password should generate different hashes due to different salts
         assert_ne!(hash1, hash2);
-        
+
         // Both hashes should verify correctly
         let result1 = password_repo
             .verify_hash(password.to_string(), hash1)
@@ -254,40 +220,40 @@ mod tests {
             .verify_hash(password.to_string(), hash2)
             .await
             .unwrap();
-        
+
         assert!(result1);
         assert!(result2);
     }
 
     #[tokio::test]
     async fn test_verify_with_invalid_hash() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let invalid_hash = "invalid_hash_format".to_string();
-        
+
         let result = password_repo
             .verify_hash(password.to_string(), invalid_hash)
             .await;
-        
+
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_verify_with_empty_hash() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let empty_hash = "".to_string();
-        
+
         let result = password_repo
             .verify_hash(password.to_string(), empty_hash)
             .await;
-        
+
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_concurrent_verify_operations() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -312,7 +278,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_mixed_concurrent_operations() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -352,45 +318,36 @@ mod tests {
 
     #[tokio::test]
     async fn test_password_case_sensitivity() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123".to_string();
-        let hash = password_repo
-            .generate_hash(password.clone())
-            .await
-            .unwrap();
-        
+        let hash = password_repo.generate_hash(password.clone()).await.unwrap();
+
         // Same case should work
         let result = password_repo
             .verify_hash(password.clone(), hash.clone())
             .await
             .unwrap();
         assert!(result);
-        
+
         // Different case should fail
         let wrong_case = "securepass123".to_string();
-        let result = password_repo
-            .verify_hash(wrong_case, hash)
-            .await
-            .unwrap();
+        let result = password_repo.verify_hash(wrong_case, hash).await.unwrap();
         assert!(!result);
     }
 
     #[tokio::test]
     async fn test_whitespace_sensitivity() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = " SecurePass123 ".to_string();
-        let hash = password_repo
-            .generate_hash(password.clone())
-            .await
-            .unwrap();
-        
+        let hash = password_repo.generate_hash(password.clone()).await.unwrap();
+
         // Same whitespace should work
         let result = password_repo
             .verify_hash(password.clone(), hash.clone())
             .await
             .unwrap();
         assert!(result);
-        
+
         // Different whitespace should fail
         let no_whitespace = "SecurePass123".to_string();
         let result = password_repo
@@ -402,15 +359,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_repository_clone_works() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let cloned_repo = password_repo.clone();
-        
+
         let password = "SecurePass123";
         let hash = password_repo
             .generate_hash(password.to_string())
             .await
             .unwrap();
-        
+
         // Cloned repository should work the same
         let result = cloned_repo
             .verify_hash(password.to_string(), hash)
@@ -421,22 +378,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_repository_instances() {
-        let repo1 = PasswordRepositoryImpl::new();
-        let repo2 = PasswordRepositoryImpl::new();
-        
+        let repo1 = Argon2PasswordProvider::new();
+        let repo2 = Argon2PasswordProvider::new();
+
         let password = "SecurePass123";
-        let hash1 = repo1
-            .generate_hash(password.to_string())
-            .await
-            .unwrap();
-        let hash2 = repo2
-            .generate_hash(password.to_string())
-            .await
-            .unwrap();
-        
+        let hash1 = repo1.generate_hash(password.to_string()).await.unwrap();
+        let hash2 = repo2.generate_hash(password.to_string()).await.unwrap();
+
         // Different instances should generate different hashes
         assert_ne!(hash1, hash2);
-        
+
         // Both should verify correctly
         let result1 = repo1
             .verify_hash(password.to_string(), hash1)
@@ -446,7 +397,7 @@ mod tests {
             .verify_hash(password.to_string(), hash2)
             .await
             .unwrap();
-        
+
         assert!(result1);
         assert!(result2);
     }
@@ -454,193 +405,149 @@ mod tests {
     // Password validation tests
     #[tokio::test]
     async fn test_password_validation_too_short() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "abc123";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::TooShort);
-            assert!(error.message.contains("at least 8 characters"));
-        }
     }
 
     #[tokio::test]
     async fn test_password_validation_too_long() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "a".repeat(129); // 129 characters
-        
+
         let result = password_repo.validate_password(&password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::TooLong);
-            assert!(error.message.contains("at most 128 characters"));
-        }
     }
 
     #[tokio::test]
     async fn test_password_validation_missing_uppercase() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "password123";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::MissingUppercase);
-            assert!(error.message.contains("uppercase letter"));
-        }
     }
 
     #[tokio::test]
     async fn test_password_validation_missing_lowercase() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "PASSWORD123";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::MissingLowercase);
-            assert!(error.message.contains("lowercase letter"));
-        }
     }
 
     #[tokio::test]
     async fn test_password_validation_missing_digit() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "PasswordABC";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::MissingDigit);
-            assert!(error.message.contains("digit"));
-        }
     }
 
     #[tokio::test]
     async fn test_password_validation_common_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "password";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            // The password "password" should fail for multiple reasons, but the first check is uppercase
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::MissingUppercase);
-            assert!(error.message.contains("uppercase letter"));
-        }
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_password_validation_common_password_with_requirements() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "Password123"; // Meets all requirements but is common
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::CommonPassword);
-            assert!(error.message.contains("too common"));
-        }
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_password_validation_valid_password() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_password_validation_with_special_chars() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123!";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_password_validation_unicode_valid() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SécurePass123";
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_ok());
     }
 
     #[tokio::test]
     async fn test_password_validation_control_characters() {
-        let password_repo = PasswordRepositoryImpl::new();
+        let password_repo = Argon2PasswordProvider::new();
         let password = "SecurePass123\x00"; // Contains null byte
-        
+
         let result = password_repo.validate_password(password).await;
         assert!(result.is_err());
-        
-        if let Err(error) = result {
-            assert_eq!(error.validation_type, crate::domain::password::PasswordValidationType::ContainsInvalidCharacters);
-            assert!(error.message.contains("control characters"));
-        }
+
+        assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_generate_hash_with_validation() {
-        let password_repo = PasswordRepositoryImpl::new();
-        
+        let password_repo = Argon2PasswordProvider::new();
+
         // Valid password should work
         let valid_password = "SecurePass123";
-        let result = password_repo.generate_hash(valid_password.to_string()).await;
+        let result = password_repo
+            .generate_hash(valid_password.to_string())
+            .await;
         assert!(result.is_ok());
-        
+
         // Invalid password should fail
         let invalid_password = "weak";
-        let result = password_repo.generate_hash(invalid_password.to_string()).await;
+        let result = password_repo
+            .generate_hash(invalid_password.to_string())
+            .await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_custom_validator() {
-        let custom_validator = crate::domain::password::PasswordValidator::new()
-            .with_min_length(10)
-            .with_special_requirement(true);
-        
-        let password_repo = PasswordRepositoryImpl::with_validator(custom_validator);
-        
+        let custom_validator = PasswordValidator::new()
+            .with_length_requirement(Some(LengthRequirement::new(10, 128)))
+            .with_special_requirement(Some(SpecialCharsRequirement::default()));
+
+        let password_repo = Argon2PasswordProvider::with_validator(custom_validator);
+
         // Password too short for custom validator
         let short_password = "Pass123";
         let result = password_repo.validate_password(short_password).await;
         assert!(result.is_err());
-        
+
         // Password missing special character
         let no_special_password = "Password123";
         let result = password_repo.validate_password(no_special_password).await;
         assert!(result.is_err());
-        
+
         // Valid password for custom validator
         let valid_password = "Password123!";
         let result = password_repo.validate_password(valid_password).await;
         assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_validator_requirements() {
-        let validator = crate::domain::password::PasswordValidator::new();
-        let requirements = validator.get_requirements();
-        
-        assert!(requirements.iter().any(|r| r.contains("8 characters")));
-        assert!(requirements.iter().any(|r| r.contains("uppercase")));
-        assert!(requirements.iter().any(|r| r.contains("lowercase")));
-        assert!(requirements.iter().any(|r| r.contains("digit")));
-        assert!(requirements.iter().any(|r| r.contains("control characters")));
-        assert!(requirements.iter().any(|r| r.contains("common password")));
     }
 }

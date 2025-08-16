@@ -5,60 +5,45 @@ use sqlx::Error as SqlxError;
 pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> RepositoryError {
     match constraint {
         // UNIQUE constraints
-        "t_users_name_key" => {
-            RepositoryError::UsernameAlreadyTaken
-        }
-        "t_users_email_key" => {
-            RepositoryError::EmailAlreadyTaken
-        }
+        "t_users_name_key" => RepositoryError::UsernameAlreadyTaken,
+        "t_users_email_key" => RepositoryError::EmailAlreadyTaken,
         "t_game_system_name_key" => {
-            let name = extract_field_from_error(error, "name").unwrap_or_else(|| "unknown".to_string());
+            let name =
+                extract_field_from_error(error, "name").unwrap_or_else(|| "unknown".to_string());
             RepositoryError::GameSystemNameAlreadyTaken(name)
         }
         "t_session_intents_user_id_session_id_key" => {
             RepositoryError::UserSessionIntentAlreadyExists
         }
-        
+
         // FOREIGN KEY constraints
-        "t_rpg_tables_gm_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_rpg_tables".to_string(), 
-                field: "gm_id".to_string() 
-            }
-        }
-        "t_rpg_tables_game_system_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_rpg_tables".to_string(), 
-                field: "game_system_id".to_string() 
-            }
-        }
-        "t_sessions_table_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_sessions".to_string(), 
-                field: "table_id".to_string() 
-            }
-        }
-        "t_session_intents_user_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_session_intents".to_string(), 
-                field: "user_id".to_string() 
-            }
-        }
-        "t_session_intents_session_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_session_intents".to_string(), 
-                field: "session_id".to_string() 
-            }
-        }
-        "t_session_checkins_session_intent_id_fkey" => {
-            RepositoryError::ForeignKeyViolation { 
-                table: "t_session_checkins".to_string(), 
-                field: "session_intent_id".to_string() 
-            }
-        }
-        
+        "t_rpg_tables_gm_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_rpg_tables".to_string(),
+            field: "gm_id".to_string(),
+        },
+        "t_rpg_tables_game_system_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_rpg_tables".to_string(),
+            field: "game_system_id".to_string(),
+        },
+        "t_sessions_table_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_sessions".to_string(),
+            field: "table_id".to_string(),
+        },
+        "t_session_intents_user_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_session_intents".to_string(),
+            field: "user_id".to_string(),
+        },
+        "t_session_intents_session_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_session_intents".to_string(),
+            field: "session_id".to_string(),
+        },
+        "t_session_checkins_session_intent_id_fkey" => RepositoryError::ForeignKeyViolation {
+            table: "t_session_checkins".to_string(),
+            field: "session_intent_id".to_string(),
+        },
+
         // Unknown constraints
-        _ => RepositoryError::UnknownConstraint(constraint.to_string())
+        _ => RepositoryError::UnknownConstraint(constraint.to_string()),
     }
 }
 
@@ -117,12 +102,16 @@ fn extract_field_from_error(error: &SqlxError, field: &str) -> Option<String> {
 
 /// Maps sqlx::Error to RepositoryError, handling constraint violations
 pub fn map_database_error(error: SqlxError) -> RepositoryError {
-
     if let Some(db_err) = error.as_database_error() {
         if let Some(code) = db_err.code() {
-            if code == "23505" { // UNIQUE constraint violation
+            if code == "23505" {
+                // UNIQUE constraint violation
                 if let Some(constraint) = db_err.constraint() {
-                    tracing::debug!("Mapping constraint violation: {} -> {:?}", constraint, error);
+                    tracing::debug!(
+                        "Mapping constraint violation: {} -> {:?}",
+                        constraint,
+                        error
+                    );
                     return map_constraint_violation(&error, constraint);
                 }
             }
@@ -130,5 +119,3 @@ pub fn map_database_error(error: SqlxError) -> RepositoryError {
     }
     RepositoryError::DatabaseError(error)
 }
-
-

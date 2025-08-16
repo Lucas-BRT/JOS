@@ -1,7 +1,6 @@
 use utoipa::Modify;
-use utoipa::openapi::security::{Http, SecurityScheme, HttpAuthScheme};
 use utoipa::openapi::OpenApi;
-
+use utoipa::openapi::security::{Http, HttpAuthScheme, SecurityScheme};
 
 #[derive(utoipa::ToSchema)]
 pub struct BearerAuth;

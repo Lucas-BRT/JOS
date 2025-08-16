@@ -1,6 +1,7 @@
+use crate::domain::{table::entity::Visibility, table_request::entity::TableRequestStatus, user::Role};
+
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "e_intent_status")]
-#[sqlx(rename_all = "snake_case")]
+#[sqlx(type_name = "e_intent_status", rename_all = "snake_case")]
 pub enum EIntentStatus {
     Yes,
     No,
@@ -8,18 +9,64 @@ pub enum EIntentStatus {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "e_roles")]
-#[sqlx(rename_all = "snake_case")]
+#[sqlx(type_name = "e_roles", rename_all = "lowercase")]
 pub enum ERoles {
     Admin,
     Moderator,
     User,
 }
 
+impl From<ERoles> for Role {
+    fn from(role: ERoles) -> Self {
+        match role {
+            ERoles::Admin => Role::Admin,
+            ERoles::Moderator => Role::Moderator,
+            ERoles::User => Role::User,
+        }
+    }
+}
+
+
+
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
-#[sqlx(type_name = "e_table_visibility")]
-#[sqlx(rename_all = "snake_case")]
+#[sqlx(type_name = "e_table_visibility", rename_all = "snake_case")]
 pub enum ETableVisibility {
     Private,
     Public,
+}
+
+impl From<ETableVisibility> for Visibility {
+    fn from(value: ETableVisibility) -> Self {
+        match value {
+            ETableVisibility::Private => Visibility::Private,
+            ETableVisibility::Public => Visibility::Public,
+        }
+    }
+}
+
+impl From<Visibility> for ETableVisibility {
+    fn from(value: Visibility) -> Self {
+        match value {
+            Visibility::Private => ETableVisibility::Private,
+            Visibility::Public => ETableVisibility::Public,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "e_table_request_status", rename_all = "lowercase")]
+pub enum ETableRequestStatus {
+    Pending,
+    Approved,
+    Rejected,
+}
+
+impl From<ETableRequestStatus> for TableRequestStatus {
+    fn from(status: ETableRequestStatus) -> Self {
+        match status {
+            ETableRequestStatus::Pending => TableRequestStatus::Pending,
+            ETableRequestStatus::Approved => TableRequestStatus::Approved,
+            ETableRequestStatus::Rejected => TableRequestStatus::Rejected,
+        }
+    }
 }

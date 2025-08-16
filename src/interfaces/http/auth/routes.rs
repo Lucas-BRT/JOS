@@ -1,13 +1,17 @@
 use crate::{
     Error, Result,
-    interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
     core::state::AppState,
+    domain::auth::Authenticator,
+    interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
 };
-use axum::{Json, Router, extract::State, routing::{post, get}};
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+use serde_json::json;
 use std::sync::Arc;
 use validator::Validate;
-use serde_json::json;
-
 
 #[utoipa::path(
     post,
@@ -28,14 +32,10 @@ async fn signup(
         return Err(Error::Validation(sanitization_error));
     }
 
-    let user = app_state
-        .user_service
-        .signup(payload)
-        .await?;
+    let user = app_state.auth_service.register(&mut payload.into()).await?;
 
     Ok(user.into())
 }
-
 
 #[utoipa::path(
     post,
@@ -57,8 +57,8 @@ async fn login(
     }
 
     let jwt_token = app_state
-        .user_service
-        .login(login_payload.into())
+        .auth_service
+        .authenticate(&login_payload.into())
         .await?;
 
     Ok(jwt_token)
@@ -77,12 +77,9 @@ async fn get_password_requirements(
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>> {
     let requirements = state.password_service.get_requirements().await;
-    
-    Ok(Json(json!({
-        "requirements": requirements
-    })))
-}
 
+    Ok(Json(json!(requirements)))
+}
 
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
@@ -91,4 +88,3 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .route("/password-requirements", get(get_password_requirements))
         .with_state(state.clone())
 }
-

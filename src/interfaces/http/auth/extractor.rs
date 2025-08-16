@@ -1,19 +1,10 @@
-use axum::{
-    extract::FromRequestParts,
-    http::request::Parts,
-    RequestPartsExt,
-};
+use crate::{core::state::AppState, domain::auth::Claims, interfaces::http::error::AuthError};
+use axum::{RequestPartsExt, extract::FromRequestParts, http::request::Parts};
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
     TypedHeader,
+    headers::{Authorization, authorization::Bearer},
 };
 use std::sync::Arc;
-
-use crate::{
-    core::state::AppState,
-    domain::jwt::Claims,
-    interfaces::http::error::AuthError,
-};
 
 impl FromRequestParts<Arc<AppState>> for Claims {
     type Rejection = AuthError;
@@ -28,7 +19,8 @@ impl FromRequestParts<Arc<AppState>> for Claims {
             .map_err(|_| AuthError::InvalidToken)?;
 
         state
-            .jwt_service
+            .auth_service
+            .jwt_provider
             .decode_token(bearer.token())
             .await
             .map_err(|_| AuthError::InvalidToken)

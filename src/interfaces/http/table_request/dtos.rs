@@ -1,9 +1,8 @@
 use crate::domain::table_request::{dtos::CreateTableRequestCommand, entity::TableRequest};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
-use chrono::{DateTime, Utc};
-
 
 #[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct CreateTableRequestDto {

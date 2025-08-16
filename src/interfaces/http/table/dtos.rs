@@ -1,7 +1,32 @@
-use crate::domain::table::{dtos::CreateTableCommand, entity::Table};
+use crate::domain::table::entity::Visibility;
+use crate::domain::table::{commands::CreateTableCommand, entity::Table};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use validator::Validate;
+
+#[derive(Debug, Clone, Deserialize, Serialize, utoipa::ToSchema)]
+pub enum TableVisibility {
+    Private,
+    Public,
+}
+
+impl From<TableVisibility> for Visibility {
+    fn from(visibility: TableVisibility) -> Self {
+        match visibility {
+            TableVisibility::Private => Visibility::Private,
+            TableVisibility::Public => Visibility::Public,
+        }
+    }
+}
+
+impl From<Visibility> for TableVisibility {
+    fn from(visibility: Visibility) -> Self {
+        match visibility {
+            Visibility::Private => TableVisibility::Private,
+            Visibility::Public => TableVisibility::Public,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct CreateTableDto {
@@ -14,7 +39,7 @@ pub struct CreateTableDto {
     ))]
     pub description: String,
     pub game_system_id: Uuid,
-    pub is_public: bool,
+    pub visibility: TableVisibility,
     #[validate(range(min = 1, max = 20, message = "Max players must be between 1 and 20"))]
     pub max_players: u32,
     pub player_slots: u32,
@@ -27,22 +52,40 @@ impl CreateTableCommand {
             gm_id,
             title: dto.title,
             description: dto.description,
-            game_system_id: dto.game_system_id,
-            is_public: dto.is_public,
-            max_players: dto.max_players,
+            visibility: dto.visibility.clone().into(),
             player_slots: dto.player_slots,
-            occupied_slots: dto.occupied_slots,
+            game_system_id: dto.game_system_id,
         }
     }
 }
 
-#[derive(Debug, Serialize, utoipa::ToSchema)]
+#[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
+pub struct UpdateTableDto {
+    #[validate(length(min = 8, max = 60, message = "Title is empty"))]
+    pub title: Option<String>,
+    #[validate(length(
+        min = 50,
+        max = 1000,
+        message = "Description must be between 50 and 1000 characters"
+    ))]
+    pub description: Option<String>,
+    pub is_public: Option<bool>,
+    #[validate(range(min = 1, max = 20, message = "Max players must be between 1 and 20"))]
+    pub max_players: Option<u32>,
+    #[validate(range(min = 1, message = "Player slots must be greater than 0"))]
+    pub player_slots: Option<u32>,
+    #[validate(range(min = 1, message = "Occupied slots must be greater than 0"))]
+    pub occupied_slots: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, utoipa::ToSchema)]
 pub struct AvaliableTableResponse {
+    pub id: Uuid,
     pub gm_id: Uuid,
     pub title: String,
     pub description: String,
     pub game_system_id: Uuid,
-    pub is_public: bool,
+    pub visibility: TableVisibility,
     pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
@@ -51,14 +94,15 @@ pub struct AvaliableTableResponse {
 impl From<&Table> for AvaliableTableResponse {
     fn from(table: &Table) -> Self {
         Self {
+            id: table.id,
             gm_id: table.gm_id,
             title: table.title.clone(),
             description: table.description.clone(),
             game_system_id: table.game_system_id,
-            is_public: table.is_public,
+            visibility: table.visibility.into(),
             max_players: table.max_players,
-            player_slots: table.player_slots,
-            occupied_slots: table.occupied_slots,
+            player_slots: table.max_players,
+            occupied_slots: 0,
         }
     }
 }

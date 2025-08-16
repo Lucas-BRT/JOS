@@ -1,10 +1,5 @@
 use crate::Error;
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
-use serde_json::json;
+
 
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
@@ -26,6 +21,8 @@ pub enum RepositoryError {
     UserNotFound,
     #[error("table not found")]
     TableNotFound,
+    #[error("table request not found")]
+    TableRequestNotFound,
 }
 
 impl From<RepositoryError> for Error {
@@ -33,107 +30,4 @@ impl From<RepositoryError> for Error {
         Error::Repository(err)
     }
 }
-
-impl IntoResponse for RepositoryError {
-    fn into_response(self) -> Response {
-        match self {
-            Self::DatabaseError(err) => {
-                tracing::error!("Database error: {}", err);
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({
-                        "message": "Internal Server Error"
-                    })),
-                )
-                    .into_response()
-            }
-            Self::UsernameAlreadyTaken => {
-                tracing::error!("Username already taken");
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "Username already taken"
-                    })),
-                )
-                    .into_response()
-            }
-            Self::EmailAlreadyTaken => {
-                tracing::error!("Email already taken");
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "Email already taken"
-                    })),
-                )
-                    .into_response()
-            }
-            Self::GameSystemNameAlreadyTaken(name) => {
-                tracing::error!("Game system name already taken: {}", name);
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "Game system name already taken",
-                        "value": name
-                    })),
-                )
-                    .into_response()
-            }
-            Self::UserSessionIntentAlreadyExists => {
-                tracing::error!("User already has intent for this session");
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "User already has intent for this session"
-                    })),
-                )
-                    .into_response()
-            }
-            Self::ForeignKeyViolation { table, field } => {
-                tracing::error!("Foreign key violation: table {}, field {}", table, field);
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "Foreign key violation",
-                        "table": table,
-                        "field": field
-                    })),
-                )
-                    .into_response()
-            }
-            Self::UnknownConstraint(constraint) => {
-                tracing::error!("Unknown constraint violation: {}", constraint);
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "message": "Constraint violation",
-                        "constraint": constraint
-                    })),
-                )
-                    .into_response()
-            }
-            Self::UserNotFound => {
-                tracing::warn!("User not found");
-
-                (
-                    StatusCode::NOT_FOUND,
-                    Json(json!({
-                        "message": "not found"
-                    })),
-                )
-                    .into_response()
-            }
-            Self::TableNotFound => {
-                tracing::warn!("Table not found");
-                (
-                    StatusCode::NOT_FOUND,
-                    Json(json!({
-                        "message": "Table not found"
-                    })),
-                )
-                    .into_response()
-            }
-        }
-    }
-}
-
 
