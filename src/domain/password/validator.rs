@@ -56,7 +56,7 @@ mod tests {
 
 
     fn generate_valid_password(n: usize) -> String {
-        use rand::{seq::SliceRandom, Rng};
+        use rand::{seq::SliceRandom};
 
 
         const UPPERCASE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";

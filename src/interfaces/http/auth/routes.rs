@@ -7,9 +7,8 @@ use crate::{
 use axum::{
     Json, Router,
     extract::State,
-    routing::{get, post},
+    routing::post,
 };
-use serde_json::json;
 use std::sync::Arc;
 use validator::Validate;
 

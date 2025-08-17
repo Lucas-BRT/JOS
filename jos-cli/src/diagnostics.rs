@@ -57,7 +57,7 @@ impl DiagnosticResult {
         if !self.issues.is_empty() {
             println!("\n🚨 Issues Found:");
             for issue in &self.issues {
-                println!("  • {}", issue);
+                println!("  • {issue}");
             }
         }
 
@@ -65,7 +65,7 @@ impl DiagnosticResult {
         if !self.suggestions.is_empty() {
             println!("\n💡 Suggestions:");
             for suggestion in &self.suggestions {
-                println!("  • {}", suggestion);
+                println!("  • {suggestion}");
             }
         }
 
@@ -102,14 +102,14 @@ pub async fn validate_environment() -> DiagnosticResult {
             Ok(value) => {
                 if value.is_empty() {
                     missing_vars.push(var);
-                    issues.push(format!("{} is empty", var));
+                    issues.push(format!("{var} is empty"));
                 } else {
                     info!("✅ {} is set", var);
                 }
             }
             Err(_) => {
                 missing_vars.push(var);
-                issues.push(format!("{} is not set", var));
+                issues.push(format!("{var} is not set"));
             }
         }
     }
@@ -135,7 +135,7 @@ pub async fn validate_environment() -> DiagnosticResult {
     if let Ok(port_str) = env::var("PORT") {
         if let Ok(port) = port_str.parse::<u16>() {
             if port < 1024 {
-                issues.push(format!("PORT {} is outside valid range (1024-65535)", port));
+                issues.push(format!("PORT {port} is outside valid range (1024-65535)"));
                 suggestions.push("Use a port between 1024 and 65535".to_string());
                 suggestions.push("Common ports: 3000, 8080, 5000".to_string());
             }
@@ -207,18 +207,16 @@ pub async fn test_database_connection() -> DiagnosticResult {
                                         info!("✅ Connected to correct database: {}", db_name);
                                     } else {
                                         issues.push(format!(
-                                            "Connected to database '{}' but expected '{}'",
-                                            current_db, db_name
+                                            "Connected to database '{current_db}' but expected '{db_name}'"
                                         ));
                                         suggestions.push(format!(
-                                            "Update DATABASE_URL to connect to '{}'",
-                                            db_name
+                                            "Update DATABASE_URL to connect to '{db_name}'"
                                         ));
                                     }
                                 }
                             }
                             Err(e) => {
-                                issues.push(format!("Could not verify database name: {}", e));
+                                issues.push(format!("Could not verify database name: {e}"));
                             }
                         }
                     }
@@ -239,7 +237,7 @@ pub async fn test_database_connection() -> DiagnosticResult {
                                     info!("✅ User has CREATE/DROP permissions");
                                 }
                                 Err(e) => {
-                                    issues.push(format!("User cannot drop tables: {}", e));
+                                    issues.push(format!("User cannot drop tables: {e}"));
                                     suggestions.push(
                                         "Grant DROP permissions to the database user".to_string(),
                                     );
@@ -247,7 +245,7 @@ pub async fn test_database_connection() -> DiagnosticResult {
                             }
                         }
                         Err(e) => {
-                            issues.push(format!("User cannot create tables: {}", e));
+                            issues.push(format!("User cannot create tables: {e}"));
                             suggestions
                                 .push("Grant CREATE permissions to the database user".to_string());
                         }
@@ -266,7 +264,7 @@ pub async fn test_database_connection() -> DiagnosticResult {
                             };
                         }
                         Err(e) => {
-                            issues.push(format!("Migration test failed: {}", e));
+                            issues.push(format!("Migration test failed: {e}"));
                             suggestions.push(
                                 "Run 'sqlx migrate run' manually to see detailed errors"
                                     .to_string(),
@@ -275,7 +273,7 @@ pub async fn test_database_connection() -> DiagnosticResult {
                     }
                 }
                 Err(e) => {
-                    issues.push(format!("Database query failed: {}", e));
+                    issues.push(format!("Database query failed: {e}"));
                     suggestions.push("Check if PostgreSQL is running".to_string());
                     suggestions.push("Verify DATABASE_URL format and credentials".to_string());
                 }
@@ -302,7 +300,7 @@ pub async fn test_database_connection() -> DiagnosticResult {
                 suggestions.push("Create database: CREATE DATABASE jos_db;".to_string());
                 suggestions.push("Or use Docker with correct database name".to_string());
             } else {
-                issues.push(format!("Database connection failed: {}", error_msg));
+                issues.push(format!("Database connection failed: {error_msg}"));
                 suggestions.push(
                     "Check DATABASE_URL format: postgres://user:pass@host:port/db".to_string(),
                 );
@@ -351,7 +349,7 @@ async fn test_migrations(pool: &PgPool) -> Result<(), DiagnosticError> {
 fn extract_database_name(db_url: &str) -> Option<String> {
     db_url
         .split('/')
-        .last()
+        .next_back()
         .map(|s| s.split('?').next().unwrap_or(s).to_string())
 }
 

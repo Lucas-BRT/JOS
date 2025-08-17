@@ -63,7 +63,7 @@ fn check_docker_compose() {
         .output()
         .is_ok()
         || Command::new("docker")
-            .args(&["compose", "version"])
+            .args(["compose", "version"])
             .output()
             .is_ok();
 
@@ -118,7 +118,7 @@ SESSION_TIMEOUT_MINUTES=60
         match fs::write(".env", env_content) {
             Ok(_) => println!("✅ .env file created successfully!"),
             Err(e) => {
-                eprintln!("❌ Failed to create .env file: {}", e);
+                eprintln!("❌ Failed to create .env file: {e}");
                 std::process::exit(1);
             }
         }
@@ -135,7 +135,7 @@ async fn start_services() {
 
     // Start services
     let status = Command::new("docker-compose")
-        .args(&["up", "-d", "db", "redis"])
+        .args(["up", "-d", "db", "redis"])
         .status();
 
     match status {
@@ -164,7 +164,7 @@ async fn wait_for_database() {
 
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
-            .args(&[
+            .args([
                 "exec",
                 "-T",
                 "db",
@@ -198,7 +198,7 @@ async fn wait_for_redis() {
 
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
-            .args(&["exec", "-T", "redis", "redis-cli", "ping"])
+            .args(["exec", "-T", "redis", "redis-cli", "ping"])
             .output();
 
         if output.is_ok() && output.unwrap().status.success() {
@@ -224,7 +224,7 @@ fn install_rust_dependencies() {
     } else {
         println!("📦 Installing sqlx-cli...");
         let status = Command::new("cargo")
-            .args(&[
+            .args([
                 "install",
                 "sqlx-cli",
                 "--no-default-features",
@@ -256,7 +256,7 @@ fn install_rust_dependencies() {
     } else {
         println!("📦 Installing cargo-watch...");
         let status = Command::new("cargo")
-            .args(&["install", "cargo-watch"])
+            .args(["install", "cargo-watch"])
             .status();
 
         match status {
@@ -292,7 +292,7 @@ async fn run_migrations() {
     // Wait a bit more for database to be fully ready
     std::thread::sleep(std::time::Duration::from_secs(2));
 
-    let status = Command::new("sqlx").args(&["migrate", "run"]).status();
+    let status = Command::new("sqlx").args(["migrate", "run"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -308,7 +308,7 @@ async fn run_migrations() {
 fn run_diagnosis() {
     println!("🔍 Running system diagnosis...");
     let diagnosis_status = Command::new("cargo")
-        .args(&["run", "-p", "jos-cli", "diagnose"])
+        .args(["run", "-p", "jos-cli", "diagnose"])
         .status();
 
     match diagnosis_status {

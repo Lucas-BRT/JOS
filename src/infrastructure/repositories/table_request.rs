@@ -71,7 +71,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
     async fn update(
         &self,
-        update_data: &UpdateTableRequestCommand,
+        _update_data: &UpdateTableRequestCommand,
     ) -> Result<()> {
         todo!()
     }
@@ -113,11 +113,11 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
     }
 
-    async fn get(&self, filters: &TableRequestFilters, pagination: Pagination) -> Result<Vec<TableRequest>> {
+    async fn get(&self, _filters: &TableRequestFilters, _pagination: Pagination) -> Result<Vec<TableRequest>> {
         todo!()
     }
 
-    async fn find(&self, filters: &TableRequestFilters) -> Result<TableRequest> {
+    async fn find(&self, _filters: &TableRequestFilters) -> Result<TableRequest> {
         todo!()
     }
 

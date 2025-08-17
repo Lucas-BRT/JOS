@@ -73,7 +73,7 @@ impl TableRepositoryTrait for TableRepository {
         Ok(created_table.into())
     }
 
-    async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
+    async fn update(&self, _command: &UpdateTableCommand) -> Result<Table> {
         todo!()
     }
 
@@ -109,15 +109,15 @@ impl TableRepositoryTrait for TableRepository {
         }
     }
 
-    async fn get(&self, filters: &TableFilters, pagination: Pagination) -> Result<Vec<Table>> {
+    async fn get(&self, _filters: &TableFilters, _pagination: Pagination) -> Result<Vec<Table>> {
         todo!()
     }
 
-    async fn find_by_id(&self, table_id: &Uuid) -> Result<Table> {
+    async fn find_by_id(&self, _table_id: &Uuid) -> Result<Table> {
         todo!()
     }
 
-    async fn find_by_gm_id(&self, gm_id: &Uuid) -> Result<Vec<Table>> {
+    async fn find_by_gm_id(&self, _gm_id: &Uuid) -> Result<Vec<Table>> {
         todo!()
     }
 }

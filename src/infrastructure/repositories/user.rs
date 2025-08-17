@@ -92,7 +92,7 @@ impl UserRepository for PostgresUserRepository {
 
 
         match existing_user {
-            Some(user) => {
+            Some(_) => {
                 let now = Utc::now();
 
                 if let Update::Change(display_name) = data.display_name {
@@ -163,7 +163,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
-    async fn get_all(&self, filters: &UserFilters) -> Result<Vec<User>> {
+    async fn get_all(&self, _filters: &UserFilters) -> Result<Vec<User>> {
         let users = sqlx::query_as!(
             UserModel,
             r#"SELECT

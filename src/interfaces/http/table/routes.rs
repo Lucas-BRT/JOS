@@ -53,7 +53,7 @@ pub async fn create_table(
 )]
 #[axum::debug_handler]
 pub async fn get_available_tables(
-    user: Claims,
+    _: Claims,
     State(app_state): State<Arc<AppState>>,
     Query(filters): Query<TableFilters>,
     Query(pagination): Query<Pagination>,
@@ -98,16 +98,12 @@ pub async fn delete_table(
 }
 
 pub async fn update_table(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-    Json(update_payload): Json<UpdateTableDto>,
-    user: Claims,
+    State(_app_state): State<Arc<AppState>>,
+    Path(_table_id): Path<Uuid>,
+    Json(_update_payload): Json<UpdateTableDto>,
+    _: Claims,
 ) -> Result<()> {
-    // let update_command = UpdateTableCommand::from_dto(update_payload, user.sub);
-
-    // app_state.table_service.update(&table_id, &update_command).await?;
-
-    Ok(())
+    todo!()
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {

@@ -53,7 +53,7 @@ pub async fn create_table_request(
 )]
 #[axum::debug_handler]
 pub async fn get_table_requests(
-    user: Claims,
+    _: Claims,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<TableRequestResponse>>> {
     let requests = app_state
@@ -115,7 +115,7 @@ pub async fn get_table_requests_by_table_id(
 #[axum::debug_handler]
 pub async fn update_table_request(
     State(app_state): State<Arc<AppState>>,
-    Path(request_id): Path<Uuid>,
+    Path(_request_id): Path<Uuid>,
     Json(update_payload): Json<UpdateTableRequestDto>,
 ) -> Result<()> {
     let update_command = UpdateTableRequestCommand {

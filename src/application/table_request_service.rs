@@ -13,17 +13,17 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct TableRequestService {
     table_request_repository: Arc<dyn TableRequestRepository>,
-    table_service: Arc<dyn TableRepository>,
+    _table_service: Arc<dyn TableRepository>,
 }
 
 impl TableRequestService {
     pub fn new(
         table_request_repository: Arc<dyn TableRequestRepository>,
-        table_service: Arc<dyn TableRepository>,
+        _table_service: Arc<dyn TableRepository>,
     ) -> Self {
         Self {
             table_request_repository,
-            table_service,
+            _table_service,
         }
     }
 

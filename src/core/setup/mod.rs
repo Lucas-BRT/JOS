@@ -55,7 +55,7 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
     info!("✅ User service initialized");
 
     // Password service
-    let password_repo = Arc::new(Argon2PasswordProvider::new());
+    let password_repo = Arc::new(Argon2PasswordProvider::default());
     let password_service = PasswordService::new(password_repo.clone());
     info!("✅ Password service initialized");
 

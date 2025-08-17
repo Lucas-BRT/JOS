@@ -4,7 +4,7 @@ use std::process::{Command, Stdio};
 pub async fn start_services() {
     println!("🚀 Starting development services...");
 
-    let status = Command::new("docker-compose").args(&["up", "-d"]).status();
+    let status = Command::new("docker-compose").args(["up", "-d"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -51,7 +51,7 @@ pub async fn restart_services() {
 }
 
 pub fn show_logs(service: &str) {
-    println!("📋 Showing logs for: {}", service);
+    println!("📋 Showing logs for: {service}");
 
     let args = match service {
         "api" => vec!["logs", "-f", "api"],
@@ -59,7 +59,7 @@ pub fn show_logs(service: &str) {
         "redis" => vec!["logs", "-f", "redis"],
         "all" => vec!["logs", "-f"],
         _ => {
-            eprintln!("❌ Invalid service: {}", service);
+            eprintln!("❌ Invalid service: {service}");
             eprintln!("   Valid services: api, db, redis, all");
             return;
         }
@@ -83,7 +83,7 @@ pub fn show_logs(service: &str) {
             let _ = child.wait();
         }
         Err(e) => {
-            eprintln!("❌ Failed to show logs: {}", e);
+            eprintln!("❌ Failed to show logs: {e}");
         }
     }
 }
@@ -98,10 +98,10 @@ pub fn show_status() {
     match output {
         Ok(output) => {
             let status = String::from_utf8_lossy(&output.stdout);
-            println!("{}", status);
+            println!("{status}");
         }
         Err(e) => {
-            eprintln!("❌ Failed to get service status: {}", e);
+            eprintln!("❌ Failed to get service status: {e}");
         }
     }
 
@@ -114,7 +114,7 @@ pub fn show_status() {
 fn check_service_health() {
     // Check database
     let db_healthy = Command::new("docker-compose")
-        .args(&[
+        .args([
             "exec",
             "-T",
             "db",
@@ -136,7 +136,7 @@ fn check_service_health() {
 
     // Check Redis
     let redis_healthy = Command::new("docker-compose")
-        .args(&["exec", "-T", "redis", "redis-cli", "ping"])
+        .args(["exec", "-T", "redis", "redis-cli", "ping"])
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false);
@@ -149,7 +149,7 @@ fn check_service_health() {
 
     // Check API (if running)
     let api_healthy = Command::new("curl")
-        .args(&["-f", "http://localhost:3000/health"])
+        .args(["-f", "http://localhost:3000/health"])
         .output()
         .map(|output| output.status.success())
         .unwrap_or(false);
@@ -176,7 +176,7 @@ pub async fn reset_database() {
 
         println!("🗑️ Removing database volumes...");
         let _ = Command::new("docker")
-            .args(&["volume", "rm", "jos_postgres_data"])
+            .args(["volume", "rm", "jos_postgres_data"])
             .output();
 
         println!("🚀 Starting services...");
@@ -202,7 +202,7 @@ async fn wait_for_database() {
 
     while attempts < max_attempts {
         let output = Command::new("docker-compose")
-            .args(&[
+            .args([
                 "exec",
                 "-T",
                 "db",
@@ -231,7 +231,7 @@ async fn wait_for_database() {
 pub async fn run_migrations() {
     println!("🗄️ Running database migrations...");
 
-    let status = Command::new("sqlx").args(&["migrate", "run"]).status();
+    let status = Command::new("sqlx").args(["migrate", "run"]).status();
 
     match status {
         Ok(exit_status) if exit_status.success() => {
@@ -248,7 +248,7 @@ pub fn open_db_shell() {
     println!("🐘 Opening PostgreSQL shell...");
 
     let status = Command::new("docker-compose")
-        .args(&["exec", "db", "psql", "-U", "postgres", "-d", "jos_db"])
+        .args(["exec", "db", "psql", "-U", "postgres", "-d", "jos_db"])
         .status();
 
     match status {
@@ -265,7 +265,7 @@ pub fn open_redis_shell() {
     println!("🔴 Opening Redis shell...");
 
     let status = Command::new("docker-compose")
-        .args(&["exec", "redis", "redis-cli"])
+        .args(["exec", "redis", "redis-cli"])
         .status();
 
     match status {
