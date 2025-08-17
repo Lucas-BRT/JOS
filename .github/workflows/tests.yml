@@ -1,0 +1,91 @@
+name: Rust CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+    branches: [main, development]
+
+jobs:
+  ci:
+    name: Build, Test, Lint, Docs
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: runner
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: jos_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy, rustfmt
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache cargo git
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-git-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-build-
+
+      - name: Install sqlx-cli
+        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+
+      - name: Run Migrations
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: sqlx migrate run
+
+      - name: Build project
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: cargo build --workspace --verbose
+
+      - name: Run tests
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: cargo test --workspace
+
+      - name: Run clippy (lint)
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: cargo clippy --workspace -- -D warnings
+
+      - name: Check formatting
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: cargo fmt --all -- --check
+
+      - name: Build documentation
+        env:
+          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+        run: cargo doc --no-deps --workspace --verbose
