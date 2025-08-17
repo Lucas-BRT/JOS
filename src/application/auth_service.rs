@@ -41,7 +41,7 @@ impl Authenticator for AuthService {
         let user = self.user_repository.find_by_email(&payload.email).await?;
         if !self
             .password_provider
-            .verify_hash(payload.password.clone(), user.password_hash.clone())
+            .verify_hash(payload.password.clone(), user.password.clone())
             .await?
         {
             return Err(Error::Application(ApplicationError::InvalidCredentials));

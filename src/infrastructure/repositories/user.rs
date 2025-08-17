@@ -38,7 +38,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role,
                 created_at,
                 updated_at)
@@ -49,7 +49,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at
@@ -78,7 +78,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at
@@ -126,7 +126,7 @@ impl UserRepository for PostgresUserRepository {
                 if let Update::Change(password) = data.password {
                     sqlx::query(r#"
                         UPDATE t_users
-                        SET password_hash = $1, updated_at = $2
+                        SET password = $1, updated_at = $2
                         WHERE id = $3
                     "#)
                     .bind(password)
@@ -171,7 +171,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at
@@ -193,7 +193,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at
@@ -218,7 +218,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at
@@ -242,7 +242,7 @@ impl UserRepository for PostgresUserRepository {
                 username,
                 display_name,
                 email,
-                password_hash,
+                password,
                 role as "role: ERoles",
                 created_at,
                 updated_at

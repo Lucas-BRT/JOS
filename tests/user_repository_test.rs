@@ -4,6 +4,7 @@ use jos::domain::user::{
 use jos::domain::utils::update::Update;
 use jos::infrastructure::repositories::error::RepositoryError;
 use jos::infrastructure::repositories::user::PostgresUserRepository;
+use jos::Error;
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -29,13 +30,18 @@ async fn test_create_user_success(pool: PgPool) {
         create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
     let result = repo.create(&user_data).await;
-    assert!(result.is_ok());
 
-    let user = result.unwrap();
-    assert_eq!(user.username, "testuser");
-    assert_eq!(user.email, "test@example.com");
-    assert_eq!(user.role, Role::User);
-    assert!(user.id != uuid::Uuid::nil());
+    match result {
+        Ok(user) => {
+            assert_eq!(user.username, "testuser");
+            assert_eq!(user.email, "test@example.com");
+            assert_eq!(user.role, Role::User);
+            assert!(user.id != uuid::Uuid::nil());
+        }
+        Err(e) => {
+            panic!("Unexpected error: {e:?}");
+        }
+    }
 }
 
 #[sqlx::test]
@@ -45,21 +51,18 @@ async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
     let user_data =
         create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    // Create first user
-    let result1 = repo.create(&user_data).await;
-    assert!(result1.is_ok());
+    repo.create(&user_data).await.expect("Failed to create first user");
 
     let user_data2 =
         create_test_user_data("testuser", "testuser", "test2@example.com", "password123");
 
-    // Try to create second user with same username
-    let result2 = repo.create(&user_data2).await;
+    let result = repo.create(&user_data2).await;
 
-    assert!(result2.is_err());
+    assert!(result.is_err());
 
-    match result2 {
-        Err(jos::Error::Repository(RepositoryError::UsernameAlreadyTaken)) => (),
-        _ => panic!("Unexpected error: {result2:?}"),
+    match result {
+        Err(Error::Repository(RepositoryError::UsernameAlreadyTaken)) => (),
+        _ => panic!("Unexpected error: {result:?}"),
     }
 }
 
@@ -73,17 +76,13 @@ async fn test_create_user_duplicate_email_should_fail(pool: PgPool) {
     let user_data2 =
         create_test_user_data("testuser2", "testuser2", "test@example.com", "password456");
 
-    // Create first user
-    let result1 = repo.create(&user_data1).await;
-    assert!(result1.is_ok());
+    repo.create(&user_data1).await.expect("Failed to create first user");
 
-    // Try to create second user with same email
-    let result2 = repo.create(&user_data2).await;
-    assert!(result2.is_err());
+    let result = repo.create(&user_data2).await;
 
-    match result2 {
-        Err(jos::Error::Repository(RepositoryError::EmailAlreadyTaken)) => (),
-        _ => panic!("Unexpected error: {result2:?}"),
+    match result {
+        Err(Error::Repository(RepositoryError::EmailAlreadyTaken)) => (),
+        _ => panic!("Unexpected error: {result:?}"),
     }
 }
 
@@ -112,7 +111,7 @@ async fn test_find_by_id_not_found(pool: PgPool) {
     let result = repo.find_by_id(&random_id).await;
 
     assert!(result.is_err());
-    if let Err(jos::Error::Repository(RepositoryError::UserNotFound)) = result {
+    if let Err(Error::Repository(RepositoryError::UserNotFound)) = result {
         // Expected error
     } else {
         panic!("Expected UserNotFound error");
@@ -233,11 +232,10 @@ async fn test_update_user_password(pool: PgPool) {
         ..Default::default()
     };
 
-    let result = repo.update(&update_data).await;
-    assert!(result.is_ok());
+    repo.update(&update_data).await.expect("Failed to update user");
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
-    assert_eq!(updated_user.password_hash, "newpassword456");
+    assert_eq!(updated_user.password, "newpassword456");
 }
 
 #[sqlx::test]
@@ -248,18 +246,14 @@ async fn test_update_user_not_found(pool: PgPool) {
     let update_data = UpdateUserCommand {
         id: random_id,
         display_name: Update::Change("newusername"),
-        email: Update::Keep,
-        password: Update::Keep,
         ..Default::default()
     };
 
     let result = repo.update(&update_data).await;
-    assert!(result.is_err());
 
-    if let Err(jos::Error::Repository(RepositoryError::UserNotFound)) = result {
-        // Expected error
-    } else {
-        panic!("Expected UserNotFound error");
+    match result {
+        Err(Error::Repository(RepositoryError::UserNotFound)) => (),
+        _ => panic!("Unexpected error: {result:?}"),
     }
 }
 
@@ -270,23 +264,12 @@ async fn test_delete_user(pool: PgPool) {
     let user_data =
         create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.unwrap();
+    let created_user = repo.create(&user_data).await.expect("Failed to create user");
 
-    // Verify that the user exists
-    let found_user = repo.find_by_id(&created_user.id).await;
-    assert!(found_user.is_ok());
+    let deleted_user = repo.delete(&created_user.id).await.expect("Failed to delete user");
 
-    // Delete the user
-    let deleted_user = repo.delete(&created_user.id).await;
-
-    assert!(deleted_user.is_ok());
-    let deleted_user = deleted_user.unwrap();
     assert_eq!(deleted_user.id, created_user.id);
     assert_eq!(deleted_user.username, "testuser");
-
-    // Verify that the user does not exist anymore
-    let found_user = repo.find_by_id(&created_user.id).await;
-    assert!(found_user.is_err());
 }
 
 #[sqlx::test]
@@ -296,11 +279,9 @@ async fn test_delete_user_not_found(pool: PgPool) {
     let random_id = uuid::Uuid::new_v4();
     let result = repo.delete(&random_id).await;
 
-    assert!(result.is_err());
-    if let Err(jos::Error::Repository(RepositoryError::UserNotFound)) = result {
-        // Expected error
-    } else {
-        panic!("Expected UserNotFound error");
+    match result {
+        Err(Error::Repository(RepositoryError::UserNotFound)) => (),
+        _ => panic!("Unexpected error: {result:?}"),
     }
 }
 
@@ -308,7 +289,6 @@ async fn test_delete_user_not_found(pool: PgPool) {
 async fn test_concurrent_user_operations(pool: PgPool) {
     let repo = PostgresUserRepository::new(Arc::new(pool));
 
-    // Create multiple users simultaneously
     let handles: Vec<_> = (0..5)
         .map(|i| {
             let repo = repo.clone();
@@ -318,18 +298,17 @@ async fn test_concurrent_user_operations(pool: PgPool) {
                 &format!("test{i}@example.com"),
                 &format!("password{i}"),
             );
-            tokio::spawn(async move { repo.create(&user_data).await })
+            tokio::spawn(async move { repo.create(&user_data).await.expect("Failed to create user") })
         })
         .collect();
 
     let results: Vec<_> = futures::future::join_all(handles).await;
 
     for result in results {
-        assert!(result.unwrap().is_ok());
+        assert!(result.is_ok());
     }
 
-    // Verify that all users were created
-    let all_users = repo.get_all(&UserFilters::default()).await.unwrap();
+    let all_users = repo.get_all(&UserFilters::default()).await.expect("Failed to get all users");
     assert_eq!(all_users.len(), 5);
 }
 

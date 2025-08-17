@@ -9,7 +9,7 @@ pub struct User {
     pub username: String,
     pub display_name: String,
     pub email: String,
-    pub password_hash: String,
+    pub password: String,
     pub role: Role,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
