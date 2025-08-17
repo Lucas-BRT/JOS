@@ -1,3 +1,4 @@
+use super::password::error::PasswordDomainError;
 use super::table::error::TableDomainError;
 use super::user::error::UserDomainError;
 
@@ -7,6 +8,8 @@ pub enum DomainError {
     Table(TableDomainError),
     #[error("User error: {0}")]
     User(UserDomainError),
+    #[error("Password error: {0}")]
+    Password(PasswordDomainError),
 }
 
 impl From<UserDomainError> for DomainError {

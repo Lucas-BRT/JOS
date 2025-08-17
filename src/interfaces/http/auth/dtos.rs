@@ -1,115 +1,43 @@
 use crate::domain::user::{
-    dtos::{CreateUserCommand, LoginUserCommand},
+    commands::{CreateUserCommand, LoginUserCommand},
     entity::User,
 };
-use axum::{Json, extract::Multipart, http::StatusCode, response::IntoResponse};
+use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+use utoipa::ToSchema;
 use validator::Validate;
 
-const MIN_USERNAME_LENGTH: u64 = 4;
-const MAX_USERNAME_LENGTH: u64 = 100;
-
-const MIN_PASSWORD_LENGTH: u64 = 8;
-const MAX_PASSWORD_LENGTH: u64 = 200;
-
-const MIN_NICKNAME_LENGTH: u64 = 4;
-const MAX_NICKNAME_LENGTH: u64 = 100;
-
-const MIN_BIO_LENGTH: u64 = 2;
-const MAX_BIO_LENGTH: u64 = 200;
-
-#[derive(Validate, Deserialize)]
-pub struct LoginDto {
-    #[validate(email)]
-    pub email: String,
-    #[validate(length(min = MIN_PASSWORD_LENGTH, max = MAX_PASSWORD_LENGTH))]
-    pub password: String,
-}
-
-impl From<LoginDto> for LoginUserCommand {
-    fn from(dto: LoginDto) -> LoginUserCommand {
-        LoginUserCommand {
-            email: dto.email,
-            password: dto.password,
-        }
-    }
-}
-
-#[derive(Validate)]
-pub struct RecoveryDto {
-    #[validate(email)]
-    pub email: String,
-}
-
-#[derive(Validate, Deserialize)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct SignupDto {
-    #[validate(length(min = MIN_USERNAME_LENGTH, max = MAX_USERNAME_LENGTH))]
-    pub name: String,
+    #[validate(length(min = 4, max = 100))]
+    pub username: String,
+    #[validate(length(min = 4, max = 100))]
+    pub display_name: String,
     #[validate(email)]
     pub email: String,
-    #[validate(length(min = MIN_PASSWORD_LENGTH, max = MAX_PASSWORD_LENGTH))]
+    #[validate(length(min = 8, max = 200))]
     pub password: String,
-    #[validate(length(min = MIN_PASSWORD_LENGTH, max = MAX_PASSWORD_LENGTH))]
+    #[validate(must_match(other = "password"))]
     pub confirm_password: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub enum Gender {
-    Male,
-    Female,
-    NonBinary,
-    Other,
-}
-
-#[derive(Debug, Deserialize, Serialize, thiserror::Error)]
-pub enum InvalidImageError {
-    #[error("Image is too large: {0}")]
-    TooLarge(String),
-    #[error("The format {0} is not supported")]
-    InvalidFormat(String),
-}
-
-#[derive(Debug, Validate, Deserialize)]
-pub struct UpdateProfile {
-    #[validate(length(min = MIN_NICKNAME_LENGTH, max = MAX_NICKNAME_LENGTH))]
-    pub nickname: Option<String>,
-    #[validate(length(min = MIN_BIO_LENGTH, max = MAX_BIO_LENGTH))]
-    pub bio: Option<String>,
-    pub gender: Option<Gender>,
-    #[validate(range(min = 0, max = 70))]
-    pub years_playing: Option<u8>,
-}
-
-pub struct UpdateProfileWithAvatar {
-    pub form: UpdateProfile,
-    pub avatar: Option<Multipart>,
-}
-
-impl From<SignupDto> for CreateUserCommand {
-    fn from(dto: SignupDto) -> CreateUserCommand {
-        CreateUserCommand {
-            name: dto.name,
-            email: dto.email,
-            password: dto.password,
-            confirm_password: dto.confirm_password,
-        }
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct UserSignupResponse {
-    pub id: Uuid,
-    pub name: String,
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct LoginDto {
+    #[validate(email)]
     pub email: String,
+    #[validate(length(min = 8, max = 200))]
+    pub password: String,
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct UserSignupResponse {
+    pub id: String,
 }
 
 impl From<User> for UserSignupResponse {
     fn from(user: User) -> Self {
         UserSignupResponse {
-            id: user.id,
-            name: user.name,
-            email: user.email,
+            id: user.id.to_string(),
         }
     }
 }
@@ -117,5 +45,51 @@ impl From<User> for UserSignupResponse {
 impl IntoResponse for UserSignupResponse {
     fn into_response(self) -> axum::response::Response {
         (StatusCode::CREATED, Json(self)).into_response()
+    }
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct LoginResponse {
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, utoipa::ToSchema)]
+pub struct UserResponse {
+    pub id: String,
+    pub username: String,
+    pub display_name: String,
+    pub role: String,
+    pub created_at: String,
+}
+
+impl From<User> for UserResponse {
+    fn from(user: User) -> Self {
+        UserResponse {
+            id: user.id.to_string(),
+            username: user.username,
+            display_name: user.display_name,
+            role: user.role.to_string(),
+            created_at: user.created_at.to_string(),
+        }
+    }
+}
+
+impl From<SignupDto> for CreateUserCommand {
+    fn from(dto: SignupDto) -> Self {
+        CreateUserCommand {
+            username: dto.username,
+            display_name: dto.display_name,
+            email: dto.email,
+            password: dto.password,
+        }
+    }
+}
+
+impl From<LoginDto> for LoginUserCommand {
+    fn from(dto: LoginDto) -> Self {
+        LoginUserCommand {
+            email: dto.email,
+            password: dto.password,
+        }
     }
 }

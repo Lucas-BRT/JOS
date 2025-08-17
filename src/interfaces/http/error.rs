@@ -5,45 +5,21 @@ use axum::{
 };
 use serde_json::json;
 
-#[derive(Debug, thiserror::Error)]
-pub enum ValidationError {
-    #[error("password and password_confirmation mismatch")]
-    PasswordMismatch,
-    #[error("{0}")]
-    Other(#[from] validator::ValidationErrors),
+#[derive(Debug)]
+pub enum AuthError {
+    InvalidToken,
 }
 
-impl IntoResponse for ValidationError {
+impl IntoResponse for AuthError {
     fn into_response(self) -> Response {
-        match self {
-            ValidationError::PasswordMismatch => {
-                tracing::error!("Password confirmation mismatch");
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "password_confirmation": ["Passwords do not match"]
-                    })),
-                )
-                    .into_response()
-            }
-            ValidationError::Other(errors) => {
-                let errors = errors
-                    .errors()
-                    .clone()
-                    .into_keys()
-                    .map(|key| key.to_string())
-                    .collect::<Vec<String>>();
+        let (status, error_message) = match self {
+            AuthError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
+        };
 
-                tracing::error!("Validation error: {:?}", errors);
+        let body = Json(json!({
+            "error": error_message,
+        }));
 
-                (
-                    StatusCode::BAD_REQUEST,
-                    Json(json!({
-                        "validation": errors
-                    })),
-                )
-                    .into_response()
-            }
-        }
+        (status, body).into_response()
     }
 }

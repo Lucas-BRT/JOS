@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+pub const DEFAULT_PAGE: u32 = 1;
+pub const DEFAULT_PAGE_SIZE: u32 = 20;
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Pagination {
     pub page: u32,
@@ -9,8 +12,8 @@ pub struct Pagination {
 impl Default for Pagination {
     fn default() -> Self {
         Self {
-            page: 1,
-            page_size: 10,
+            page: DEFAULT_PAGE,
+            page_size: DEFAULT_PAGE_SIZE,
         }
     }
 }
