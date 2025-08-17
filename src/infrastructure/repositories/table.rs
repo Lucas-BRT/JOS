@@ -40,7 +40,7 @@ impl TableRepositoryTrait for TableRepository {
                 visibility, 
                 description, 
                 game_system_id, 
-                max_players, 
+                player_slots, 
                 created_at, 
                 updated_at)
             VALUES 
@@ -52,7 +52,7 @@ impl TableRepositoryTrait for TableRepository {
                 visibility as "visibility: ETableVisibility",
                 description,
                 game_system_id,
-                max_players,
+                player_slots,
                 created_at,
                 updated_at
             "#,
@@ -89,7 +89,7 @@ impl TableRepositoryTrait for TableRepository {
                     visibility as "visibility: ETableVisibility",
                     description,
                     game_system_id,
-                    max_players,
+                    player_slots,
                     created_at,
                     updated_at
             "#,

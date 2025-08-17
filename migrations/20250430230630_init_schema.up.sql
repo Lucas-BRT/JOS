@@ -29,7 +29,7 @@ CREATE TABLE t_users (
 	"password_hash" TEXT NOT NULL,
 	"role" e_roles NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id")
 );
 
@@ -50,7 +50,7 @@ CREATE TABLE t_rpg_tables (
 	"description" TEXT NOT NULL,
 	"game_system_id" UUID NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id"),
 	FOREIGN KEY("gm_id") REFERENCES t_users("id") ON UPDATE NO ACTION ON DELETE CASCADE,
 	FOREIGN KEY("game_system_id") REFERENCES "t_game_system"("id") ON UPDATE NO ACTION ON DELETE CASCADE
@@ -63,7 +63,7 @@ CREATE TABLE t_table_requests (
 	"message" TEXT,
 	"status" e_table_request_status NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id")
 );
 
@@ -76,7 +76,7 @@ CREATE TABLE t_sessions (
 	"table_id" UUID NOT NULL,
 	"accepting_intents" BOOLEAN NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id"),
 	FOREIGN KEY("table_id") REFERENCES "t_rpg_tables"("id") ON UPDATE NO ACTION ON DELETE CASCADE
 );
@@ -89,7 +89,7 @@ CREATE TABLE t_session_intents (
 	"session_id" UUID NOT NULL,
 	"intent_status" e_intent_status NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id"),
 	UNIQUE("user_id", "session_id"),
 	FOREIGN KEY("user_id") REFERENCES "t_users"("id") ON UPDATE NO ACTION ON DELETE CASCADE,
@@ -103,7 +103,7 @@ CREATE TABLE t_session_checkins (
 	"session_intent_id" UUID NOT NULL,
 	"attendance" BOOLEAN NOT NULL,
 	"created_at" TIMESTAMPTZ NOT NULL,
-	"updated_at" TIMESTAMPTZ,
+	"updated_at" TIMESTAMPTZ NOT NULL,
 	PRIMARY KEY("id"),
 	FOREIGN KEY("session_intent_id") REFERENCES "t_session_intents"("id") ON UPDATE NO ACTION ON DELETE CASCADE
 );

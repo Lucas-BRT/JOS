@@ -5,7 +5,7 @@ use sqlx::Error as SqlxError;
 pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> RepositoryError {
     match constraint {
         // UNIQUE constraints
-        "t_users_name_key" => RepositoryError::UsernameAlreadyTaken,
+        "t_users_username_key" => RepositoryError::UsernameAlreadyTaken,
         "t_users_email_key" => RepositoryError::EmailAlreadyTaken,
         "t_game_system_name_key" => {
             let name =
@@ -41,16 +41,22 @@ pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> Reposito
             table: "t_session_checkins".to_string(),
             field: "session_intent_id".to_string(),
         },
+        // "t_users_username_key" => RepositoryError::UsernameAlreadyTaken {
+
+        // }
 
         // Unknown constraints
-        _ => RepositoryError::UnknownConstraint(constraint.to_string()),
+        _ => {
+            tracing::error!("unknown constraint violation: {}", constraint);
+            RepositoryError::UnknownConstraint(constraint.to_string())
+        }
     }
 }
 
 /// Try to parse "Key (field)=(value)" from a given text
 fn parse_key_value_from_text(text: &str, field: &str) -> Option<String> {
     // Most precise pattern first: "(field)=(" then value until ")"
-    if let Some(pos) = text.find(&format!("({})=(", field)) {
+    if let Some(pos) = text.find(&format!("({field})=(")) {
         let after = &text[pos + field.len() + 4..]; // skip "(field)=("
         if let Some(end) = after.find(')') {
             let mut value = &after[..end];
@@ -63,7 +69,7 @@ fn parse_key_value_from_text(text: &str, field: &str) -> Option<String> {
     }
 
     // Fallback: "(field)=" followed by optional '(' then value until ')' or whitespace/comma
-    if let Some(pos) = text.find(&format!("({})=", field)) {
+    if let Some(pos) = text.find(&format!("({field})=")) {
         let mut after = &text[pos + field.len() + 3..]; // skip "(field)="
         after = after.trim_start();
         if after.starts_with('(') {

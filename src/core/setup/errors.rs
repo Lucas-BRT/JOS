@@ -29,17 +29,16 @@ impl SetupError {
         match self {
             SetupError::FailedToGetEnvironmentVariable(var) => {
                 format!(
-                    "❌ Missing environment variable: {}\n\n\
+                    "❌ Missing environment variable: {var}\n\n\
                     💡 Solution:\n\
                     • Check if your .env file exists in the project root\n\
-                    • Verify that {} is defined in your .env file\n\
-                    • Example: {}=your_value\n\
-                    • Run './scripts/setup.sh' to create a .env template",
-                    var, var, var
+                    • Verify that {var} is defined in your .env file\n\
+                    • Example: {var}=your_value\n\
+                    • Run './scripts/setup.sh' to create a .env template"
                 )
             }
             SetupError::FailedToEstablishDatabaseConnection(err) => {
-                let mut message = format!("❌ Database connection failed: {}\n\n", err);
+                let mut message = format!("❌ Database connection failed: {err}\n\n");
 
                 if err.contains("password authentication failed") {
                     message.push_str(
@@ -92,82 +91,75 @@ impl SetupError {
             }
             SetupError::FailedToParsePort(err) => {
                 format!(
-                    "❌ Invalid PORT value: {}\n\n\
+                    "❌ Invalid PORT value: {err}\n\n\
                     💡 Solution:\n\
                     • PORT must be a number between 1024 and 65535\n\
                     • Check your .env file\n\
                     • Example: PORT=3000\n\
-                    • Common ports: 3000, 8080, 5000",
-                    err
+                    • Common ports: 3000, 8080, 5000"
                 )
             }
             SetupError::FailedToRunDBMigrations(err) => {
                 format!(
-                    "❌ Database migration failed: {}\n\n\
+                    "❌ Database migration failed: {err}\n\n\
                     💡 Solution:\n\
                     • Check if database exists and is accessible\n\
                     • Verify user has permissions to create tables\n\
                     • Run 'sqlx migrate run' manually to see detailed errors\n\
                     • Check PostgreSQL logs\n\
-                    • Ensure DATABASE_URL is correct in .env file",
-                    err
+                    • Ensure DATABASE_URL is correct in .env file"
                 )
             }
             SetupError::DatabaseHealthCheckFailed(err) => {
                 format!(
-                    "❌ Database health check failed: {}\n\n\
+                    "❌ Database health check failed: {err}\n\n\
                     💡 Solution:\n\
                     • Database connection is not working properly\n\
                     • Check if PostgreSQL is running\n\
                     • Verify DATABASE_URL in .env file\n\
                     • Try connecting manually: psql DATABASE_URL\n\
-                    • Check PostgreSQL logs for errors",
-                    err
+                    • Check PostgreSQL logs for errors"
                 )
             }
             SetupError::InvalidConfiguration(err) => {
                 format!(
-                    "❌ Invalid configuration: {}\n\n\
+                    "❌ Invalid configuration: {err}\n\n\
                     💡 Solution:\n\
                     • Check your .env file for correct values\n\
                     • Verify all required variables are set\n\
                     • Run 'cargo run -p jos-cli setup' to validate your setup\n\
-                    • See docs/SETUP.md for configuration examples",
-                    err
+                    • See docs/SETUP.md for configuration examples"
                 )
             }
             SetupError::EnvironmentValidationFailed(err) => {
                 format!(
-                    "❌ Environment validation failed: {}\n\n\
+                    "❌ Environment validation failed: {err}\n\n\
                     💡 Solution:\n\
                     • Check if .env file exists in project root\n\
                     • Verify all required variables are set\n\
                     • Run './scripts/setup.sh' to create .env template\n\
                     • Required variables: DATABASE_URL, PORT, JWT_SECRET\n\
-                    • See docs/SETUP.md for configuration guide",
-                    err
+                    • See docs/SETUP.md for configuration guide"
                 )
             }
             SetupError::FailedToSetupServerAddress(err) => {
                 format!(
-                    "❌ Failed to setup server address: {}\n\n\
+                    "❌ Failed to setup server address: {err}\n\n\
                     💡 Solution:\n\
                     • Check PORT value in .env file\n\
                     • PORT must be a valid number\n\
                     • Try: PORT=3000\n\
-                    • Ensure port is between 1024 and 65535",
-                    err
+                    • Ensure port is between 1024 and 65535"
                 )
             }
             SetupError::FailedToLaunchServer(err) => {
                 format!(
-                    "❌ Failed to launch server: {}\n\n\
+                    "❌ Failed to launch server: {err}\n\n\
                     💡 Solution:\n\
                     • Check if port is available\n\
                     • Verify server configuration\n\
                     • Check system resources\n\
-                    • Try restarting the application",
-                    err
+                    • Try restarting the application"
                 )
             }
         }

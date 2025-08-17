@@ -1,5 +1,8 @@
 use crate::domain::error::DomainError;
 
+
+
+
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum PasswordDomainError {
     #[error("Password is too common")]

@@ -86,7 +86,6 @@ pub struct AvaliableTableResponse {
     pub description: String,
     pub game_system_id: Uuid,
     pub visibility: TableVisibility,
-    pub max_players: u32,
     pub player_slots: u32,
     pub occupied_slots: u32,
 }
@@ -100,8 +99,7 @@ impl From<&Table> for AvaliableTableResponse {
             description: table.description.clone(),
             game_system_id: table.game_system_id,
             visibility: table.visibility.into(),
-            max_players: table.max_players,
-            player_slots: table.max_players,
+            player_slots: table.player_slots,
             occupied_slots: 0,
         }
     }

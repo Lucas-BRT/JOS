@@ -64,27 +64,9 @@ async fn login(
     Ok(jwt_token)
 }
 
-#[utoipa::path(
-    get,
-    path = "/v1/auth/password-requirements",
-    tag = "auth",
-    responses(
-        (status = 200, description = "Password requirements", body = serde_json::Value)
-    )
-)]
-#[axum::debug_handler]
-async fn get_password_requirements(
-    State(state): State<Arc<AppState>>,
-) -> Result<Json<serde_json::Value>> {
-    let requirements = state.password_service.get_requirements().await;
-
-    Ok(Json(json!(requirements)))
-}
-
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/signup", post(signup))
         .route("/login", post(login))
-        .route("/password-requirements", get(get_password_requirements))
         .with_state(state.clone())
 }

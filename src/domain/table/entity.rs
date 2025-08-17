@@ -11,7 +11,7 @@ pub struct Table {
     pub visibility: Visibility,
     pub description: String,
     pub game_system_id: Uuid,
-    pub max_players: u32,
+    pub player_slots: u32,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }

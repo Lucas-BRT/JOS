@@ -28,7 +28,7 @@ use uuid::Uuid;
 pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<Json<MeResponse>> {
     let user = app_state.user_service.get_self_user_info(&user.sub).await?;
 
-    Ok(Json(user.into()))
+    Ok(Json(user))
 }
 
 #[utoipa::path(

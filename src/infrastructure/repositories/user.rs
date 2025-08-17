@@ -90,102 +90,75 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(RepositoryError::DatabaseError)?;
 
-        if existing_user.is_none() {
-            return Err(RepositoryError::UserNotFound.into());
-        }
 
-        if let Update::Change(name) = &data.display_name {
-            let existing_name = sqlx::query_as!(
-                UserModel,
-                r#"SELECT 
-                    id,
-                    username,
-                    display_name,
-                    email,
-                    password_hash,
-                    role as "role: ERoles",
-                    created_at,
-                    updated_at
-                FROM t_users 
-                    WHERE display_name = $1 AND id != $2"#,
-                name,
-                data.id
-            )
-            .fetch_optional(self.pool.as_ref())
-            .await
-            .map_err(RepositoryError::DatabaseError)?;
+        match existing_user {
+            Some(user) => {
+                let now = Utc::now();
 
-            if existing_name.is_some() {
-                return Err(RepositoryError::UsernameAlreadyTaken.into());
+                if let Update::Change(display_name) = data.display_name {
+                    sqlx::query(r#"
+                        UPDATE t_users
+                        SET display_name = $1, updated_at = $2
+                        WHERE id = $3
+                    "#)
+                    .bind(display_name)
+                    .bind(now)
+                    .bind(data.id)
+                    .execute(self.pool.as_ref())
+                    .await
+                    .map_err(RepositoryError::DatabaseError)?;
+                }
+
+                if let Update::Change(email) = data.email {
+                    sqlx::query(r#"
+                        UPDATE t_users
+                        SET email = $1, updated_at = $2
+                        WHERE id = $3
+                    "#)
+                    .bind(email)
+                    .bind(now)
+                    .bind(data.id)
+                    .execute(self.pool.as_ref())
+                    .await
+                    .map_err(RepositoryError::DatabaseError)?;
+                }
+
+                if let Update::Change(password) = data.password {
+                    sqlx::query(r#"
+                        UPDATE t_users
+                        SET password_hash = $1, updated_at = $2
+                        WHERE id = $3
+                    "#)
+                    .bind(password)
+                    .bind(now)
+                    .bind(data.id)
+                    .execute(self.pool.as_ref())
+                    .await
+                    .map_err(RepositoryError::DatabaseError)?;
+                }
+
             }
-
-            sqlx::query!(
-                r#"UPDATE t_users 
-                    SET display_name = $1, 
-                    updated_at = $2 
-                    WHERE id = $3"#,
-                name,
-                Utc::now(),
-                data.id
-            )
-            .execute(self.pool.as_ref())
-            .await
-            .map_err(RepositoryError::DatabaseError)?;
-        }
-
-        if let Update::Change(email) = &data.email {
-            let existing_email = sqlx::query_as!(
-                UserModel,
-                r#"SELECT 
-                    id,
-                    username,
-                    display_name,
-                    email,
-                    password_hash,
-                    role as "role: ERoles",
-                    created_at,
-                    updated_at
-                FROM t_users 
-                    WHERE email = $1 AND id != $2"#,
-                email,
-                data.id
-            )
-            .fetch_optional(self.pool.as_ref())
-            .await
-            .map_err(RepositoryError::DatabaseError)?;
-
-            if existing_email.is_some() {
-                return Err(RepositoryError::EmailAlreadyTaken.into());
+            None => {
+                return Err(RepositoryError::UserNotFound.into());
             }
+        }
 
-            sqlx::query!(
+
+
+        if let Update::Change(display_name) = data.display_name {
+            sqlx::query(
                 r#"UPDATE t_users 
-                    SET email = $1, 
-                    updated_at = $2 
-                    WHERE id = $3"#,
-                email,
-                Utc::now(),
-                data.id
+                    SET display_name = $1 
+                    WHERE id = $2"#,
             )
+            .bind(display_name)
+            .bind(data.id)
             .execute(self.pool.as_ref())
             .await
             .map_err(RepositoryError::DatabaseError)?;
         }
 
-        if let Update::Change(password) = &data.password {
-            sqlx::query!(
-                r#"UPDATE t_users 
-                    SET password_hash = $1, 
-                    updated_at = $2 
-                    WHERE id = $3"#,
-                password,
-                Utc::now(),
-                data.id
-            )
-            .execute(self.pool.as_ref())
-            .await
-            .map_err(RepositoryError::DatabaseError)?;
-        }
+
 
         Ok(())
     }

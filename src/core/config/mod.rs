@@ -3,7 +3,7 @@ mod enviroment;
 mod jwt;
 
 use crate::{
-    Error, Result,
+    Result,
     config::{constants::DEFAULT_JWT_SECRET, enviroment::Environment},
     setup::SetupError,
 };
@@ -33,16 +33,16 @@ impl Config {
             .parse()
             .map_err(|e: ParseIntError| SetupError::FailedToParsePort(e.to_string()))?;
 
-        let addr = SocketAddr::from_str(format!("{}:{server_port}", DEFAULT_HOST).as_str())
+        let addr = SocketAddr::from_str(format!("{DEFAULT_HOST}:{server_port}").as_str())
             .map_err(|err| SetupError::FailedToSetupServerAddress(err.to_string()))?;
 
         let environment = std::env::var("ENVIRONMENT")
             .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))
-            .and_then(|value| {
+            .map(|value| {
                 if value == "production" {
-                    Ok(Environment::Production)
+                    Environment::Production
                 } else {
-                    Ok(Environment::Development)
+                    Environment::Development
                 }
             })
             .unwrap_or_default();
@@ -86,7 +86,7 @@ impl Config {
         format!(
             "Server: {}, Database: {}, JWT Expiration: {} days",
             self.addr,
-            self.database_url.split('@').last().unwrap_or("unknown"),
+            self.database_url.split('@').next_back().unwrap_or("unknown"),
             self.jwt_expiration_duration.num_days()
         )
     }
@@ -113,7 +113,7 @@ impl Config {
         info!("🌐 Server will bind to: {}", self.addr);
         info!(
             "🗄️  Database: {}",
-            self.database_url.split('@').last().unwrap_or("unknown")
+            self.database_url.split('@').next_back().unwrap_or("unknown")
         );
         info!(
             "🔐 JWT expiration: {} days",

@@ -12,7 +12,7 @@ async fn main() -> Result<()> {
             std::process::exit(1);
         }
         Err(other_error) => {
-            eprintln!("\n❌ Application error: {}", other_error);
+            eprintln!("\n❌ Application error: {other_error}");
             std::process::exit(1);
         }
     }

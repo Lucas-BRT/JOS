@@ -2,7 +2,6 @@ use super::dtos::{CreateTableRequestCommand, DeleteTableRequestCommand, TableReq
 use super::entity::TableRequest;
 use crate::domain::utils::pagination::Pagination;
 use crate::Result;
-use uuid::Uuid;
 
 #[async_trait::async_trait]
 pub trait TableRequestRepository: Send + Sync {

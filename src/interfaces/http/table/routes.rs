@@ -1,18 +1,13 @@
-use crate::application::error::ApplicationError;
 use crate::domain::table::commands::DeleteTableCommand;
 use crate::domain::table::search_filters::TableFilters;
 use crate::domain::utils::pagination::Pagination;
 use crate::domain::{
     auth::Claims,
-    table::commands::{CreateTableCommand, UpdateTableCommand},
+    table::commands::CreateTableCommand,
 };
-use crate::infrastructure::prelude::RepositoryError;
-use crate::interfaces::http::{
-    table::dtos::{AvaliableTableResponse, CreateTableDto, UpdateTableDto},
-    table_request::dtos::UpdateTableRequestDto,
-};
+use crate::interfaces::http::table::dtos::{AvaliableTableResponse, CreateTableDto, UpdateTableDto};
 use crate::state::AppState;
-use crate::{Error, Result};
+use crate::Result;
 use axum::extract::Query;
 use axum::{
     Json, Router,

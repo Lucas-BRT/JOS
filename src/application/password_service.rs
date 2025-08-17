@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    domain::password::{PasswordProvider, PasswordRequirement},
+    domain::password::PasswordProvider,
 };
 use std::sync::Arc;
 
@@ -24,9 +24,5 @@ impl PasswordService {
 
     pub async fn validate_password(&self, password: &str) -> Result<()> {
         self.password_provider.validate_password(password).await
-    }
-
-    pub async fn get_requirements(&self) -> Vec<PasswordRequirement> {
-        self.password_provider.get_requirements().await
     }
 }

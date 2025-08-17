@@ -12,7 +12,6 @@ use utoipa::OpenApi;
 
         crate::interfaces::http::auth::routes::signup,
         crate::interfaces::http::auth::routes::login,
-        crate::interfaces::http::auth::routes::get_password_requirements,
 
         crate::interfaces::http::user::routes::me,
         crate::interfaces::http::user::routes::get_user_by_id,

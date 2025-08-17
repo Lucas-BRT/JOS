@@ -50,8 +50,8 @@ impl TableRequestService {
 
     pub async fn get_requests_by_table_id(&self, table_id: &Uuid, gm_id: &Uuid) -> Result<Vec<TableRequest>> {
         let filters = TableRequestFilters {
-            table_id: Some(table_id.clone()),
-            gm_id: Some(gm_id.clone()),
+            table_id: Some(*table_id),
+            gm_id: Some(*gm_id),
             ..Default::default()
         };
 

@@ -1,233 +1,164 @@
-use crate::domain::password::{PasswordDomainError, PasswordRequirement};
-use crate::{Error, Result};
+use crate::{domain::password::error::PasswordDomainError, Error, Result};
 
 const DEFAULT_MIN_LENGTH: usize = 8;
 const DEFAULT_MAX_LENGTH: usize = 128;
+const DEFAULT_MIN_UPPERCASE: usize = 1;
+const DEFAULT_MIN_LOWERCASE: usize = 1;
 const DEFAULT_MIN_DIGITS: usize = 1;
 const DEFAULT_MIN_SPECIAL_CHARS: usize = 1;
-const DEFAULT_ALLOWED_SPECIAL_CHARS: &str = "!@#$%^&*()_+-=[]{}|;':\",./<>?`~";
 
-#[derive(Clone)]
-pub struct LengthRequirement {
-    min_length: usize,
-    max_length: usize,
+pub trait PasswordValidator: Send + Sync {
+    fn validate(&self, password: &str) -> Result<()>;
 }
 
-impl LengthRequirement {
-    pub fn new(min_length: usize, max_length: usize) -> Self {
-        Self {
-            min_length,
-            max_length,
-        }
-    }
-}
 
-impl Default for LengthRequirement {
-    fn default() -> Self {
-        Self {
-            min_length: DEFAULT_MIN_LENGTH,
-            max_length: DEFAULT_MAX_LENGTH,
-        }
-    }
-}
+#[derive(Clone, Default)]
+pub struct DefaultPasswordValidator;
 
-#[derive(Clone)]
-pub struct CaseRequirement {
-    require_uppercase: bool,
-    require_lowercase: bool,
-}
+impl PasswordValidator for DefaultPasswordValidator {
+    fn validate(&self, password: &str) -> Result<()> {
 
-impl Default for CaseRequirement {
-    fn default() -> Self {
-        Self {
-            require_uppercase: true,
-            require_lowercase: true,
-        }
-    }
-}
+        let password_length = password.len();
 
-#[derive(Clone)]
-pub struct DigitRequirement {
-    require_digit: bool,
-    min_digits: usize,
-}
-
-impl Default for DigitRequirement {
-    fn default() -> Self {
-        Self {
-            require_digit: true,
-            min_digits: DEFAULT_MIN_DIGITS,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct SpecialCharsRequirement {
-    require_special: bool,
-    allowed_special_chars: String,
-}
-
-impl Default for SpecialCharsRequirement {
-    fn default() -> Self {
-        Self {
-            require_special: true,
-            allowed_special_chars: DEFAULT_ALLOWED_SPECIAL_CHARS.to_string(),
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct CommonPasswordRequirement {
-    require_common_password: bool,
-    common_passwords: Vec<String>,
-}
-
-#[derive(Clone)]
-pub struct PasswordValidator {
-    length_requirement: LengthRequirement,
-    case_requirement: Option<CaseRequirement>,
-    digit_requirement: Option<DigitRequirement>,
-    special_requirement: Option<SpecialCharsRequirement>,
-    common_password_requirement: Option<CommonPasswordRequirement>,
-}
-
-impl Default for PasswordValidator {
-    fn default() -> Self {
-        Self {
-            length_requirement: LengthRequirement::default(),
-            case_requirement: None,
-            digit_requirement: None,
-            special_requirement: None,
-            common_password_requirement: None,
-        }
-    }
-}
-
-impl PasswordValidator {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-impl PasswordValidator {
-    pub fn with_length_requirement(
-        mut self,
-        length_requirement: Option<LengthRequirement>,
-    ) -> Self {
-        self.length_requirement = length_requirement.unwrap_or(LengthRequirement::default());
-        self
-    }
-
-    pub fn with_case_requirement(mut self, case_requirement: Option<CaseRequirement>) -> Self {
-        self.case_requirement = case_requirement;
-        self
-    }
-
-    pub fn with_digit_requirement(mut self, digit_requirement: Option<DigitRequirement>) -> Self {
-        self.digit_requirement = digit_requirement;
-        self
-    }
-
-    pub fn with_special_requirement(
-        mut self,
-        special_requirement: Option<SpecialCharsRequirement>,
-    ) -> Self {
-        self.special_requirement = special_requirement;
-        self
-    }
-
-    pub fn with_common_password_requirement(
-        mut self,
-        common_password_requirement: Option<CommonPasswordRequirement>,
-    ) -> Self {
-        self.common_password_requirement = common_password_requirement;
-        self
-    }
-
-    pub fn validate(&self, password: &str) -> Result<()> {
-        if password.len() < self.length_requirement.min_length {
+        if password_length < DEFAULT_MIN_LENGTH {
             return Err(Error::Domain(PasswordDomainError::TooShort.into()));
         }
 
-        if password.len() > self.length_requirement.max_length {
+        if password_length > DEFAULT_MAX_LENGTH {
             return Err(Error::Domain(PasswordDomainError::TooLong.into()));
         }
 
-        if let Some(case_requirement) = &self.case_requirement {
-            if case_requirement.require_uppercase && !password.chars().any(|c| c.is_uppercase()) {
-                return Err(Error::Domain(PasswordDomainError::MissingUppercase.into()));
-            }
+        if password.chars().filter(|c| c.is_uppercase()).count() < DEFAULT_MIN_UPPERCASE {
+            return Err(Error::Domain(PasswordDomainError::MissingUppercase.into()));
         }
 
-        if let Some(case_requirement) = &self.case_requirement {
-            if case_requirement.require_lowercase && !password.chars().any(|c| c.is_lowercase()) {
-                return Err(Error::Domain(PasswordDomainError::MissingLowercase.into()));
-            }
+        if password.chars().filter(|c| c.is_lowercase()).count() < DEFAULT_MIN_LOWERCASE {
+            return Err(Error::Domain(PasswordDomainError::MissingLowercase.into()));
         }
 
-        if let Some(digit_requirement) = &self.digit_requirement {
-            if digit_requirement.require_digit && !password.chars().any(|c| c.is_digit(10)) {
-                return Err(Error::Domain(PasswordDomainError::MissingDigit.into()));
-            }
+        if password.chars().filter(|c| c.is_ascii_digit()).count() < DEFAULT_MIN_DIGITS {
+            return Err(Error::Domain(PasswordDomainError::MissingDigit.into()));
         }
 
-        if let Some(special_requirement) = &self.special_requirement {
-            if special_requirement.require_special
-                && !password
-                    .chars()
-                    .any(|c| special_requirement.allowed_special_chars.contains(c))
-            {
-                return Err(Error::Domain(
-                    PasswordDomainError::MissingSpecialChar.into(),
-                ));
-            }
-        }
-
-        if let Some(common_password_requirement) = &self.common_password_requirement {
-            if common_password_requirement.require_common_password
-                && common_password_requirement
-                    .common_passwords
-                    .contains(&password.to_string())
-            {
-                return Err(Error::Domain(PasswordDomainError::TooCommon.into()));
-            }
+        if password.chars().filter(|c| c.is_ascii_punctuation()).count() < DEFAULT_MIN_SPECIAL_CHARS {
+            return Err(Error::Domain(PasswordDomainError::MissingSpecialChar.into()));
         }
 
         Ok(())
     }
 }
 
-impl PasswordValidator {
-    pub fn get_requirements(&self) -> Vec<PasswordRequirement> {
-        vec![
-            PasswordRequirement::new(
-                "Length".to_string(),
-                self.length_requirement.min_length.to_string(),
-            ),
-            PasswordRequirement::new(
-                "Case".to_string(),
-                self.case_requirement
-                    .as_ref()
-                    .unwrap_or(&CaseRequirement::default())
-                    .require_uppercase
-                    .to_string(),
-            ),
-            PasswordRequirement::new(
-                "Digit".to_string(),
-                self.digit_requirement
-                    .as_ref()
-                    .unwrap_or(&DigitRequirement::default())
-                    .require_digit
-                    .to_string(),
-            ),
-            PasswordRequirement::new(
-                "Special".to_string(),
-                self.special_requirement
-                    .as_ref()
-                    .unwrap_or(&SpecialCharsRequirement::default())
-                    .require_special
-                    .to_string(),
-            ),
-        ]
+#[cfg(test)]
+mod tests {
+    use rand::seq::IndexedRandom;
+
+    use super::*;
+
+
+    fn generate_valid_password(n: usize) -> String {
+        use rand::{seq::SliceRandom, Rng};
+
+
+        const UPPERCASE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        const LOWERCASE: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
+        const DIGITS: &[u8] = b"0123456789";
+        const SPECIAL: &[u8] = b"!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~";
+
+        let mut rng = rand::rng();
+        let mut password = Vec::with_capacity(n);
+
+        for _ in 0..DEFAULT_MIN_UPPERCASE {
+            password.push(*UPPERCASE.choose(&mut rng).unwrap());
+        }
+        for _ in 0..DEFAULT_MIN_LOWERCASE {
+            password.push(*LOWERCASE.choose(&mut rng).unwrap());
+        }
+        for _ in 0..DEFAULT_MIN_DIGITS {
+            password.push(*DIGITS.choose(&mut rng).unwrap());
+        }
+        for _ in 0..DEFAULT_MIN_SPECIAL_CHARS {
+            password.push(*SPECIAL.choose(&mut rng).unwrap());
+        }
+
+        let all: Vec<u8> = [UPPERCASE, LOWERCASE, DIGITS, SPECIAL].concat();
+        for _ in password.len()..n {
+            password.push(*all.choose(&mut rng).unwrap());
+        }
+
+        password.shuffle(&mut rng);
+
+        String::from_utf8(password).unwrap()
     }
+
+    #[tokio::test]
+    async fn test_validate_password_too_short() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("1234567");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_password_too_long() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("12345678901234567890123456789012345678901234567890123456789012345678901234567890");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_password_missing_uppercase() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("password123");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_password_missing_lowercase() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("PASSWORD123");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_password_missing_digit() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("PasswordABC");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_validate_password_valid() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("Password123!");
+        assert!(result.is_ok());
+    }
+
+
+    #[tokio::test]
+    async fn test_validate_password_missing_special_char() {
+        let validator = DefaultPasswordValidator;
+        let result = validator.validate("Password123");
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_valid_passwords() {
+
+        let validator = DefaultPasswordValidator;
+        let mut passwords = Vec::new();
+
+        for _ in 0..100 {
+            let password = generate_valid_password(10);
+            passwords.push(password);
+        }
+
+        for password in passwords {
+
+            let result = validator.validate(&password);
+            assert!(result.is_ok());
+        }
+
+    }
+
 }
+
+

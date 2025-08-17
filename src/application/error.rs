@@ -1,5 +1,4 @@
 use crate::Error;
-use serde_json::json;
 
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApplicationError {
