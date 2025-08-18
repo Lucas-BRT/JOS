@@ -1,4 +1,4 @@
-use crate::{domain::password::error::PasswordDomainError, Error, Result};
+use crate::{Error, Result, domain::password::error::PasswordDomainError};
 
 const DEFAULT_MIN_LENGTH: usize = 8;
 const DEFAULT_MAX_LENGTH: usize = 128;
@@ -11,13 +11,11 @@ pub trait PasswordValidator: Send + Sync {
     fn validate(&self, password: &str) -> Result<()>;
 }
 
-
 #[derive(Clone, Default)]
 pub struct DefaultPasswordValidator;
 
 impl PasswordValidator for DefaultPasswordValidator {
     fn validate(&self, password: &str) -> Result<()> {
-
         let password_length = password.len();
 
         if password_length < DEFAULT_MIN_LENGTH {
@@ -40,8 +38,15 @@ impl PasswordValidator for DefaultPasswordValidator {
             return Err(Error::Domain(PasswordDomainError::MissingDigit.into()));
         }
 
-        if password.chars().filter(|c| c.is_ascii_punctuation()).count() < DEFAULT_MIN_SPECIAL_CHARS {
-            return Err(Error::Domain(PasswordDomainError::MissingSpecialChar.into()));
+        if password
+            .chars()
+            .filter(|c| c.is_ascii_punctuation())
+            .count()
+            < DEFAULT_MIN_SPECIAL_CHARS
+        {
+            return Err(Error::Domain(
+                PasswordDomainError::MissingSpecialChar.into(),
+            ));
         }
 
         Ok(())
@@ -54,10 +59,8 @@ mod tests {
 
     use super::*;
 
-
     fn generate_valid_password(n: usize) -> String {
-        use rand::{seq::SliceRandom};
-
+        use rand::seq::SliceRandom;
 
         const UPPERCASE: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const LOWERCASE: &[u8] = b"abcdefghijklmnopqrstuvwxyz";
@@ -100,7 +103,9 @@ mod tests {
     #[tokio::test]
     async fn test_validate_password_too_long() {
         let validator = DefaultPasswordValidator;
-        let result = validator.validate("12345678901234567890123456789012345678901234567890123456789012345678901234567890");
+        let result = validator.validate(
+            "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
+        );
         assert!(result.is_err());
     }
 
@@ -132,7 +137,6 @@ mod tests {
         assert!(result.is_ok());
     }
 
-
     #[tokio::test]
     async fn test_validate_password_missing_special_char() {
         let validator = DefaultPasswordValidator;
@@ -142,7 +146,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_valid_passwords() {
-
         let validator = DefaultPasswordValidator;
         let mut passwords = Vec::new();
 
@@ -152,13 +155,8 @@ mod tests {
         }
 
         for password in passwords {
-
             let result = validator.validate(&password);
             assert!(result.is_ok());
         }
-
     }
-
 }
-
-

@@ -122,13 +122,11 @@ pub async fn validate_environment() -> DiagnosticResult {
     }
 
     // Validate DATABASE_URL format
-    if let Ok(db_url) = env::var("DATABASE_URL") {
-        if !db_url.starts_with("postgres://") && !db_url.starts_with("postgresql://") {
-            issues
-                .push("DATABASE_URL must start with 'postgres://' or 'postgresql://'".to_string());
-            suggestions
-                .push("Use format: postgres://username:password@host:port/database".to_string());
-        }
+    if let Ok(db_url) = env::var("DATABASE_URL")
+        && (!db_url.starts_with("postgres://") && !db_url.starts_with("postgresql://"))
+    {
+        issues.push("DATABASE_URL must start with 'postgres://' or 'postgresql://'".to_string());
+        suggestions.push("Use format: postgres://username:password@host:port/database".to_string());
     }
 
     // Validate PORT
@@ -146,17 +144,17 @@ pub async fn validate_environment() -> DiagnosticResult {
     }
 
     // Validate JWT_SECRET length
-    if let Ok(jwt_secret) = env::var("JWT_SECRET") {
-        if jwt_secret.len() < 32 {
-            issues.push("JWT_SECRET is shorter than recommended (32+ characters)".to_string());
-            suggestions.push("Use a longer JWT_SECRET for better security".to_string());
-        }
+    if let Ok(jwt_secret) = env::var("JWT_SECRET")
+        && jwt_secret.len() < 32
+    {
+        issues.push("JWT_SECRET is shorter than recommended (32+ characters)".to_string());
+        suggestions.push("Use a longer JWT_SECRET for better security".to_string());
     }
 
     DiagnosticResult {
         environment_ok: issues.is_empty(),
-        database_ok: false,   // Will be checked separately
-        migrations_ok: false, // Will be checked separately
+        database_ok: false,
+        migrations_ok: false,
         issues,
         suggestions,
     }

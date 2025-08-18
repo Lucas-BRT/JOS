@@ -1,12 +1,12 @@
-use crate::domain::table_request::dtos::{DeleteTableRequestCommand, TableRequestFilters};
-use crate::domain::utils::pagination::Pagination;
 use crate::Result;
 use crate::domain::table::table_repository::TableRepository;
+use crate::domain::table_request::dtos::{DeleteTableRequestCommand, TableRequestFilters};
 use crate::domain::table_request::{
     dtos::{CreateTableRequestCommand, UpdateTableRequestCommand},
     entity::TableRequest,
     table_request_repository::TableRequestRepository,
 };
+use crate::domain::utils::pagination::Pagination;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -27,34 +27,42 @@ impl TableRequestService {
         }
     }
 
-    pub async fn create(&self, request_data: &mut CreateTableRequestCommand) -> Result<TableRequest> {
+    pub async fn create(
+        &self,
+        request_data: &mut CreateTableRequestCommand,
+    ) -> Result<TableRequest> {
         self.table_request_repository.create(request_data).await
     }
 
-    pub async fn update(
-        &self,
-        update_data: &UpdateTableRequestCommand,
-    ) -> Result<()> {
-        self.table_request_repository
-            .update(update_data)
-            .await
+    pub async fn update(&self, update_data: &UpdateTableRequestCommand) -> Result<()> {
+        self.table_request_repository.update(update_data).await
     }
 
     pub async fn delete(&self, request_data: &DeleteTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.delete(request_data).await
     }
 
-    pub async fn get(&self, filters: &TableRequestFilters, pagination: Pagination) -> Result<Vec<TableRequest>> {
+    pub async fn get(
+        &self,
+        filters: &TableRequestFilters,
+        pagination: Pagination,
+    ) -> Result<Vec<TableRequest>> {
         self.table_request_repository.get(filters, pagination).await
     }
 
-    pub async fn get_requests_by_table_id(&self, table_id: &Uuid, gm_id: &Uuid) -> Result<Vec<TableRequest>> {
+    pub async fn get_requests_by_table_id(
+        &self,
+        table_id: &Uuid,
+        gm_id: &Uuid,
+    ) -> Result<Vec<TableRequest>> {
         let filters = TableRequestFilters {
             table_id: Some(*table_id),
             gm_id: Some(*gm_id),
             ..Default::default()
         };
 
-        self.table_request_repository.get(&filters, Pagination::default()).await
+        self.table_request_repository
+            .get(&filters, Pagination::default())
+            .await
     }
 }

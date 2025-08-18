@@ -1,14 +1,14 @@
-use crate::domain::table_request::entity::TableRequest;
-use crate::infrastructure::prelude::RepositoryError;
-use crate::infrastructure::repositories::constraint_mapper;
 use crate::Result;
 use crate::domain::table_request::dtos::*;
-use crate::infrastructure::entities::t_table_requests::Model as TableRequestModel;
+use crate::domain::table_request::entity::TableRequest;
 use crate::domain::table_request::table_request_repository::TableRequestRepository;
 use crate::domain::utils::pagination::Pagination;
 use crate::infrastructure::entities::enums::ETableRequestStatus;
-use sqlx::PgPool;
+use crate::infrastructure::entities::t_table_requests::Model as TableRequestModel;
+use crate::infrastructure::prelude::RepositoryError;
+use crate::infrastructure::repositories::constraint_mapper;
 use chrono::Utc;
+use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -28,8 +28,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let id = Uuid::new_v4();
         let now = Utc::now();
 
-        let result = sqlx::query_as!(TableRequestModel, 
-                r#"INSERT INTO t_table_requests 
+        let result = sqlx::query_as!(
+            TableRequestModel,
+            r#"INSERT INTO t_table_requests 
                     (id, 
                     user_id, 
                     table_id, 
@@ -54,30 +55,28 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     created_at,
                     updated_at
                 "#,
-                id,
-                request_data.user_id, 
-                request_data.table_id, 
-                request_data.message,
-                ETableRequestStatus::Pending as _,
-                now,
-                now
-            )
-            .fetch_one(self.pool.as_ref())
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+            id,
+            request_data.user_id,
+            request_data.table_id,
+            request_data.message,
+            ETableRequestStatus::Pending as _,
+            now,
+            now
+        )
+        .fetch_one(self.pool.as_ref())
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(result.into())
     }
 
-    async fn update(
-        &self,
-        _update_data: &UpdateTableRequestCommand,
-    ) -> Result<()> {
+    async fn update(&self, _update_data: &UpdateTableRequestCommand) -> Result<()> {
         todo!()
     }
 
     async fn delete(&self, request_data: &DeleteTableRequestCommand) -> Result<TableRequest> {
-        let table = sqlx::query_as!(TableRequestModel, 
+        let table = sqlx::query_as!(
+            TableRequestModel,
             r#"SELECT 
                 id,
                 user_id,
@@ -97,29 +96,30 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             Some(table) => {
                 sqlx::query(
                     r#"DELETE FROM t_table_requests 
-                        WHERE id = $1"#
+                        WHERE id = $1"#,
                 )
                 .bind(request_data.id)
                 .execute(self.pool.as_ref())
                 .await
                 .map_err(constraint_mapper::map_database_error)?;
-        
+
                 Ok(table.into())
             }
             None => {
                 return Err(RepositoryError::TableRequestNotFound.into());
             }
         }
-
     }
 
-    async fn get(&self, _filters: &TableRequestFilters, _pagination: Pagination) -> Result<Vec<TableRequest>> {
+    async fn get(
+        &self,
+        _filters: &TableRequestFilters,
+        _pagination: Pagination,
+    ) -> Result<Vec<TableRequest>> {
         todo!()
     }
 
     async fn find(&self, _filters: &TableRequestFilters) -> Result<TableRequest> {
         todo!()
     }
-
-
 }
