@@ -19,6 +19,14 @@ impl Default for Pagination {
 }
 
 impl Pagination {
+    pub fn with_page(self, page: u32) -> Self {
+        Self { page, ..self }
+    }
+
+    pub fn with_page_size(self, page_size: u32) -> Self {
+        Self { page_size, ..self }
+    }
+
     pub fn offset(&self) -> u32 {
         (self.page - 1) * self.page_size
     }

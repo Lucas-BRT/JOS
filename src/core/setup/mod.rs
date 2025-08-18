@@ -11,7 +11,10 @@ use crate::core::state::AppState;
 use crate::infrastructure::prelude::*;
 use crate::infrastructure::{
     create_postgres_pool,
-    repositories::{jwt::JwtTokenProvider, table_request::PostgresTableRequestRepository, user::PostgresUserRepository},
+    repositories::{
+        jwt::JwtTokenProvider, table_request::PostgresTableRequestRepository,
+        user::PostgresUserRepository,
+    },
     run_postgres_migrations,
 };
 pub use errors::SetupError;
@@ -60,13 +63,14 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
     info!("✅ Password service initialized");
 
     // Table service
-    let table_repo = Arc::new(TableRepository::new(pool.clone()));
+    let table_repo = Arc::new(PostgresTableRepository::new(pool.clone()));
     let table_service = TableService::new(table_repo.clone());
     info!("✅ Table service initialized");
 
     // Table request service
     let table_request_repo = Arc::new(PostgresTableRequestRepository::new(pool.clone()));
-    let table_request_service = TableRequestService::new(table_request_repo.clone(), table_repo.clone());
+    let table_request_service =
+        TableRequestService::new(table_request_repo.clone(), table_repo.clone());
     info!("✅ Table request service initialized");
 
     // Auth service
