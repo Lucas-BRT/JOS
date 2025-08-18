@@ -6,13 +6,13 @@ use crate::domain::user::{
     user_repository::UserRepository,
 };
 use crate::domain::utils::update::Update;
+use crate::infrastructure::entities::enums::ERoles;
 use crate::infrastructure::entities::t_users::Model as UserModel;
 use crate::infrastructure::repositories::{constraint_mapper, error::RepositoryError};
 use chrono::Utc;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
-use crate::infrastructure::entities::enums::ERoles;
 
 #[derive(Clone)]
 pub struct PostgresUserRepository {
@@ -90,17 +90,18 @@ impl UserRepository for PostgresUserRepository {
         .await
         .map_err(RepositoryError::DatabaseError)?;
 
-
         match existing_user {
             Some(_) => {
                 let now = Utc::now();
 
                 if let Update::Change(display_name) = data.display_name {
-                    sqlx::query(r#"
+                    sqlx::query(
+                        r#"
                         UPDATE t_users
                         SET display_name = $1, updated_at = $2
                         WHERE id = $3
-                    "#)
+                    "#,
+                    )
                     .bind(display_name)
                     .bind(now)
                     .bind(data.id)
@@ -110,11 +111,13 @@ impl UserRepository for PostgresUserRepository {
                 }
 
                 if let Update::Change(email) = data.email {
-                    sqlx::query(r#"
+                    sqlx::query(
+                        r#"
                         UPDATE t_users
                         SET email = $1, updated_at = $2
                         WHERE id = $3
-                    "#)
+                    "#,
+                    )
                     .bind(email)
                     .bind(now)
                     .bind(data.id)
@@ -124,11 +127,13 @@ impl UserRepository for PostgresUserRepository {
                 }
 
                 if let Update::Change(password) = data.password {
-                    sqlx::query(r#"
+                    sqlx::query(
+                        r#"
                         UPDATE t_users
                         SET password = $1, updated_at = $2
                         WHERE id = $3
-                    "#)
+                    "#,
+                    )
                     .bind(password)
                     .bind(now)
                     .bind(data.id)
@@ -136,14 +141,11 @@ impl UserRepository for PostgresUserRepository {
                     .await
                     .map_err(RepositoryError::DatabaseError)?;
                 }
-
             }
             None => {
                 return Err(RepositoryError::UserNotFound.into());
             }
         }
-
-
 
         if let Update::Change(display_name) = data.display_name {
             sqlx::query(
@@ -157,8 +159,6 @@ impl UserRepository for PostgresUserRepository {
             .await
             .map_err(RepositoryError::DatabaseError)?;
         }
-
-
 
         Ok(())
     }

@@ -1,13 +1,15 @@
+use crate::Result;
 use crate::domain::table::commands::DeleteTableCommand;
 use crate::domain::table::search_filters::TableFilters;
 use crate::domain::utils::pagination::Pagination;
 use crate::domain::{
     auth::Claims,
-    table::commands::CreateTableCommand,
+    table::commands::{CreateTableCommand, GetTableCommand},
 };
-use crate::interfaces::http::table::dtos::{AvaliableTableResponse, CreateTableDto, UpdateTableDto};
+use crate::interfaces::http::table::dtos::{
+    AvaliableTableResponse, CreateTableDto, UpdateTableDto,
+};
 use crate::state::AppState;
-use crate::Result;
 use axum::extract::Query;
 use axum::{
     Json, Router,
@@ -58,7 +60,10 @@ pub async fn get_available_tables(
     Query(filters): Query<TableFilters>,
     Query(pagination): Query<Pagination>,
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state.table_service.get(&filters, pagination).await?;
+    let tables = app_state
+        .table_service
+        .get(&GetTableCommand::new(filters, pagination))
+        .await?;
 
     let tables = tables.iter().map(AvaliableTableResponse::from).collect();
 

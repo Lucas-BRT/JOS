@@ -1,6 +1,9 @@
 use crate::infrastructure::repositories::error::RepositoryError;
 use sqlx::Error as SqlxError;
 
+const UNIQUE_CONSTRAINT_CODE: &str = "23505";
+const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";
+
 /// Maps database constraint violations to specific RepositoryError variants
 pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> RepositoryError {
     match constraint {
@@ -41,9 +44,6 @@ pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> Reposito
             table: "t_session_checkins".to_string(),
             field: "session_intent_id".to_string(),
         },
-        // "t_users_username_key" => RepositoryError::UsernameAlreadyTaken {
-
-        // }
 
         // Unknown constraints
         _ => {
@@ -108,9 +108,13 @@ fn extract_field_from_error(error: &SqlxError, field: &str) -> Option<String> {
 
 /// Maps sqlx::Error to RepositoryError, handling constraint violations
 pub fn map_database_error(error: SqlxError) -> RepositoryError {
+    if matches!(&error, SqlxError::RowNotFound) {
+        return RepositoryError::TableNotFound;
+    }
+
     if let Some(db_err) = error.as_database_error() {
         if let Some(code) = db_err.code() {
-            if code == "23505" {
+            if code == UNIQUE_CONSTRAINT_CODE || code == FOREIGN_KEY_CONSTRAINT_CODE {
                 // UNIQUE constraint violation
                 if let Some(constraint) = db_err.constraint() {
                     tracing::debug!(

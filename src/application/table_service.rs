@@ -1,9 +1,8 @@
 use crate::application::error::ApplicationError;
 use crate::domain::table::commands::*;
 use crate::domain::table::{
-    entity::Table, search_filters::TableFilters, table_repository::TableRepository,
+    commands::GetTableCommand, entity::Table, table_repository::TableRepository,
 };
-use crate::domain::utils::pagination::Pagination;
 use crate::{Error, Result};
 use std::sync::Arc;
 use uuid::Uuid;
@@ -38,8 +37,8 @@ impl TableService {
         self.table_repository.find_by_id(table_id).await
     }
 
-    pub async fn get(&self, filters: &TableFilters, pagination: Pagination) -> Result<Vec<Table>> {
-        self.table_repository.get(filters, pagination).await
+    pub async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
+        self.table_repository.get(command).await
     }
 
     pub async fn update(&self, update_data: &UpdateTableCommand) -> Result<Table> {
