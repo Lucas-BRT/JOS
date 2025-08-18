@@ -6,86 +6,140 @@ on:
   pull_request:
     branches: [main, development]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 1
+  RUSTFLAGS: "-D warnings"
+  RUSTC_WRAPPER: "sccache"
+
 jobs:
-  ci:
-    name: Build, Test, Lint, Docs
+  lints:
+    name: Lints (Clippy & Fmt)
     runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: runner
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: jos_db
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@v1
+      - name: Start sccache
+        uses: mozilla-actions/sccache-action@v0.0.5
         with:
-          toolchain: stable
+          version: "v0.8.0"
+
+      - name: Wait for sccache server
+        run: sleep 2
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
           components: clippy, rustfmt
 
-      - name: Cache cargo registry
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-registry-
+      - name: Setup Rust Cache
+        uses: Swatinem/rust-cache@v2
 
-      - name: Cache cargo git
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-git-
+      - name: Run Lints
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+      
+      - name: Stop sccache
+        if: always()
+        run: sccache --stop-server
 
-      - name: Cache build artifacts
-        uses: actions/cache@v4
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    needs: [lints]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start sccache
+        uses: mozilla-actions/sccache-action@v0.0.5
         with:
-          path: target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-build-
+          version: "v0.8.0"
+
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-key: test
+
+      - name: Install System Dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libssl-dev pkg-config postgresql-client
 
       - name: Install sqlx-cli
-        run: cargo install sqlx-cli --no-default-features --features rustls,postgres
+        run: cargo install sqlx-cli --version 0.7.0 --no-default-features --features rustls,postgres --locked
 
-      - name: Run Migrations
+      - name: Verify Database URL
         env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::Secret 'DATABASE_URL' is not set. This job requires a live database connection."
+            exit 1
+          fi
+          echo "✅ DATABASE_URL secret is present."
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: sqlx migrate run
 
-      - name: Build project
+      - name: Run Tests
         env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
-        run: cargo build --workspace --verbose
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SQLX_OFFLINE: "false"
+        run: cargo test --workspace --locked
 
-      - name: Run tests
-        env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
-        run: cargo test --workspace
+      - name: Stop sccache
+        run: sccache --stop-server
 
-      - name: Run clippy (lint)
-        env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
-        run: cargo clippy --workspace -- -D warnings
+  build_release:
+    name: Build Release Artifact
+    runs-on: ubuntu-latest
+    needs: [lints]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check formatting
-        env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
-        run: cargo fmt --all -- --check
+      - name: Start sccache
+        uses: mozilla-actions/sccache-action@v0.0.5
+        with:
+          version: "v0.8.0"
 
-      - name: Build documentation
-        env:
-          DATABASE_URL: "postgres://runner:password@localhost:5432/jos_db"
-        run: cargo doc --no-deps --workspace --verbose
+      - name: Install Rust Toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-key: release
+
+      - name: Build Release Binary
+        run: cargo build --release --workspace --locked
+
+      - name: Stop sccache
+        run: sccache --stop-server
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-binary
+          path: target/release/your_binary_name
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v1.4.1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
