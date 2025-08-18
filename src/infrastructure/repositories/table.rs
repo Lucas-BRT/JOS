@@ -79,7 +79,6 @@ impl TableRepositoryTrait for PostgresTableRepository {
 
         let mut builder = sqlx::QueryBuilder::new("UPDATE t_rpg_tables SET ");
 
-        // Usa `separated` para gerenciar as vírgulas na cláusula SET.
         let mut separated = builder.separated(", ");
 
         if let Update::Change(title) = &command.title {
@@ -107,22 +106,18 @@ impl TableRepositoryTrait for PostgresTableRepository {
             separated.push_bind_unseparated(game_system_id);
         }
 
-        // A primeira chamada a `push` não adiciona vírgula.
-        // As subsequentes sim.
         separated.push("updated_at = ");
         separated.push_bind_unseparated(now);
 
-        // Adiciona a cláusula WHERE após a SET.
         builder.push(" WHERE id = ");
         builder.push_bind(command.id);
 
-        // Adiciona a cláusula RETURNING corretamente.
         builder.push(
             r#" RETURNING 
                 id, 
                 gm_id, 
                 title, 
-                visibility, -- CORRIGIDO
+                visibility,
                 description, 
                 game_system_id,
                 player_slots,
@@ -130,7 +125,6 @@ impl TableRepositoryTrait for PostgresTableRepository {
                 updated_at"#,
         );
 
-        // Executa a query construída com todos os seus parâmetros.
         let updated_table = builder
             .build_query_as::<TableModel>()
             .fetch_one(self.pool.as_ref())
@@ -325,6 +319,7 @@ mod tests {
     use super::*;
     use crate::Error;
     use crate::domain::game_system::GameSystemRepository;
+    use crate::domain::table::commands::UpdateTableCommand;
     use crate::domain::table::entity::Visibility;
     use crate::domain::table::search_filters::TableFilters;
     use crate::domain::user::UserRepository;
