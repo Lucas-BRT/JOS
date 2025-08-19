@@ -1,5 +1,5 @@
-use crate::domain::table::entity::Table;
 use super::enums::ETableVisibility;
+use crate::domain::table::entity::Table;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 

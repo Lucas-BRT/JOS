@@ -1,9 +1,15 @@
 use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
 use crate::{
-    core::state::AppState, domain::{
+    Result,
+    core::state::AppState,
+    domain::{
         auth::Claims,
-        table_request::dtos::{CreateTableRequestCommand, DeleteTableRequestCommand, TableRequestFilters, UpdateTableRequestCommand}, utils::pagination::Pagination,
-    }, Result
+        table_request::dtos::{
+            CreateTableRequestCommand, DeleteTableRequestCommand, TableRequestFilters,
+            UpdateTableRequestCommand,
+        },
+        utils::pagination::Pagination,
+    },
 };
 use axum::{
     Json, Router,
@@ -86,7 +92,6 @@ pub async fn get_table_requests_by_table_id(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<Vec<TableRequestResponse>>> {
-
     let requests = app_state
         .table_request_service
         .get_requests_by_table_id(&table_id, &user.sub)

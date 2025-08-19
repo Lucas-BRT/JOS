@@ -4,11 +4,7 @@ use crate::{
     domain::auth::Authenticator,
     interfaces::http::auth::dtos::{LoginDto, SignupDto, UserSignupResponse},
 };
-use axum::{
-    Json, Router,
-    extract::State,
-    routing::post,
-};
+use axum::{Json, Router, extract::State, routing::post};
 use std::sync::Arc;
 use validator::Validate;
 

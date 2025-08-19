@@ -11,7 +11,7 @@ pub struct UpdateTableRequestCommand {
     pub status: String,
 }
 
-pub struct DeleteTableRequestCommand {    
+pub struct DeleteTableRequestCommand {
     pub id: Uuid,
     pub gm_id: Uuid,
 }
@@ -24,6 +24,3 @@ pub struct TableRequestFilters {
     pub table_id: Option<Uuid>,
     pub status: Option<String>,
 }
-
-
-

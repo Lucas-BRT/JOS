@@ -1,5 +1,5 @@
-use crate::domain::user::User;
 use super::enums::ERoles;
+use crate::domain::user::User;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 

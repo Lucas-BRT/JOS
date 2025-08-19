@@ -86,7 +86,10 @@ impl Config {
         format!(
             "Server: {}, Database: {}, JWT Expiration: {} days",
             self.addr,
-            self.database_url.split('@').next_back().unwrap_or("unknown"),
+            self.database_url
+                .split('@')
+                .next_back()
+                .unwrap_or("unknown"),
             self.jwt_expiration_duration.num_days()
         )
     }
@@ -113,7 +116,10 @@ impl Config {
         info!("🌐 Server will bind to: {}", self.addr);
         info!(
             "🗄️  Database: {}",
-            self.database_url.split('@').next_back().unwrap_or("unknown")
+            self.database_url
+                .split('@')
+                .next_back()
+                .unwrap_or("unknown")
         );
         info!(
             "🔐 JWT expiration: {} days",

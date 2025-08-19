@@ -1,4 +1,6 @@
-use crate::domain::{table::entity::Visibility, table_request::entity::TableRequestStatus, user::Role};
+use crate::domain::{
+    table::entity::Visibility, table_request::entity::TableRequestStatus, user::Role,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "e_intent_status", rename_all = "snake_case")]
@@ -25,8 +27,6 @@ impl From<ERoles> for Role {
         }
     }
 }
-
-
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "e_table_visibility", rename_all = "snake_case")]

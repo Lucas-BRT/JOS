@@ -112,20 +112,17 @@ pub fn map_database_error(error: SqlxError) -> RepositoryError {
         return RepositoryError::TableNotFound;
     }
 
-    if let Some(db_err) = error.as_database_error() {
-        if let Some(code) = db_err.code() {
-            if code == UNIQUE_CONSTRAINT_CODE || code == FOREIGN_KEY_CONSTRAINT_CODE {
-                // UNIQUE constraint violation
-                if let Some(constraint) = db_err.constraint() {
-                    tracing::debug!(
-                        "Mapping constraint violation: {} -> {:?}",
-                        constraint,
-                        error
-                    );
-                    return map_constraint_violation(&error, constraint);
-                }
-            }
-        }
+    if let Some(db_err) = error.as_database_error()
+        && let Some(code) = db_err.code()
+        && (code == UNIQUE_CONSTRAINT_CODE || code == FOREIGN_KEY_CONSTRAINT_CODE)
+        && let Some(constraint) = db_err.constraint()
+    {
+        tracing::debug!(
+            "Mapping constraint violation: {} -> {:?}",
+            constraint,
+            error
+        );
+        return map_constraint_violation(&error, constraint);
     }
     RepositoryError::DatabaseError(error)
 }

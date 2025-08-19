@@ -1,10 +1,13 @@
+use jos::Error;
 use jos::domain::user::{
-    commands::{CreateUserCommand, UpdateUserCommand}, role::Role, search_commands::UserFilters, user_repository::UserRepository as UserRepositoryTrait
+    commands::{CreateUserCommand, UpdateUserCommand},
+    role::Role,
+    search_commands::UserFilters,
+    user_repository::UserRepository as UserRepositoryTrait,
 };
 use jos::domain::utils::update::Update;
 use jos::infrastructure::repositories::error::RepositoryError;
 use jos::infrastructure::repositories::user::PostgresUserRepository;
-use jos::Error;
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -51,7 +54,9 @@ async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
     let user_data =
         create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    repo.create(&user_data).await.expect("Failed to create first user");
+    repo.create(&user_data)
+        .await
+        .expect("Failed to create first user");
 
     let user_data2 =
         create_test_user_data("testuser", "testuser", "test2@example.com", "password123");
@@ -76,7 +81,9 @@ async fn test_create_user_duplicate_email_should_fail(pool: PgPool) {
     let user_data2 =
         create_test_user_data("testuser2", "testuser2", "test@example.com", "password456");
 
-    repo.create(&user_data1).await.expect("Failed to create first user");
+    repo.create(&user_data1)
+        .await
+        .expect("Failed to create first user");
 
     let result = repo.create(&user_data2).await;
 
@@ -232,7 +239,9 @@ async fn test_update_user_password(pool: PgPool) {
         ..Default::default()
     };
 
-    repo.update(&update_data).await.expect("Failed to update user");
+    repo.update(&update_data)
+        .await
+        .expect("Failed to update user");
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
     assert_eq!(updated_user.password, "newpassword456");
@@ -264,9 +273,15 @@ async fn test_delete_user(pool: PgPool) {
     let user_data =
         create_test_user_data("testuser", "testuser", "test@example.com", "password123");
 
-    let created_user = repo.create(&user_data).await.expect("Failed to create user");
+    let created_user = repo
+        .create(&user_data)
+        .await
+        .expect("Failed to create user");
 
-    let deleted_user = repo.delete(&created_user.id).await.expect("Failed to delete user");
+    let deleted_user = repo
+        .delete(&created_user.id)
+        .await
+        .expect("Failed to delete user");
 
     assert_eq!(deleted_user.id, created_user.id);
     assert_eq!(deleted_user.username, "testuser");
@@ -298,7 +313,11 @@ async fn test_concurrent_user_operations(pool: PgPool) {
                 &format!("test{i}@example.com"),
                 &format!("password{i}"),
             );
-            tokio::spawn(async move { repo.create(&user_data).await.expect("Failed to create user") })
+            tokio::spawn(async move {
+                repo.create(&user_data)
+                    .await
+                    .expect("Failed to create user")
+            })
         })
         .collect();
 
@@ -308,7 +327,9 @@ async fn test_concurrent_user_operations(pool: PgPool) {
         assert!(result.is_ok());
     }
 
-    let all_users = repo.get_all(&UserFilters::default()).await.expect("Failed to get all users");
+    let all_users = repo
+        .get_all(&UserFilters::default())
+        .await
+        .expect("Failed to get all users");
     assert_eq!(all_users.len(), 5);
 }
-

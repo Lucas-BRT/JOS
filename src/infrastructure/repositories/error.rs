@@ -1,6 +1,5 @@
 use crate::Error;
 
-
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
     #[error("username already taken")]
@@ -30,4 +29,3 @@ impl From<RepositoryError> for Error {
         Error::Repository(err)
     }
 }
-

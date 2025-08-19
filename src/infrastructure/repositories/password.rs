@@ -9,7 +9,6 @@ use argon2::PasswordVerifier;
 use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
 use std::sync::Arc;
 
-
 #[derive(Clone)]
 pub struct Argon2PasswordProvider {
     validator: Arc<dyn PasswordValidator>,
@@ -23,9 +22,7 @@ impl Default for Argon2PasswordProvider {
 
 impl Argon2PasswordProvider {
     pub fn new(validator: Arc<dyn PasswordValidator>) -> Self {
-        Self {
-            validator,
-        }
+        Self { validator }
     }
 }
 
@@ -144,7 +141,9 @@ mod tests {
         let password = "SecurePass123!";
         let invalid_hash = "not-a-valid-hash".to_string();
 
-        let result = password_repo.verify_hash(password.to_string(), invalid_hash).await;
+        let result = password_repo
+            .verify_hash(password.to_string(), invalid_hash)
+            .await;
         assert!(result.is_err(), "hash inválido deveria falhar");
     }
 
@@ -153,17 +152,29 @@ mod tests {
         let password_repo = Argon2PasswordProvider::default();
         let password = "SecurePass123!";
 
-        let hash1 = password_repo.generate_hash(password.to_string()).await.unwrap();
-        let hash2 = password_repo.generate_hash(password.to_string()).await.unwrap();
+        let hash1 = password_repo
+            .generate_hash(password.to_string())
+            .await
+            .unwrap();
+        let hash2 = password_repo
+            .generate_hash(password.to_string())
+            .await
+            .unwrap();
 
-        assert_ne!(hash1, hash2, "hashes não deveriam ser iguais por causa do salt");
+        assert_ne!(
+            hash1, hash2,
+            "hashes não deveriam ser iguais por causa do salt"
+        );
     }
 
     #[tokio::test]
     async fn test_concurrent_verify_operations() {
         let password_repo = Argon2PasswordProvider::default();
         let password = "SecurePass123!";
-        let hash = password_repo.generate_hash(password.to_string()).await.unwrap();
+        let hash = password_repo
+            .generate_hash(password.to_string())
+            .await
+            .unwrap();
 
         let handles: Vec<_> = (0..5)
             .map(|_| {
@@ -179,6 +190,4 @@ mod tests {
             assert!(result);
         }
     }
-
-
 }

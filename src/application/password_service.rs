@@ -1,7 +1,4 @@
-use crate::{
-    Result,
-    domain::password::PasswordProvider,
-};
+use crate::{Result, domain::password::PasswordProvider};
 use std::sync::Arc;
 
 #[derive(Clone)]
