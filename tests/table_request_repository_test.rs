@@ -21,17 +21,17 @@ use uuid::Uuid;
 async fn test_create_table_request_success(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
-    let user_id = utils::create_user(&pool).await.id;
+    let user = utils::create_user(&pool).await;
     let table = utils::create_table(&pool).await;
     let message = Some("I would like to join this table".to_string());
 
-    let request_data = CreateTableRequestCommand::new(user_id, table.id, message.clone());
+    let request_data = CreateTableRequestCommand::new(user.id, table.id, message.clone());
 
     let result = repo.create(&request_data).await;
 
     match result {
         Ok(table_request) => {
-            assert_eq!(table_request.user_id, user_id);
+            assert_eq!(table_request.user_id, user.id);
             assert_eq!(table_request.table_id, table.id);
             assert_eq!(table_request.message, message);
             assert_eq!(table_request.status, TableRequestStatus::Pending);
@@ -48,16 +48,16 @@ async fn test_create_table_request_success(pool: PgPool) {
 async fn test_create_table_request_without_message(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
-    let user_id = utils::create_user(&pool).await.id;
+    let user = utils::create_user(&pool).await;
     let table = utils::create_table(&pool).await;
 
-    let request_data = CreateTableRequestCommand::new(user_id, table.id, None);
+    let request_data = CreateTableRequestCommand::new(user.id, table.id, None);
 
     let result = repo.create(&request_data).await;
 
     match result {
         Ok(table_request) => {
-            assert_eq!(table_request.user_id, user_id);
+            assert_eq!(table_request.user_id, user.id);
             assert_eq!(table_request.table_id, table.id);
             assert_eq!(table_request.message, None);
             assert_eq!(table_request.status, TableRequestStatus::Pending);
@@ -73,14 +73,14 @@ async fn test_create_table_request_without_message(pool: PgPool) {
 async fn test_create_multiple_table_requests_success(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
-    let user_id1 = utils::create_user(&pool).await.id;
-    let user_id2 = utils::create_user(&pool).await.id;
+    let user1 = utils::create_user(&pool).await;
+    let user2 = utils::create_user(&pool).await;
     let table = utils::create_table(&pool).await;
 
     let request_data1 =
-        CreateTableRequestCommand::new(user_id1, table.id, Some("First request".to_string()));
+        CreateTableRequestCommand::new(user1.id, table.id, Some("First request".to_string()));
     let request_data2 =
-        CreateTableRequestCommand::new(user_id2, table.id, Some("Second request".to_string()));
+        CreateTableRequestCommand::new(user2.id, table.id, Some("Second request".to_string()));
 
     let result1 = repo.create(&request_data1).await;
     let result2 = repo.create(&request_data2).await;
@@ -91,8 +91,8 @@ async fn test_create_multiple_table_requests_success(pool: PgPool) {
     let table_request1 = result1.unwrap();
     let table_request2 = result2.unwrap();
 
-    assert_eq!(table_request1.user_id, user_id1);
-    assert_eq!(table_request2.user_id, user_id2);
+    assert_eq!(table_request1.user_id, user1.id);
+    assert_eq!(table_request2.user_id, user2.id);
     assert_eq!(table_request1.table_id, table.id);
     assert_eq!(table_request2.table_id, table.id);
     assert_ne!(table_request1.id, table_request2.id);
@@ -102,19 +102,19 @@ async fn test_create_multiple_table_requests_success(pool: PgPool) {
 async fn test_delete_table_request_success(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
-    let user_id = utils::create_user(&pool).await.id;
+    let user = utils::create_user(&pool).await;
     let table = utils::create_table(&pool).await;
-    let gm_id = utils::create_user(&pool).await.id;
+    let gm = utils::create_user(&pool).await;
 
     let request_data =
-        CreateTableRequestCommand::new(user_id, table.id, Some("Test request".to_string()));
+        CreateTableRequestCommand::new(user.id, table.id, Some("Test request".to_string()));
 
     let created_request = repo.create(&request_data).await.unwrap();
     let request_id = created_request.id;
 
     let delete_data = DeleteTableRequestCommand {
         id: request_id,
-        gm_id,
+        gm_id: gm.id,
     };
 
     let result = repo.delete(&delete_data).await;
@@ -122,7 +122,7 @@ async fn test_delete_table_request_success(pool: PgPool) {
     match result {
         Ok(deleted_request) => {
             assert_eq!(deleted_request.id, request_id);
-            assert_eq!(deleted_request.user_id, user_id);
+            assert_eq!(deleted_request.user_id, user.id);
             assert_eq!(deleted_request.table_id, table.id);
         }
         Err(e) => {
@@ -136,11 +136,11 @@ async fn test_delete_table_request_not_found(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
     let random_id = Uuid::new_v4();
-    let gm_id = utils::create_user(&pool).await.id;
+    let gm = utils::create_user(&pool).await;
 
     let delete_data = DeleteTableRequestCommand {
         id: random_id,
-        gm_id,
+        gm_id: gm.id,
     };
 
     let result = repo.delete(&delete_data).await;
@@ -158,10 +158,10 @@ async fn test_concurrent_table_request_operations(pool: PgPool) {
     let handles: Vec<_> = (0..5)
         .map(async |i| {
             let repo = repo.clone();
-            let user_id = utils::create_user(&pool).await.id;
+            let user = utils::create_user(&pool).await;
             let table = utils::create_table(&pool).await;
             let message = Some(format!("Request {}", i));
-            let request_data = CreateTableRequestCommand::new(user_id, table.id, message);
+            let request_data = CreateTableRequestCommand::new(user.id, table.id, message);
             repo.create(&request_data).await
         })
         .collect();
@@ -227,10 +227,10 @@ async fn test_get_table_requests(pool: PgPool) {
 async fn test_find_table_request(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
-    let user_id = utils::create_user(&pool).await.id;
+    let user = utils::create_user(&pool).await;
     let table = utils::create_table(&pool).await;
 
-    let table_request_command = CreateTableRequestCommand::new(user_id, table.id, None);
+    let table_request_command = CreateTableRequestCommand::new(user.id, table.id, None);
 
     let table_request = repo.create(&table_request_command).await.unwrap();
 
