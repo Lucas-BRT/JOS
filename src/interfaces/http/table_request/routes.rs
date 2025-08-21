@@ -5,16 +5,15 @@ use crate::{
     domain::{
         auth::Claims,
         table_request::dtos::{
-            CreateTableRequestCommand, DeleteTableRequestCommand, TableRequestFilters,
+            CreateTableRequestCommand, DeleteTableRequestCommand, GetTableRequestCommand,
             UpdateTableRequestCommand,
         },
-        utils::pagination::Pagination,
     },
 };
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::{delete, get, post, put},
+    routing::{delete, get, patch, post},
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -64,7 +63,7 @@ pub async fn get_table_requests(
 ) -> Result<Json<Vec<TableRequestResponse>>> {
     let requests = app_state
         .table_request_service
-        .get(&TableRequestFilters::default(), Pagination::default())
+        .get(&GetTableRequestCommand::default())
         .await?;
     let requests = requests.iter().map(TableRequestResponse::from).collect();
 
@@ -104,7 +103,7 @@ pub async fn get_table_requests_by_table_id(
 }
 
 #[utoipa::path(
-    put,
+    patch,
     path = "/v1/table-requests/{id}",
     tag = "table-requests",
     params(
@@ -120,12 +119,15 @@ pub async fn get_table_requests_by_table_id(
 #[axum::debug_handler]
 pub async fn update_table_request(
     State(app_state): State<Arc<AppState>>,
-    Path(_request_id): Path<Uuid>,
+    Path(request_id): Path<Uuid>,
     Json(update_payload): Json<UpdateTableRequestDto>,
 ) -> Result<()> {
     let update_command = UpdateTableRequestCommand {
+        id: request_id,
         status: update_payload.status,
+        message: update_payload.message,
     };
+
     app_state
         .table_request_service
         .update(&update_command)
@@ -165,7 +167,7 @@ pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_table_requests))
         .route("/", post(create_table_request))
-        .route("/{id}", put(update_table_request))
+        .route("/{id}", patch(update_table_request))
         .route("/{id}", delete(delete_table_request))
         .with_state(state.clone())
 }

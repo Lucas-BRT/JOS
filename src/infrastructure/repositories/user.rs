@@ -143,7 +143,7 @@ impl UserRepository for PostgresUserRepository {
                 }
             }
             None => {
-                return Err(RepositoryError::UserNotFound.into());
+                return Err(RepositoryError::UserNotFound(data.id.to_string()).into());
             }
         }
 
@@ -207,7 +207,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(RepositoryError::DatabaseError)?;
 
         user.map(|model| model.into())
-            .ok_or(RepositoryError::UserNotFound.into())
+            .ok_or(RepositoryError::UserNotFound(username.to_string()).into())
     }
 
     async fn find_by_id(&self, id: &Uuid) -> Result<User> {
@@ -231,7 +231,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(RepositoryError::DatabaseError)?;
 
         user.map(|model| model.into())
-            .ok_or(RepositoryError::UserNotFound.into())
+            .ok_or(RepositoryError::UserNotFound(id.to_string()).into())
     }
 
     async fn find_by_email(&self, email: &str) -> Result<User> {
@@ -255,7 +255,7 @@ impl UserRepository for PostgresUserRepository {
         .map_err(RepositoryError::DatabaseError)?;
 
         user.map(|model| model.into())
-            .ok_or(RepositoryError::UserNotFound.into())
+            .ok_or(RepositoryError::UserNotFound(email.to_string()).into())
     }
 
     async fn delete(&self, user_id: &Uuid) -> Result<User> {

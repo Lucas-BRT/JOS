@@ -7,5 +7,6 @@ pub fn init_logging() {
         .with_max_level(Level::INFO)
         .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
         .with_target(true)
+        .with_test_writer()
         .init();
 }

@@ -14,6 +14,26 @@ pub struct CreateTableCommand {
     pub game_system_id: Uuid,
 }
 
+impl CreateTableCommand {
+    pub fn new(
+        gm_id: Uuid,
+        title: String,
+        description: String,
+        visibility: Visibility,
+        player_slots: u32,
+        game_system_id: Uuid,
+    ) -> Self {
+        Self {
+            gm_id,
+            title,
+            description,
+            visibility,
+            player_slots,
+            game_system_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct UpdateTableCommand {
     pub id: Uuid,
@@ -28,6 +48,12 @@ pub struct UpdateTableCommand {
 pub struct DeleteTableCommand {
     pub id: Uuid,
     pub gm_id: Uuid,
+}
+
+impl DeleteTableCommand {
+    pub fn new(id: Uuid, gm_id: Uuid) -> Self {
+        Self { id, gm_id }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

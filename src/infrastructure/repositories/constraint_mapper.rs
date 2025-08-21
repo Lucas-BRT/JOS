@@ -4,48 +4,115 @@ use sqlx::Error as SqlxError;
 const UNIQUE_CONSTRAINT_CODE: &str = "23505";
 const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";
 
-/// Maps database constraint violations to specific RepositoryError variants
 pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> RepositoryError {
+    let db_err = error
+        .as_database_error()
+        .expect("Expected a database error");
+    let message = db_err.message();
+    let is_referenced_not_found = message.contains("is not present in table");
+
     match constraint {
-        // UNIQUE constraints
-        "t_users_username_key" => RepositoryError::UsernameAlreadyTaken,
-        "t_users_email_key" => RepositoryError::EmailAlreadyTaken,
+        "t_users_username_key" => {
+            tracing::error!("username already taken: {}", message);
+            RepositoryError::UsernameAlreadyTaken
+        }
+        "t_users_email_key" => {
+            tracing::error!("email already taken: {}", message);
+            RepositoryError::EmailAlreadyTaken
+        }
         "t_game_system_name_key" => {
-            let name =
-                extract_field_from_error(error, "name").unwrap_or_else(|| "unknown".to_string());
-            RepositoryError::GameSystemNameAlreadyTaken(name)
+            tracing::error!("game system name already taken: {}", message);
+            RepositoryError::GameSystemNameAlreadyTaken
         }
         "t_session_intents_user_id_session_id_key" => {
+            tracing::error!("user session intent already exists: {}", message);
             RepositoryError::UserSessionIntentAlreadyExists
         }
 
-        // FOREIGN KEY constraints
-        "t_rpg_tables_gm_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_rpg_tables".to_string(),
-            field: "gm_id".to_string(),
-        },
-        "t_rpg_tables_game_system_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_rpg_tables".to_string(),
-            field: "game_system_id".to_string(),
-        },
-        "t_sessions_table_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_sessions".to_string(),
-            field: "table_id".to_string(),
-        },
-        "t_session_intents_user_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_session_intents".to_string(),
-            field: "user_id".to_string(),
-        },
-        "t_session_intents_session_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_session_intents".to_string(),
-            field: "session_id".to_string(),
-        },
-        "t_session_checkins_session_intent_id_fkey" => RepositoryError::ForeignKeyViolation {
-            table: "t_session_checkins".to_string(),
-            field: "session_intent_id".to_string(),
-        },
-
-        // Unknown constraints
+        "t_rpg_tables_gm_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "gm_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::UserNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_rpg_tables".to_string(),
+                    field: "gm_id".to_string(),
+                }
+            }
+        }
+        "t_rpg_tables_game_system_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "game_system_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::GameSystemNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_rpg_tables".to_string(),
+                    field: "game_system_id".to_string(),
+                }
+            }
+        }
+        "t_sessions_table_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "table_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::RpgTableNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_sessions".to_string(),
+                    field: "table_id".to_string(),
+                }
+            }
+        }
+        "t_session_intents_user_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "user_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::UserNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_session_intents".to_string(),
+                    field: "user_id".to_string(),
+                }
+            }
+        }
+        "t_session_intents_session_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "session_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::SessionNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_session_intents".to_string(),
+                    field: "session_id".to_string(),
+                }
+            }
+        }
+        "t_session_checkins_session_intent_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "session_intent_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::SessionIntentNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_session_checkins".to_string(),
+                    field: "session_intent_id".to_string(),
+                }
+            }
+        }
+        "t_table_requests_user_id_fkey" => {
+            if is_referenced_not_found {
+                let id = extract_field_from_error(error, "user_id")
+                    .unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::UserNotFound(id)
+            } else {
+                RepositoryError::ForeignKeyViolation {
+                    table: "t_table_requests".to_string(),
+                    field: "user_id".to_string(),
+                }
+            }
+        }
         _ => {
             tracing::error!("unknown constraint violation: {}", constraint);
             RepositoryError::UnknownConstraint(constraint.to_string())
@@ -53,14 +120,12 @@ pub fn map_constraint_violation(error: &SqlxError, constraint: &str) -> Reposito
     }
 }
 
-/// Try to parse "Key (field)=(value)" from a given text
 fn parse_key_value_from_text(text: &str, field: &str) -> Option<String> {
-    // Most precise pattern first: "(field)=(" then value until ")"
     if let Some(pos) = text.find(&format!("({field})=(")) {
-        let after = &text[pos + field.len() + 4..]; // skip "(field)=("
+        let after = &text[pos + field.len() + 4..];
         if let Some(end) = after.find(')') {
             let mut value = &after[..end];
-            // Trim quotes if present
+
             value = value.trim_matches('\"').trim_matches('\'');
             if !value.is_empty() {
                 return Some(value.to_string());
@@ -68,9 +133,8 @@ fn parse_key_value_from_text(text: &str, field: &str) -> Option<String> {
         }
     }
 
-    // Fallback: "(field)=" followed by optional '(' then value until ')' or whitespace/comma
     if let Some(pos) = text.find(&format!("({field})=")) {
-        let mut after = &text[pos + field.len() + 3..]; // skip "(field)="
+        let mut after = &text[pos + field.len() + 3..];
         after = after.trim_start();
         if after.starts_with('(') {
             after = &after[1..];
@@ -87,9 +151,7 @@ fn parse_key_value_from_text(text: &str, field: &str) -> Option<String> {
     None
 }
 
-/// Helper function to extract field value from error message
 fn extract_field_from_error(error: &SqlxError, field: &str) -> Option<String> {
-    // Prefer driver message if available
     if let Some(db_err) = error.as_database_error() {
         let message = db_err.message();
         if let Some(val) = parse_key_value_from_text(message, field) {
@@ -97,7 +159,6 @@ fn extract_field_from_error(error: &SqlxError, field: &str) -> Option<String> {
         }
     }
 
-    // Parse the full Display string, which usually includes DETAIL for Postgres
     let error_display = error.to_string();
     if let Some(val) = parse_key_value_from_text(&error_display, field) {
         return Some(val);
@@ -106,7 +167,6 @@ fn extract_field_from_error(error: &SqlxError, field: &str) -> Option<String> {
     None
 }
 
-/// Maps sqlx::Error to RepositoryError, handling constraint violations
 pub fn map_database_error(error: SqlxError) -> RepositoryError {
     if matches!(&error, SqlxError::RowNotFound) {
         return RepositoryError::TableNotFound;

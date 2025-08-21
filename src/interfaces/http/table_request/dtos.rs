@@ -1,4 +1,10 @@
-use crate::domain::table_request::{dtos::CreateTableRequestCommand, entity::TableRequest};
+use crate::domain::{
+    table_request::{
+        dtos::CreateTableRequestCommand,
+        entity::{TableRequest, TableRequestStatus},
+    },
+    utils::update::Update,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -23,8 +29,8 @@ impl CreateTableRequestCommand {
 
 #[derive(Debug, Clone, Deserialize, Validate, utoipa::ToSchema)]
 pub struct UpdateTableRequestDto {
-    #[validate(length(min = 1, message = "Status cannot be empty"))]
-    pub status: String,
+    pub status: Update<TableRequestStatus>,
+    pub message: Update<Option<String>>,
 }
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
@@ -35,7 +41,7 @@ pub struct TableRequestResponse {
     pub message: Option<String>,
     pub status: String,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<&TableRequest> for TableRequestResponse {
@@ -45,7 +51,7 @@ impl From<&TableRequest> for TableRequestResponse {
             user_id: request.user_id,
             table_id: request.table_id,
             message: request.message.clone(),
-            status: request.status.clone().into(),
+            status: request.status.into(),
             created_at: request.created_at,
             updated_at: request.updated_at,
         }

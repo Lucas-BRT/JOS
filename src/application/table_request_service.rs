@@ -1,6 +1,8 @@
 use crate::Result;
 use crate::domain::table::table_repository::TableRepository;
-use crate::domain::table_request::dtos::{DeleteTableRequestCommand, TableRequestFilters};
+use crate::domain::table_request::dtos::{
+    DeleteTableRequestCommand, GetTableRequestCommand, TableRequestFilters,
+};
 use crate::domain::table_request::{
     dtos::{CreateTableRequestCommand, UpdateTableRequestCommand},
     entity::TableRequest,
@@ -34,7 +36,7 @@ impl TableRequestService {
         self.table_request_repository.create(request_data).await
     }
 
-    pub async fn update(&self, update_data: &UpdateTableRequestCommand) -> Result<()> {
+    pub async fn update(&self, update_data: &UpdateTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.update(update_data).await
     }
 
@@ -42,12 +44,8 @@ impl TableRequestService {
         self.table_request_repository.delete(request_data).await
     }
 
-    pub async fn get(
-        &self,
-        filters: &TableRequestFilters,
-        pagination: Pagination,
-    ) -> Result<Vec<TableRequest>> {
-        self.table_request_repository.get(filters, pagination).await
+    pub async fn get(&self, command: &GetTableRequestCommand) -> Result<Vec<TableRequest>> {
+        self.table_request_repository.get(command).await
     }
 
     pub async fn get_requests_by_table_id(
@@ -61,8 +59,11 @@ impl TableRequestService {
             ..Default::default()
         };
 
-        self.table_request_repository
-            .get(&filters, Pagination::default())
-            .await
+        let command = GetTableRequestCommand {
+            filters,
+            pagination: Pagination::default(),
+        };
+
+        self.table_request_repository.get(&command).await
     }
 }
