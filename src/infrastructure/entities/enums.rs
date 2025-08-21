@@ -61,6 +61,16 @@ pub enum ETableRequestStatus {
     Rejected,
 }
 
+impl From<TableRequestStatus> for ETableRequestStatus {
+    fn from(status: TableRequestStatus) -> Self {
+        match status {
+            TableRequestStatus::Pending => ETableRequestStatus::Pending,
+            TableRequestStatus::Approved => ETableRequestStatus::Approved,
+            TableRequestStatus::Rejected => ETableRequestStatus::Rejected,
+        }
+    }
+}
+
 impl From<ETableRequestStatus> for TableRequestStatus {
     fn from(status: ETableRequestStatus) -> Self {
         match status {

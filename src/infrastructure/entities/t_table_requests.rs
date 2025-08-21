@@ -11,7 +11,7 @@ pub struct Model {
     pub message: Option<String>,
     pub status: ETableRequestStatus,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<Model> for TableRequest {
