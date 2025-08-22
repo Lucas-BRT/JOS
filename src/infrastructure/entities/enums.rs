@@ -1,5 +1,6 @@
 use crate::domain::{
-    table::entity::Visibility, table_request::entity::TableRequestStatus, user::Role,
+    session_intent::IntentStatus, table::entity::Visibility,
+    table_request::entity::TableRequestStatus, user::Role,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
@@ -77,6 +78,26 @@ impl From<ETableRequestStatus> for TableRequestStatus {
             ETableRequestStatus::Pending => TableRequestStatus::Pending,
             ETableRequestStatus::Approved => TableRequestStatus::Approved,
             ETableRequestStatus::Rejected => TableRequestStatus::Rejected,
+        }
+    }
+}
+
+impl From<EIntentStatus> for IntentStatus {
+    fn from(status: EIntentStatus) -> Self {
+        match status {
+            EIntentStatus::Yes => IntentStatus::Yes,
+            EIntentStatus::No => IntentStatus::No,
+            EIntentStatus::Maybe => IntentStatus::Maybe,
+        }
+    }
+}
+
+impl From<IntentStatus> for EIntentStatus {
+    fn from(status: IntentStatus) -> Self {
+        match status {
+            IntentStatus::Yes => EIntentStatus::Yes,
+            IntentStatus::No => EIntentStatus::No,
+            IntentStatus::Maybe => EIntentStatus::Maybe,
         }
     }
 }

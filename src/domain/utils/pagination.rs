@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 pub const DEFAULT_PAGE: u32 = 1;
 pub const DEFAULT_PAGE_SIZE: u32 = 20;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Pagination {
     pub page: u32,
     pub page_size: u32,

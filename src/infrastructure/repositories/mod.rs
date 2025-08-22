@@ -5,6 +5,7 @@ pub mod jwt;
 pub mod password;
 pub mod prelude;
 pub mod session;
+pub mod session_intent;
 pub mod table;
 pub mod table_request;
 pub mod user;

@@ -1,6 +1,10 @@
 use jos::{
     domain::{
         game_system::{GameSystem, GameSystemRepository},
+        session::{CreateSessionCommand, Session, SessionRepository},
+        session_intent::{
+            CreateSessionIntentCommand, IntentStatus, SessionIntent, SessionIntentRepository,
+        },
         table::{
             commands::CreateTableCommand,
             entity::{Table, Visibility},
@@ -8,8 +12,12 @@ use jos::{
         },
         user::{User, UserRepository, commands::CreateUserCommand},
     },
-    infrastructure::prelude::{
-        PostgresGameSystemRepository, PostgresTableRepository, PostgresUserRepository,
+    infrastructure::{
+        prelude::{
+            PostgresGameSystemRepository, PostgresSessionRepository, PostgresTableRepository,
+            PostgresUserRepository,
+        },
+        repositories::session_intent::PostgresSessionIntentRepository,
     },
 };
 use sqlx::PgPool;
@@ -41,16 +49,13 @@ pub async fn create_game_system(pool: &PgPool) -> GameSystem {
 }
 
 #[allow(unused)]
-pub async fn create_table(pool: &PgPool) -> Table {
+pub async fn create_table(pool: &PgPool, gm: User, game_system: GameSystem) -> Table {
     let repo = PostgresTableRepository::new(Arc::new(pool.clone()));
-
-    let gm_id = create_user(pool).await;
-    let game_system = create_game_system(pool).await;
 
     let table_name = format!("Test Table {}", Uuid::new_v4());
 
     let table_data = CreateTableCommand::new(
-        gm_id.id,
+        gm.id,
         table_name,
         "Test Table Description".to_string(),
         Visibility::Public,
@@ -59,4 +64,33 @@ pub async fn create_table(pool: &PgPool) -> Table {
     );
 
     repo.create(&table_data).await.unwrap()
+}
+
+pub async fn create_session(pool: &PgPool, table: Table) -> Session {
+    let repo = PostgresSessionRepository::new(Arc::new(pool.clone()));
+
+    let session_name = format!("Test Session {}", Uuid::new_v4());
+
+    let session_data = CreateSessionCommand::new(
+        table.id,
+        session_name,
+        "Test Session Description".to_string(),
+        true,
+    );
+
+    repo.create(&session_data).await.unwrap()
+}
+
+#[allow(unused)]
+pub async fn create_session_intent(
+    pool: &PgPool,
+    user: User,
+    session: Session,
+    status: IntentStatus,
+) -> SessionIntent {
+    let repo = PostgresSessionIntentRepository::new(Arc::new(pool.clone()));
+
+    let session_intent_data = CreateSessionIntentCommand::new(user.id, session.id, status);
+
+    repo.create(session_intent_data).await.unwrap()
 }
