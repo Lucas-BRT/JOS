@@ -22,7 +22,10 @@ async fn test_create_table_request_success(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
     let user = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+    let gm = utils::create_user(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+
+    let table = utils::create_table(&pool, gm, game_system).await;
     let message = Some("I would like to join this table".to_string());
 
     let request_data = CreateTableRequestCommand::new(user.id, table.id, message.clone());
@@ -49,7 +52,10 @@ async fn test_create_table_request_without_message(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
     let user = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+    let gm = utils::create_user(&pool).await;
+
+    let table = utils::create_table(&pool, gm, game_system).await;
 
     let request_data = CreateTableRequestCommand::new(user.id, table.id, None);
 
@@ -75,7 +81,10 @@ async fn test_create_multiple_table_requests_success(pool: PgPool) {
 
     let user1 = utils::create_user(&pool).await;
     let user2 = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+
+    let gm = utils::create_user(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+    let table = utils::create_table(&pool, gm, game_system).await;
 
     let request_data1 =
         CreateTableRequestCommand::new(user1.id, table.id, Some("First request".to_string()));
@@ -103,7 +112,10 @@ async fn test_delete_table_request_success(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
     let user = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+
+    let gm = utils::create_user(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+    let table = utils::create_table(&pool, gm, game_system).await;
     let gm = utils::create_user(&pool).await;
 
     let request_data =
@@ -159,7 +171,11 @@ async fn test_concurrent_table_request_operations(pool: PgPool) {
         .map(async |i| {
             let repo = repo.clone();
             let user = utils::create_user(&pool).await;
-            let table = utils::create_table(&pool).await;
+
+            let gm = utils::create_user(&pool).await;
+            let game_system = utils::create_game_system(&pool).await;
+            let table = utils::create_table(&pool, gm, game_system).await;
+
             let message = Some(format!("Request {}", i));
             let request_data = CreateTableRequestCommand::new(user.id, table.id, message);
             repo.create(&request_data).await
@@ -177,7 +193,10 @@ async fn test_concurrent_table_request_operations(pool: PgPool) {
 async fn test_update_table_request(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
     let player = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+
+    let gm = utils::create_user(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+    let table = utils::create_table(&pool, gm, game_system).await;
 
     let request_data =
         CreateTableRequestCommand::new(player.id, table.id, Some("Initial message".to_string()));
@@ -228,7 +247,10 @@ async fn test_find_table_request(pool: PgPool) {
     let repo = PostgresTableRequestRepository::new(Arc::new(pool.clone()));
 
     let user = utils::create_user(&pool).await;
-    let table = utils::create_table(&pool).await;
+
+    let gm = utils::create_user(&pool).await;
+    let game_system = utils::create_game_system(&pool).await;
+    let table = utils::create_table(&pool, gm, game_system).await;
 
     let table_request_command = CreateTableRequestCommand::new(user.id, table.id, None);
 

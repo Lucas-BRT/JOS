@@ -1,4 +1,5 @@
 use super::enums::EIntentStatus;
+use crate::domain::session_intent::SessionIntent;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
@@ -9,5 +10,18 @@ pub struct Model {
     pub session_id: Uuid,
     pub intent_status: EIntentStatus,
     pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<Model> for SessionIntent {
+    fn from(model: Model) -> Self {
+        SessionIntent {
+            id: model.id,
+            user_id: model.user_id,
+            session_id: model.session_id,
+            intent_status: model.intent_status.into(),
+            created_at: model.created_at,
+            updated_at: model.updated_at,
+        }
+    }
 }
