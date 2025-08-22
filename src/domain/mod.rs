@@ -3,6 +3,7 @@ pub mod error;
 pub mod game_system;
 pub mod jwt;
 pub mod password;
+pub mod session;
 pub mod table;
 pub mod table_request;
 pub mod user;

@@ -34,17 +34,17 @@ impl TableRepositoryTrait for PostgresTableRepository {
 
         let created_table = sqlx::query_as!(
             TableModel,
-            r#"INSERT INTO t_rpg_tables 
-                (id, 
-                gm_id, 
-                title, 
-                visibility, 
-                description, 
-                game_system_id, 
-                player_slots, 
-                created_at, 
+            r#"INSERT INTO t_rpg_tables
+                (id,
+                gm_id,
+                title,
+                visibility,
+                description,
+                game_system_id,
+                player_slots,
+                created_at,
                 updated_at)
-            VALUES 
+            VALUES
                 ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING
                 id,
@@ -113,12 +113,12 @@ impl TableRepositoryTrait for PostgresTableRepository {
         builder.push_bind(command.id);
 
         builder.push(
-            r#" RETURNING 
-                id, 
-                gm_id, 
-                title, 
+            r#" RETURNING
+                id,
+                gm_id,
+                title,
                 visibility,
-                description, 
+                description,
                 game_system_id,
                 player_slots,
                 created_at,
@@ -137,7 +137,7 @@ impl TableRepositoryTrait for PostgresTableRepository {
     async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
         let table = sqlx::query_as!(
             TableModel,
-            r#"DELETE FROM t_rpg_tables 
+            r#"DELETE FROM t_rpg_tables
                 WHERE id = $1
                 RETURNING
                     id,
@@ -166,16 +166,16 @@ impl TableRepositoryTrait for PostgresTableRepository {
 
     async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
         let mut builder = sqlx::QueryBuilder::new(
-            r#"SELECT 
-                id, 
-                gm_id, 
-                title, 
-                visibility, 
-                description, 
-                game_system_id, 
-                player_slots, 
-                created_at, 
-                updated_at 
+            r#"SELECT
+                id,
+                gm_id,
+                title,
+                visibility,
+                description,
+                game_system_id,
+                player_slots,
+                created_at,
+                updated_at
             FROM t_rpg_tables"#,
         );
 
@@ -264,17 +264,17 @@ impl TableRepositoryTrait for PostgresTableRepository {
     async fn find_by_id(&self, table_id: &Uuid) -> Result<Table> {
         let table = sqlx::query_as!(
             TableModel,
-            r#"SELECT 
-                id, 
-                gm_id, 
-                title, 
-                visibility as "visibility: ETableVisibility", 
-                description, 
-                game_system_id, 
-                player_slots, 
-                created_at, 
-                updated_at 
-            FROM t_rpg_tables 
+            r#"SELECT
+                id,
+                gm_id,
+                title,
+                visibility as "visibility: ETableVisibility",
+                description,
+                game_system_id,
+                player_slots,
+                created_at,
+                updated_at
+            FROM t_rpg_tables
             WHERE id = $1"#,
             table_id
         )
@@ -291,16 +291,16 @@ impl TableRepositoryTrait for PostgresTableRepository {
     async fn find_by_gm_id(&self, gm_id: &Uuid) -> Result<Vec<Table>> {
         let tables = sqlx::query_as!(
             TableModel,
-            r#"SELECT 
-                id, 
-                gm_id, 
-                title, 
-                visibility as "visibility: ETableVisibility", 
-                description, 
-                game_system_id, 
-                player_slots, 
-                created_at, 
-                updated_at 
+            r#"SELECT
+                id,
+                gm_id,
+                title,
+                visibility as "visibility: ETableVisibility",
+                description,
+                game_system_id,
+                player_slots,
+                created_at,
+                updated_at
             FROM t_rpg_tables
             WHERE gm_id = $1"#,
             gm_id
@@ -312,6 +312,3 @@ impl TableRepositoryTrait for PostgresTableRepository {
         Ok(tables.into_iter().map(|m| m.into()).collect())
     }
 }
-
-#[cfg(test)]
-mod tests {}
