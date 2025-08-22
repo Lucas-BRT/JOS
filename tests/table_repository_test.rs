@@ -450,7 +450,7 @@ async fn test_update_table_not_found(pool: PgPool) {
     let result = repo.update(&update_data).await;
 
     match result {
-        Err(Error::Repository(RepositoryError::TableNotFound)) => (),
+        Err(Error::Repository(RepositoryError::NotFound)) => (),
         _ => panic!("Unexpected error: {result:?}"),
     }
 }

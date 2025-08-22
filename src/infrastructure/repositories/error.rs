@@ -2,6 +2,10 @@ use crate::Error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum RepositoryError {
+    #[error("Io error: {0}")]
+    IoError(String),
+    #[error("database timeout")]
+    DatabaseTimeout,
     #[error("username already taken")]
     UsernameAlreadyTaken,
     #[error("email already taken")]
@@ -24,12 +28,18 @@ pub enum RepositoryError {
     TableNotFound,
     #[error("table request not found")]
     TableRequestNotFound,
-    #[error("session not found: {0}")]
-    SessionNotFound(String),
+    #[error("session not found")]
+    SessionNotFound,
     #[error("session intent not found: {0}")]
     SessionIntentNotFound(String),
     #[error("unknown constraint: {0}")]
     UnknownConstraint(String),
+    #[error("not found")]
+    NotFound,
+    #[error("invalid input: {0}")]
+    InvalidInput(String),
+    #[error("validation error: {0}")]
+    ValidationError(String),
 }
 
 impl From<RepositoryError> for Error {
