@@ -43,17 +43,12 @@ async fn test_create_session_success(pool: PgPool) {
 
     let result = session_repo.create(&session_data).await;
 
-    match result {
-        Ok(session) => {
-            assert_eq!(session.name, "Test Session");
-            assert_eq!(session.description, "A test session".to_string());
-            assert_eq!(session.accepting_intents, true);
-            assert_eq!(session.table_id, table.id);
-            assert!(session.id != Uuid::nil());
-        }
-        Err(e) => {
-            panic!("Unexpected error: {e:?}");
-        }
+    if let Ok(session) = result {
+        assert_eq!(session.name, "Test Session");
+        assert_eq!(session.description, "A test session".to_string());
+        assert!(session.accepting_intents);
+        assert_eq!(session.table_id, table.id);
+        assert!(session.id != Uuid::nil());
     }
 }
 
@@ -83,14 +78,9 @@ async fn test_create_session_accepting_intents_false(pool: PgPool) {
 
     let result = session_repo.create(&session_data).await;
 
-    match result {
-        Ok(session) => {
-            assert_eq!(session.name, "Closed Session");
-            assert_eq!(session.accepting_intents, false);
-        }
-        Err(e) => {
-            panic!("Unexpected error: {e:?}");
-        }
+    if let Ok(session) = result {
+        assert_eq!(session.name, "Closed Session");
+        assert!(!session.accepting_intents);
     }
 }
 
@@ -121,14 +111,13 @@ async fn test_find_by_id(pool: PgPool) {
     let created_session = session_repo.create(&session_data).await.unwrap();
     let found_session = session_repo.find_by_id(&created_session.id).await.unwrap();
 
-    match found_session {
-        Some(session) => {
-            assert_eq!(session.id, created_session.id);
-            assert_eq!(session.name, "Test Session");
-            assert_eq!(session.description, "A test session".to_string());
-            assert_eq!(session.accepting_intents, true);
-        }
-        None => panic!("Session not found"),
+    if let Some(session) = found_session {
+        assert_eq!(session.id, created_session.id);
+        assert_eq!(session.name, "Test Session");
+        assert_eq!(session.description, "A test session".to_string());
+        assert!(session.accepting_intents);
+    } else {
+        panic!("Session not found");
     }
 }
 
@@ -139,9 +128,8 @@ async fn test_find_by_id_not_found(pool: PgPool) {
     let random_id = Uuid::new_v4();
     let result = session_repo.find_by_id(&random_id).await.unwrap();
 
-    match result {
-        Some(session) => panic!("Unexpected session found: {session:?}"),
-        None => {}
+    if let Some(session) = result {
+        panic!("Unexpected session found: {session:?}");
     }
 }
 
@@ -294,7 +282,7 @@ async fn test_get_sessions_with_filters(pool: PgPool) {
 
     assert_eq!(open_sessions.len(), 1);
     assert_eq!(open_sessions[0].name, "Open Session");
-    assert_eq!(open_sessions[0].accepting_intents, true);
+    assert!(open_sessions[0].accepting_intents);
 }
 
 #[sqlx::test]
@@ -338,7 +326,7 @@ async fn test_update_session_name(pool: PgPool) {
         Some(session) => {
             assert_eq!(session.name, "Updated Name");
             assert_eq!(session.description, "A test session".to_string());
-            assert_eq!(session.accepting_intents, true);
+            assert!(session.accepting_intents);
         }
         None => panic!("Session not found"),
     }
@@ -429,7 +417,7 @@ async fn test_update_session_accepting_intents(pool: PgPool) {
 
     match updated_session {
         Some(session) => {
-            assert_eq!(session.accepting_intents, false);
+            assert!(!session.accepting_intents);
         }
         None => {
             panic!("Session not found");
@@ -478,7 +466,7 @@ async fn test_update_session_multiple_fields(pool: PgPool) {
         Some(session) => {
             assert_eq!(session.name, "New Name");
             assert_eq!(session.description, "New description".to_string());
-            assert_eq!(session.accepting_intents, false);
+            assert!(!session.accepting_intents);
         }
         None => panic!("Session not found"),
     }

@@ -155,7 +155,7 @@ impl SessionRepository for PostgresSessionRepository {
         .fetch_optional(self.pool.as_ref())
         .await
         .map_err(constraint_mapper::map_database_error)?
-        .and_then(|session| Some(Session::from(session)));
+        .map(Session::from);
 
         Ok(session)
     }
