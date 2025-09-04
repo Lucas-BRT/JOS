@@ -1,7 +1,8 @@
 use crate::domain::{
-    session::filters::SessionFilters,
+    session::{filters::SessionFilters, entity::SessionStatus},
     utils::{pagination::Pagination, update::Update},
 };
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -9,15 +10,26 @@ pub struct CreateSessionCommand {
     pub table_id: Uuid,
     pub name: String,
     pub description: String,
+    pub scheduled_for: Option<DateTime<Utc>>,
+    pub status: SessionStatus,
     pub accepting_intents: bool,
 }
 
 impl CreateSessionCommand {
-    pub fn new(table_id: Uuid, name: String, description: String, accepting_intents: bool) -> Self {
+    pub fn new(
+        table_id: Uuid, 
+        name: String, 
+        description: String, 
+        scheduled_for: Option<DateTime<Utc>>,
+        status: SessionStatus,
+        accepting_intents: bool
+    ) -> Self {
         Self {
             table_id,
             name,
             description,
+            scheduled_for,
+            status,
             accepting_intents,
         }
     }
@@ -44,6 +56,8 @@ pub struct UpdateSessionCommand {
     pub id: Uuid,
     pub name: Update<String>,
     pub description: Update<String>,
+    pub scheduled_for: Update<Option<DateTime<Utc>>>,
+    pub status: Update<SessionStatus>,
     pub accepting_intents: Update<bool>,
 }
 
@@ -52,12 +66,16 @@ impl UpdateSessionCommand {
         id: Uuid,
         name: Update<String>,
         description: Update<String>,
+        scheduled_for: Update<Option<DateTime<Utc>>>,
+        status: Update<SessionStatus>,
         accepting_intents: Update<bool>,
     ) -> Self {
         Self {
             id,
             name,
             description,
+            scheduled_for,
+            status,
             accepting_intents,
         }
     }

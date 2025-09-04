@@ -1,5 +1,5 @@
 use crate::domain::{
-    table::{entity::Visibility, search_filters::TableFilters},
+    table::{entity::{Visibility, TableStatus}, search_filters::TableFilters},
     utils::{pagination::Pagination, update::Update},
 };
 use uuid::Uuid;
@@ -12,6 +12,7 @@ pub struct CreateTableCommand {
     pub visibility: Visibility,
     pub player_slots: u32,
     pub game_system_id: Uuid,
+    pub status: TableStatus,
 }
 
 impl CreateTableCommand {
@@ -22,6 +23,7 @@ impl CreateTableCommand {
         visibility: Visibility,
         player_slots: u32,
         game_system_id: Uuid,
+        status: TableStatus,
     ) -> Self {
         Self {
             gm_id,
@@ -30,6 +32,7 @@ impl CreateTableCommand {
             visibility,
             player_slots,
             game_system_id,
+            status,
         }
     }
 }
@@ -42,6 +45,7 @@ pub struct UpdateTableCommand {
     pub visibility: Update<Visibility>,
     pub player_slots: Update<u32>,
     pub game_system_id: Update<Uuid>,
+    pub status: Update<TableStatus>,
 }
 
 #[derive(Debug, Clone)]

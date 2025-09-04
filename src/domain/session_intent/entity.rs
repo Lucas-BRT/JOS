@@ -33,7 +33,7 @@ impl SessionIntent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IntentStatus {
-    Yes,
-    No,
-    Maybe,
+    Confirmed,
+    Tentative,
+    Declined,
 }
