@@ -1,9 +1,7 @@
 use crate::Result;
-use crate::domain::table::commands::{
-    CreateTableCommand, DeleteTableCommand, GetTableCommand, UpdateTableCommand,
-};
-use crate::domain::table::entity::Table;
-use crate::domain::table::table_repository::TableRepository as TableRepositoryTrait;
+use crate::domain::entities::commands::*;
+use crate::domain::entities::*;
+use crate::domain::repositories::TableRepository as TableRepositoryTrait;
 use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 use uuid::Uuid;

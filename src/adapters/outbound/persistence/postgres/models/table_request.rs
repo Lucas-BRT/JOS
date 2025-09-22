@@ -1,4 +1,4 @@
-use crate::domain::table_request::entity::{TableRequest, TableRequestStatus};
+use crate::domain::entities::{TableRequest, TableRequestStatus};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 

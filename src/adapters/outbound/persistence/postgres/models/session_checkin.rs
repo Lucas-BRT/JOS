@@ -1,7 +1,6 @@
+use crate::domain::entities::SessionCheckin;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
-
-use crate::domain::session_checkin::SessionCheckin;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
 pub struct SessionCheckinModel {

@@ -5,6 +5,8 @@ use crate::interfaces::http::openapi::OpenApiRoutes;
 use crate::interfaces::http::table::routes::routes as table_routes;
 use crate::interfaces::http::table_request::routes::routes as table_request_routes;
 use crate::interfaces::http::user::routes::routes as user_routes;
+use crate::adapters::inbound::http::handlers::session::routes::routes as session_routes;
+use crate::adapters::inbound::http::handlers::search::routes::routes as search_routes;
 use axum::{Router, routing::get};
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -14,7 +16,9 @@ fn router(app_state: Arc<AppState>) -> Router {
         .nest("/auth", auth_routes(app_state.clone()))
         .nest("/users", user_routes(app_state.clone()))
         .nest("/tables", table_routes(app_state.clone()))
-        .nest("/table-requests", table_request_routes(app_state.clone()))
+        .nest("/sessions", session_routes(app_state.clone()))
+        .nest("/requests", table_request_routes(app_state.clone()))
+        .nest("/search", search_routes(app_state.clone()))
 }
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {

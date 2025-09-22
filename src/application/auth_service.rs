@@ -1,18 +1,11 @@
-use crate::{
-    Error, Result,
-    application::error::ApplicationError,
-    domain::{
-        auth::{Authenticator, TokenProvider},
-        password::PasswordProvider,
-        user::{
-            UpdateUserCommand, UserRepository,
-            commands::{CreateUserCommand, LoginUserCommand},
-            entity::User,
-        },
-        utils::update::Update,
-    },
-};
 use std::sync::Arc;
+
+use crate::application::error::ApplicationError;
+use crate::domain::auth::{Authenticator, PasswordProvider, TokenProvider};
+use crate::domain::entities::*;
+use crate::domain::repositories::UserRepository;
+use crate::domain::utils::update::Update;
+use crate::{Error, Result};
 
 #[derive(Clone)]
 pub struct AuthService {
@@ -47,7 +40,7 @@ impl Authenticator for AuthService {
             return Err(Error::Application(ApplicationError::InvalidCredentials));
         }
 
-        let jwt_token = self.jwt_provider.generate_token(user.id, user.role).await?;
+        let jwt_token = self.jwt_provider.generate_token(&user.id).await?;
 
         Ok(jwt_token)
     }

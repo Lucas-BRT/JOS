@@ -1,9 +1,18 @@
-use crate::Result;
-use crate::domain::session_intent::{
-    CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand, SessionIntent,
-    SessionIntentRepository, UpdateSessionIntentCommand,
+use crate::{
+    Result,
+    adapters::outbound::postgres::{
+        constraint_mapper,
+        models::{SessionIntentModel, session_intent::EIntentStatus},
+    },
+    domain::{
+        entities::{
+            CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
+            SessionIntent, UpdateSessionIntentCommand,
+        },
+        repositories::SessionIntentRepository,
+        utils::update::Update,
+    },
 };
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 pub struct PostgresSessionIntentRepository {
@@ -59,7 +68,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         builder.push_bind(command.id);
 
         builder.push(
-            r#" RETURNING 
+            r#" RETURNING
             id,
             user_id,
             session_id,

@@ -1,15 +1,13 @@
-use std::sync::Arc;
+use tokio::net::TcpListener;
 use tracing::info;
 
-use crate::core::setup::SetupError;
-use crate::core::state::AppState;
-use crate::interfaces::http::create_router;
-use crate::{Error, Result};
+use crate::{Error, Result, infrastructure::SetupError};
+use axum::Router;
 
-pub async fn launch_server(state: Arc<AppState>) -> Result<()> {
+pub async fn launch_server(router: &Router) -> Result<()> {
     info!("🚀 Launching HTTP server...");
 
-    let listener = tokio::net::TcpListener::bind(&state.config.addr)
+    let listener = TcpListener::bind(&router.config.addr)
         .await
         .map_err(|err| Error::Setup(SetupError::FailedToBindAddress(err.to_string())))?;
 
@@ -21,8 +19,6 @@ pub async fn launch_server(state: Arc<AppState>) -> Result<()> {
         local_addr
     );
     info!("🔍 Health check available at: http://{}/health", local_addr);
-
-    let router = create_router(state);
 
     axum::serve(listener, router)
         .await

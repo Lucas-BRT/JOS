@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::domain::table_member::TableMember;
+use crate::domain::entities::TableMember;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
 pub struct TableMemberModel {

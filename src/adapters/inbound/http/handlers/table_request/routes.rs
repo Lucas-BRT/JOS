@@ -12,11 +12,13 @@ use crate::{
 };
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, State, Query},
     routing::{delete, get, patch, post},
 };
 use std::sync::Arc;
 use uuid::Uuid;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[utoipa::path(
     post,
@@ -163,11 +165,154 @@ pub async fn delete_table_request(
     Ok(())
 }
 
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct RequestFilters {
+    pub r#type: Option<String>, // "sent" or "received"
+    pub status: Option<String>,
+    pub page: Option<u32>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RequestListResponse {
+    pub requests: Vec<TableRequestResponse>,
+    pub total: u64,
+    pub page: u32,
+    pub limit: u32,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AcceptRequestResponse {
+    pub message: String,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct RejectRequestResponse {
+    pub message: String,
+}
+
+#[utoipa::path(
+    get,
+    path = "/v1/requests",
+    tag = "requests",
+    params(
+        ("type" = Option<String>, Query, description = "Filter by type: sent or received"),
+        ("status" = Option<String>, Query, description = "Filter by status"),
+        ("page" = Option<u32>, Query, description = "Page number"),
+        ("limit" = Option<u32>, Query, description = "Items per page")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    responses(
+        (status = 200, description = "List of requests", body = RequestListResponse),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
+    )
+)]
+pub async fn get_requests(
+    State(app_state): State<Arc<AppState>>,
+    Query(filters): Query<RequestFilters>,
+    claims: Claims,
+) -> Result<Json<RequestListResponse>> {
+    let requests = app_state.table_request_service.get_requests(&filters, &claims.user_id).await?;
+    Ok(Json(requests))
+}
+
+#[utoipa::path(
+    post,
+    path = "/v1/tables/{id}/requests",
+    tag = "requests",
+    params(
+        ("id" = Uuid, Path, description = "Table ID")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    request_body = CreateTableRequestDto,
+    responses(
+        (status = 201, description = "Request created successfully", body = String),
+        (status = 400, description = "Bad request", body = serde_json::Value),
+        (status = 401, description = "Unauthorized", body = serde_json::Value)
+    )
+)]
+pub async fn create_table_request_by_table_id(
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(payload): Json<CreateTableRequestDto>,
+    claims: Claims,
+) -> Result<Json<String>> {
+    let mut request = CreateTableRequestCommand {
+        user_id: claims.user_id,
+        table_id,
+        message: payload.message,
+    };
+    let request = app_state.table_request_service.create(&mut request).await?;
+    Ok(Json(request.id.to_string()))
+}
+
+#[utoipa::path(
+    post,
+    path = "/v1/requests/{id}/accept",
+    tag = "requests",
+    params(
+        ("id" = Uuid, Path, description = "Request ID")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    responses(
+        (status = 200, description = "Request accepted successfully", body = AcceptRequestResponse),
+        (status = 401, description = "Unauthorized", body = serde_json::Value),
+        (status = 403, description = "Forbidden", body = serde_json::Value)
+    )
+)]
+pub async fn accept_request(
+    State(app_state): State<Arc<AppState>>,
+    Path(request_id): Path<Uuid>,
+    claims: Claims,
+) -> Result<Json<AcceptRequestResponse>> {
+    app_state.table_request_service.accept_request(&request_id, &claims.user_id).await?;
+    Ok(Json(AcceptRequestResponse {
+        message: "Request accepted successfully".to_string(),
+    }))
+}
+
+#[utoipa::path(
+    post,
+    path = "/v1/requests/{id}/reject",
+    tag = "requests",
+    params(
+        ("id" = Uuid, Path, description = "Request ID")
+    ),
+    security(
+        ("bearer_auth" = [])
+    ),
+    responses(
+        (status = 200, description = "Request rejected successfully", body = RejectRequestResponse),
+        (status = 401, description = "Unauthorized", body = serde_json::Value),
+        (status = 403, description = "Forbidden", body = serde_json::Value)
+    )
+)]
+pub async fn reject_request(
+    State(app_state): State<Arc<AppState>>,
+    Path(request_id): Path<Uuid>,
+    claims: Claims,
+) -> Result<Json<RejectRequestResponse>> {
+    app_state.table_request_service.reject_request(&request_id, &claims.user_id).await?;
+    Ok(Json(RejectRequestResponse {
+        message: "Request rejected successfully".to_string(),
+    }))
+}
+
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_table_requests))
         .route("/", post(create_table_request))
         .route("/{id}", patch(update_table_request))
         .route("/{id}", delete(delete_table_request))
+        .route("/requests", get(get_requests))
+        .route("/tables/{id}/requests", post(create_table_request_by_table_id))
+        .route("/requests/{id}/accept", post(accept_request))
+        .route("/requests/{id}/reject", post(reject_request))
         .with_state(state.clone())
 }

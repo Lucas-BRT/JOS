@@ -1,13 +1,10 @@
-CREATE TYPE table_visibility AS ENUM ('private', 'public');
-CREATE TYPE table_status AS ENUM ('draft', 'open', 'paused', 'completed', 'cancelled');
 CREATE TYPE session_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
-CREATE TYPE intent_status AS ENUM ('confirmed', 'tentative', 'declined');
+CREATE TYPE intent_status AS ENUM ('confirmed', 'unsure', 'declined');
 CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
 
 CREATE TABLE users (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "username" TEXT NOT NULL UNIQUE,
-    "display_name" TEXT NOT NULL,
     "email" TEXT NOT NULL UNIQUE,
     "password" TEXT NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -27,10 +24,8 @@ CREATE TABLE tables (
     "gm_id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "visibility" table_visibility NOT NULL DEFAULT 'public',
     "player_slots" INTEGER NOT NULL CHECK ("player_slots" >= 0),
     "game_system_id" UUID NOT NULL,
-    "status" table_status NOT NULL DEFAULT 'draft',
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
@@ -42,10 +37,7 @@ CREATE TABLE table_members (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "table_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
-    "role" TEXT NOT NULL DEFAULT 'player',
     "joined_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    "status" TEXT NOT NULL DEFAULT 'active',
-    "character_name" TEXT,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
@@ -61,7 +53,6 @@ CREATE TABLE sessions (
     "table_id" UUID NOT NULL,
     "scheduled_for" TIMESTAMPTZ,
     "status" session_status NOT NULL DEFAULT 'scheduled',
-    "accepting_intents" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
@@ -72,7 +63,7 @@ CREATE TABLE session_intents (
     "id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL,
     "session_id" UUID NOT NULL,
-    "intent_status" intent_status NOT NULL DEFAULT 'tentative',
+    "intent_status" intent_status NOT NULL DEFAULT 'unsure',
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
@@ -110,10 +101,9 @@ CREATE INDEX idx_tables_gm_id ON tables ("gm_id");
 CREATE INDEX idx_tables_status ON tables ("status");
 CREATE INDEX idx_table_members_table_id ON table_members ("table_id");
 CREATE INDEX idx_table_members_user_id ON table_members ("user_id");
-CREATE INDEX idx_table_members_status ON table_members ("status");
 CREATE INDEX idx_sessions_table_id ON sessions ("table_id");
 CREATE INDEX idx_sessions_scheduled_for ON sessions ("scheduled_for");
-CREATE INDEX idx_sessions_accepting_intents ON sessions ("accepting_intents");
+CREATE INDEX idx_sessions_status ON sessions ("status");
 CREATE INDEX idx_session_intents_session_id ON session_intents ("session_id");
 CREATE INDEX idx_session_intents_user_id ON session_intents ("user_id");
 CREATE INDEX idx_session_intents_status ON session_intents ("intent_status");

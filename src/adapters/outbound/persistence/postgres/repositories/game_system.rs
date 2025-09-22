@@ -1,8 +1,7 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::domain::game_system::{GameSystem, GameSystemRepository};
-use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresGameSystemRepository {
@@ -18,17 +17,13 @@ impl PostgresGameSystemRepository {
 #[async_trait::async_trait]
 impl GameSystemRepository for PostgresGameSystemRepository {
     async fn create(&self, name: &str) -> Result<GameSystem> {
-        let id = Uuid::new_v4();
-        let now = Utc::now();
-
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
-            INSERT INTO game_systems (id, name)
-            VALUES ($1, $2)
+            INSERT INTO game_systems (name)
+            VALUES ($1)
             RETURNING *
             "#,
-            id,
             name,
         )
         .fetch_one(&self.pool)
@@ -42,13 +37,13 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         let result = sqlx::query_as!(
             GameSystemModel,
             "SELECT *
-            FROM game_systems 
+            FROM game_systems
             WHERE name ILIKE $1",
             name
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(result.map(|m| m.into()))
     }

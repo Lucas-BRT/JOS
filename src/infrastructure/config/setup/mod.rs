@@ -4,25 +4,28 @@ mod errors;
 mod logging;
 mod server;
 
-use crate::Result;
-use crate::application::*;
-use crate::core::config::Config;
-use crate::core::state::AppState;
-use crate::infrastructure::prelude::*;
-use crate::infrastructure::{
-    create_postgres_pool,
-    repositories::{
-        jwt::JwtTokenProvider, table_request::PostgresTableRequestRepository,
-        user::PostgresUserRepository,
+use crate::{
+    Result,
+    adapters::outbound::{
+        Argon2PasswordProvider, JwtTokenProvider,
+        postgres::{
+            create_postgres_pool,
+            repositories::{
+                PostgresTableRepository, PostgresTableRequestRepository, PostgresUserRepository,
+            },
+            run_postgres_migrations,
+        },
     },
-    run_postgres_migrations,
+    application::{AuthService, PasswordService, TableRequestService, TableService, UserService},
+    infrastructure::Config,
 };
+use axum::Router;
 pub use errors::SetupError;
 pub use server::launch_server;
 use std::sync::Arc;
 use tracing::{info, warn};
 
-pub async fn setup_services() -> Result<Arc<AppState>> {
+pub async fn setup_services(router: &Router) -> Result<()> {
     logging::init_logging();
 
     info!("🔧 Initializing application setup...");
@@ -85,16 +88,7 @@ pub async fn setup_services() -> Result<Arc<AppState>> {
     );
     info!("✅ Auth service initialized");
 
-    let state = AppState::new(
-        config,
-        user_service,
-        table_service,
-        table_request_service,
-        auth_service,
-        password_service,
-    );
-    info!("✅ Application state initialized");
-
     info!("🎉 Application setup completed successfully!");
-    Ok(Arc::new(state))
+
+    Ok(())
 }

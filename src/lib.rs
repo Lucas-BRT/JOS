@@ -1,8 +1,9 @@
 pub mod adapters;
 pub mod application;
 pub mod domain;
+pub mod dtos;
 pub mod infrastructure;
+pub mod setup;
 pub mod shared;
 
-// Re-export commonly used items
 pub use shared::{Db, Error, Result};

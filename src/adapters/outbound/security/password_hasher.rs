@@ -1,28 +1,16 @@
-use crate::domain::password::validator::DefaultPasswordValidator;
-use crate::{
-    Error, Result,
-    domain::password::{PasswordProvider, PasswordValidator},
-};
+use crate::domain::auth::PasswordProvider;
+use crate::{Error, Result};
 use argon2::Argon2;
 use argon2::PasswordHash;
 use argon2::PasswordVerifier;
 use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
-use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct Argon2PasswordProvider {
-    validator: Arc<dyn PasswordValidator>,
-}
-
-impl Default for Argon2PasswordProvider {
-    fn default() -> Self {
-        Self::new(Arc::new(DefaultPasswordValidator))
-    }
-}
+pub struct Argon2PasswordProvider;
 
 impl Argon2PasswordProvider {
-    pub fn new(validator: Arc<dyn PasswordValidator>) -> Self {
-        Self { validator }
+    pub fn new() -> Self {
+        Self
     }
 }
 

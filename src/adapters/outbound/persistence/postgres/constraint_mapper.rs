@@ -1,6 +1,7 @@
-use crate::infrastructure::repositories::error::RepositoryError;
 use sqlx::Error as SqlxError;
 use sqlx::error::DatabaseError;
+
+use crate::adapters::outbound::postgres::RepositoryError;
 
 const UNIQUE_CONSTRAINT_CODE: &str = "23505";
 const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";

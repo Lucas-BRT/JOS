@@ -1,8 +1,6 @@
 use crate::application::error::ApplicationError;
-use crate::domain::table::commands::*;
-use crate::domain::table::{
-    commands::GetTableCommand, entity::Table, table_repository::TableRepository,
-};
+use crate::domain::entities::*;
+use crate::domain::repositories::TableRepository;
 use crate::{Error, Result};
 use std::sync::Arc;
 use uuid::Uuid;

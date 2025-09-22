@@ -1,4 +1,4 @@
-use crate::core::setup::SetupError;
+use crate::infrastructure::SetupError;
 use crate::{Error, Result};
 
 pub fn validate_environment() -> Result<()> {

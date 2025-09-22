@@ -1,2 +1,3 @@
-pub mod pagination;
 pub mod update;
+
+pub use update::Update;

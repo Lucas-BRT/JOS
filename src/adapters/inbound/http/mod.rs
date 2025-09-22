@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod error;
 pub mod health;
+pub mod middleware;
 pub mod openapi;
 pub mod routers;
 pub mod table;

@@ -1,4 +1,4 @@
-use crate::domain::session_intent::{IntentStatus, SessionIntent};
+use crate::domain::entities::{IntentStatus, SessionIntent};
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 

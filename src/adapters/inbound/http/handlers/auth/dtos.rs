@@ -50,6 +50,7 @@ impl IntoResponse for UserSignupResponse {
 
 #[derive(Debug, Serialize, utoipa::ToSchema)]
 pub struct LoginResponse {
+    pub user: UserResponse,
     pub token: String,
 }
 

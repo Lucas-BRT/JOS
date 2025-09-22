@@ -1,4 +1,5 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::domain::table_request::dtos::*;
 use crate::domain::table_request::entity::TableRequest;
 use crate::domain::table_request::table_request_repository::TableRequestRepository;
@@ -22,15 +23,15 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     async fn create(&self, request_data: &CreateTableRequestCommand) -> Result<TableRequest> {
         let result = sqlx::query_as!(
             TableRequestModel,
-            r#"INSERT INTO table_requests 
+            r#"INSERT INTO table_requests
                     (
-                    user_id, 
-                    table_id, 
+                    user_id,
+                    table_id,
                     message,
                     status)
                 VALUES
                     ($1, $2, $3, $4)
-                RETURNING 
+                RETURNING
                     id,
                     user_id,
                     table_id,
@@ -70,7 +71,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         builder.push_bind(update_data.id);
 
         builder.push(
-            r#" RETURNING 
+            r#" RETURNING
                 id,
                 user_id,
                 table_id,
@@ -92,7 +93,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     async fn delete(&self, request_data: &DeleteTableRequestCommand) -> Result<TableRequest> {
         let table = sqlx::query_as!(
             TableRequestModel,
-            r#"DELETE FROM table_requests 
+            r#"DELETE FROM table_requests
                 WHERE id = $1
                 RETURNING
                 id,
@@ -114,7 +115,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
     async fn get(&self, command: &GetTableRequestCommand) -> Result<Vec<TableRequest>> {
         let mut builder = sqlx::QueryBuilder::new(
-            r#"SELECT 
+            r#"SELECT
                 id,
                 user_id,
                 table_id,
@@ -180,7 +181,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     async fn find_by_id(&self, id: &Uuid) -> Result<TableRequest> {
         let request = sqlx::query_as!(
             TableRequestModel,
-            r#"SELECT 
+            r#"SELECT
                 id,
                 user_id,
                 table_id,
