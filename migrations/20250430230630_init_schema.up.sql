@@ -24,7 +24,7 @@ CREATE TABLE tables (
     "gm_id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
-    "player_slots" INTEGER NOT NULL CHECK ("player_slots" >= 0),
+    "slots" INTEGER NOT NULL CHECK ("slots" >= 0),
     "game_system_id" UUID NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -98,7 +98,6 @@ CREATE TABLE table_requests (
 );
 
 CREATE INDEX idx_tables_gm_id ON tables ("gm_id");
-CREATE INDEX idx_tables_status ON tables ("status");
 CREATE INDEX idx_table_members_table_id ON table_members ("table_id");
 CREATE INDEX idx_table_members_user_id ON table_members ("user_id");
 CREATE INDEX idx_sessions_table_id ON sessions ("table_id");

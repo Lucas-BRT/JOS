@@ -1,7 +1,7 @@
 use crate::Result;
 use crate::adapters::outbound::postgres::models::SessionCheckinModel;
 use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
-use crate::domain::entities::{CreateSessionCheckinCommand, UpdateSessionCheckinCommand, DeleteSessionCheckinCommand, GetSessionCheckinCommand, SessionCheckin};
+use crate::domain::entities::*;
 use crate::domain::repositories::SessionCheckinRepository;
 use crate::domain::utils::update::Update;
 use sqlx::PgPool;
@@ -34,7 +34,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
             "#,
             &command.session_intent_id,
             &command.attendance,
-            &command.notes,
+            command.notes.as_deref(),
         )
         .fetch_one(&self.pool)
         .await
@@ -53,21 +53,21 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
                 created_at,
                 updated_at
             FROM session_checkins
-            "#
+            "#,
         );
 
         let mut conditions = Vec::new();
-        
+
         if let Some(id) = &command.id {
             conditions.push("id = ");
             query.push_bind(id);
         }
-        
+
         if let Some(session_intent_id) = &command.session_intent_id {
             conditions.push("session_intent_id = ");
             query.push_bind(session_intent_id);
         }
-        
+
         if let Some(attendance) = &command.attendance {
             conditions.push("attendance = ");
             query.push_bind(attendance);
@@ -89,7 +89,10 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
             .await
             .map_err(RepositoryError::DatabaseError)?;
 
-        Ok(session_checkins.into_iter().map(|model| model.into()).collect())
+        Ok(session_checkins
+            .into_iter()
+            .map(|model| model.into())
+            .collect())
     }
 
     async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
@@ -126,34 +129,16 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
     }
 
     async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
-        // First get the session checkin to return it
         let session_checkin = sqlx::query_as!(
             SessionCheckinModel,
-            r#"SELECT
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at
-            FROM session_checkins
+            r#"DELETE FROM session_checkins
             WHERE id = $1
+            RETURNING
+                *
             "#,
             &command.id
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
-
-        // Then delete it
-        sqlx::query(
-            r#"
-            DELETE FROM session_checkins
-            WHERE id = $1
-            "#,
-        )
-        .bind(&command.id)
-        .execute(&self.pool)
         .await
         .map_err(RepositoryError::DatabaseError)?;
 

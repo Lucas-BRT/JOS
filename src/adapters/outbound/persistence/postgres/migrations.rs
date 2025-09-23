@@ -1,10 +1,8 @@
-use crate::{Error, Result, infrastructure::setup::SetupError};
-use sqlx::PgPool;
-use std::sync::Arc;
+use crate::{Db, Error, Result, infrastructure::SetupError};
 
-pub async fn run_postgres_migrations(pool: Arc<PgPool>) -> Result<()> {
+pub async fn run_postgres_migrations(pool: Db) -> Result<()> {
     sqlx::migrate!("./migrations")
-        .run(pool.as_ref())
+        .run(&pool)
         .await
         .map_err(|err| Error::Setup(SetupError::FailedToRunDBMigrations(err.to_string())))?;
 

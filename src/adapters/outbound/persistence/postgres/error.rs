@@ -44,6 +44,6 @@ pub enum RepositoryError {
 
 impl From<RepositoryError> for Error {
     fn from(err: RepositoryError) -> Self {
-        Error::Repository(err)
+        Error::Persistence(err)
     }
 }

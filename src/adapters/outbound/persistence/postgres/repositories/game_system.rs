@@ -1,6 +1,9 @@
 use crate::Result;
 use crate::adapters::outbound::postgres::constraint_mapper;
-use crate::domain::game_system::{GameSystem, GameSystemRepository};
+use crate::adapters::outbound::postgres::models::GameSystemModel;
+use crate::domain::entities::*;
+use crate::domain::game_system::*;
+use crate::domain::utils::Update;
 use sqlx::PgPool;
 
 #[derive(Clone)]
@@ -16,7 +19,7 @@ impl PostgresGameSystemRepository {
 
 #[async_trait::async_trait]
 impl GameSystemRepository for PostgresGameSystemRepository {
-    async fn create(&self, name: &str) -> Result<GameSystem> {
+    async fn create(&self, command: CreateGameSystemCommand) -> Result<GameSystem> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
@@ -24,7 +27,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
             VALUES ($1)
             RETURNING *
             "#,
-            name,
+            command.name,
         )
         .fetch_one(&self.pool)
         .await
@@ -33,27 +36,54 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         Ok(result.into())
     }
 
-    async fn find_by_name(&self, name: &str) -> Result<Option<GameSystem>> {
+    async fn read(&self, command: GetGameSystemCommand) -> Result<Vec<GameSystem>> {
         let result = sqlx::query_as!(
             GameSystemModel,
             "SELECT *
             FROM game_systems
             WHERE name ILIKE $1",
-            name
+            command.name,
         )
-        .fetch_optional(&self.pool)
+        .fetch_all(&self.pool)
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(result.map(|m| m.into()))
+        Ok(result.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn get_all(&self) -> Result<Vec<GameSystem>> {
-        let result = sqlx::query_as!(GameSystemModel, "SELECT * FROM game_systems")
-            .fetch_all(&self.pool)
+    async fn update(&self, command: UpdateGameSystemCommand) -> Result<GameSystem> {
+        let mut builder = sqlx::QueryBuilder::new("UPDATE game_systems SET ");
+        let mut separated = builder.separated(", ");
+
+        if let Update::Change(name) = &command.name {
+            separated.push("name = ");
+            separated.push_bind_unseparated(name);
+        }
+
+        builder.push(" WHERE id = ");
+        builder.push_bind(command.id);
+
+        builder.push(" RETURNING *");
+
+        let updated_game_system = builder
+            .build_query_as::<GameSystemModel>()
+            .fetch_one(&self.pool)
             .await
             .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(result.into_iter().map(|m| m.into()).collect())
+        Ok(updated_game_system.into())
+    }
+
+    async fn delete(&self, command: DeleteGameSystemCommand) -> Result<GameSystem> {
+        let result = sqlx::query_as!(
+            GameSystemModel,
+            r#"DELETE FROM game_systems WHERE id = $1 RETURNING *"#,
+            command.id,
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(result.into())
     }
 }

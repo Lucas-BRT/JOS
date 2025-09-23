@@ -31,4 +31,5 @@ pub struct GetTableCommand {
     pub gm_id: Option<Uuid>,
     pub title: Option<String>,
     pub game_system_id: Option<Uuid>,
+    pub slots: Option<u32>,
 }

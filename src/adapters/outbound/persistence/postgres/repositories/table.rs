@@ -1,10 +1,11 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::constraint_mapper;
+use crate::adapters::outbound::postgres::models::TableModel;
 use crate::domain::entities::commands::*;
 use crate::domain::entities::*;
-use crate::domain::repositories::TableRepository as TableRepositoryTrait;
+use crate::domain::repositories::TableRepository;
 use crate::domain::utils::update::Update;
 use sqlx::PgPool;
-use uuid::Uuid;
 
 pub struct PostgresTableRepository {
     pool: PgPool,
@@ -17,11 +18,8 @@ impl PostgresTableRepository {
 }
 
 #[async_trait::async_trait]
-impl TableRepositoryTrait for PostgresTableRepository {
-    async fn create(&self, command: &CreateTableCommand) -> Result<Table> {
-        let visibility: ETableVisibility = command.visibility.into();
-        let status: ETableStatus = command.status.into();
-
+impl TableRepository for PostgresTableRepository {
+    async fn create(&self, command: CreateTableCommand) -> Result<Table> {
         let created_table = sqlx::query_as!(
             TableModel,
             r#"INSERT INTO tables
@@ -29,31 +27,25 @@ impl TableRepositoryTrait for PostgresTableRepository {
                 gm_id,
                 title,
                 description,
-                visibility,
-                player_slots,
-                game_system_id,
-                status)
+                slots,
+                game_system_id)
             VALUES
-                ($1, $2, $3, $4, $5, $6, $7)
+                ($1, $2, $3, $4, $5)
             RETURNING
                 id,
                 gm_id,
                 title,
                 description,
-                visibility as "visibility: ETableVisibility",
-                player_slots,
+                slots,
                 game_system_id,
-                status as "status: ETableStatus",
                 created_at,
                 updated_at
             "#,
             command.gm_id,
             command.title,
             command.description,
-            visibility as _,
-            command.player_slots as i32,
+            command.slots as i32,
             command.game_system_id,
-            status as _,
         )
         .fetch_one(&self.pool)
         .await
@@ -62,7 +54,7 @@ impl TableRepositoryTrait for PostgresTableRepository {
         Ok(created_table.into())
     }
 
-    async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
+    async fn update(&self, command: UpdateTableCommand) -> Result<Table> {
         let mut builder = sqlx::QueryBuilder::new("UPDATE tables SET ");
         let mut separated = builder.separated(", ");
 
@@ -76,24 +68,14 @@ impl TableRepositoryTrait for PostgresTableRepository {
             separated.push_bind_unseparated(description);
         }
 
-        if let Update::Change(visibility) = &command.visibility {
-            separated.push("visibility = ");
-            separated.push_bind_unseparated(ETableVisibility::from(*visibility));
-        }
-
-        if let Update::Change(player_slots) = &command.player_slots {
-            separated.push("player_slots = ");
-            separated.push_bind_unseparated(*player_slots as i32);
+        if let Update::Change(slots) = &command.slots {
+            separated.push("slots = ");
+            separated.push_bind_unseparated(*slots as i32);
         }
 
         if let Update::Change(game_system_id) = &command.game_system_id {
             separated.push("game_system_id = ");
             separated.push_bind_unseparated(game_system_id);
-        }
-
-        if let Update::Change(status) = &command.status {
-            separated.push("status = ");
-            separated.push_bind_unseparated(ETableStatus::from(*status));
         }
 
         builder.push(" WHERE id = ");
@@ -105,10 +87,8 @@ impl TableRepositoryTrait for PostgresTableRepository {
                 gm_id,
                 title,
                 description,
-                visibility as "visibility: ETableVisibility",
-                player_slots,
+                slots,
                 game_system_id,
-                status as "status: ETableStatus",
                 created_at,
                 updated_at"#,
         );
@@ -122,7 +102,7 @@ impl TableRepositoryTrait for PostgresTableRepository {
         Ok(updated_table.into())
     }
 
-    async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
+    async fn delete(&self, command: DeleteTableCommand) -> Result<Table> {
         let table = sqlx::query_as!(
             TableModel,
             r#"DELETE FROM tables
@@ -132,10 +112,8 @@ impl TableRepositoryTrait for PostgresTableRepository {
                     gm_id,
                     title,
                     description,
-                    visibility as "visibility: ETableVisibility",
-                    player_slots,
+                    slots,
                     game_system_id,
-                    status as "status: ETableStatus",
                     created_at,
                     updated_at
             "#,
@@ -148,17 +126,15 @@ impl TableRepositoryTrait for PostgresTableRepository {
         Ok(table.into())
     }
 
-    async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
+    async fn read(&self, command: GetTableCommand) -> Result<Vec<Table>> {
         let mut builder = sqlx::QueryBuilder::new(
             r#"SELECT
                 id,
                 gm_id,
                 title,
                 description,
-                visibility as "visibility: ETableVisibility",
-                player_slots,
+                slots,
                 game_system_id,
-                status as "status: ETableStatus",
                 created_at,
                 updated_at
             FROM tables"#,
@@ -174,127 +150,41 @@ impl TableRepositoryTrait for PostgresTableRepository {
             }
         };
 
-        if let Some(id) = &command.filters.id {
+        if let Some(id) = &command.id {
             push_filter_separator(&mut builder);
             builder.push("id = ");
             builder.push_bind(id);
         }
 
-        if let Some(gm_id) = &command.filters.gm_id {
+        if let Some(gm_id) = &command.gm_id {
             push_filter_separator(&mut builder);
             builder.push("gm_id = ");
             builder.push_bind(gm_id);
         }
 
-        if let Some(title) = &command.filters.title {
+        if let Some(title) = &command.title {
             push_filter_separator(&mut builder);
             builder.push("title = ");
             builder.push_bind(title);
         }
 
-        if let Some(visibility) = &command.filters.visibility {
-            push_filter_separator(&mut builder);
-            builder.push("visibility = ");
-            builder.push_bind(ETableVisibility::from(*visibility));
-        }
-
-        if let Some(description) = &command.filters.description {
-            push_filter_separator(&mut builder);
-            builder.push("description = ");
-            builder.push_bind(description);
-        }
-
-        if let Some(game_system_id) = &command.filters.game_system_id {
+        if let Some(game_system_id) = &command.game_system_id {
             push_filter_separator(&mut builder);
             builder.push("game_system_id = ");
             builder.push_bind(game_system_id);
         }
 
-        if let Some(player_slots) = &command.filters.player_slots {
+        if let Some(slots) = &command.slots {
             push_filter_separator(&mut builder);
-            builder.push("player_slots = ");
-            builder.push_bind(*player_slots as i32);
+            builder.push("slots = ");
+            builder.push_bind(*slots as i32);
         }
-
-        if let Some(created_at) = &command.filters.created_at {
-            push_filter_separator(&mut builder);
-            builder.push("created_at = ");
-            builder.push_bind(created_at);
-        }
-
-        if let Some(updated_at) = &command.filters.updated_at {
-            push_filter_separator(&mut builder);
-            builder.push("updated_at = ");
-            builder.push_bind(updated_at);
-        }
-
-        let page = command.pagination.limit();
-        let offset = command.pagination.offset();
-
-        builder.push(" LIMIT ");
-        builder.push_bind(page as i64);
-
-        builder.push(" OFFSET ");
-        builder.push_bind(offset as i64);
 
         let tables = builder
             .build_query_as::<TableModel>()
             .fetch_all(&self.pool)
             .await
             .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(tables.into_iter().map(|m| m.into()).collect())
-    }
-
-    async fn find_by_id(&self, table_id: &Uuid) -> Result<Table> {
-        let table = sqlx::query_as!(
-            TableModel,
-            r#"SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                visibility as "visibility: ETableVisibility",
-                player_slots,
-                game_system_id,
-                status as "status: ETableStatus",
-                created_at,
-                updated_at
-            FROM tables
-            WHERE id = $1"#,
-            table_id
-        )
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        match table {
-            Some(table) => Ok(table.into()),
-            None => Err(RepositoryError::TableNotFound.into()),
-        }
-    }
-
-    async fn find_by_gm_id(&self, gm_id: &Uuid) -> Result<Vec<Table>> {
-        let tables = sqlx::query_as!(
-            TableModel,
-            r#"SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                visibility as "visibility: ETableVisibility",
-                player_slots,
-                game_system_id,
-                status as "status: ETableStatus",
-                created_at,
-                updated_at
-            FROM tables
-            WHERE gm_id = $1"#,
-            gm_id
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(tables.into_iter().map(|m| m.into()).collect())
     }

@@ -1,32 +1,57 @@
 use crate::domain::auth::PasswordProvider;
 use crate::{Error, Result};
-use argon2::Argon2;
-use argon2::PasswordHash;
-use argon2::PasswordVerifier;
-use argon2::password_hash::{PasswordHasher, SaltString, rand_core::OsRng};
+use bcrypt::{DEFAULT_COST, hash, verify};
+use validator::ValidationError;
 
 #[derive(Clone)]
-pub struct Argon2PasswordProvider;
+pub struct BcryptPasswordProvider;
 
-impl Argon2PasswordProvider {
+impl BcryptPasswordProvider {
     pub fn new() -> Self {
         Self
     }
+
+    pub fn default() -> Self {
+        Self::new()
+    }
+
+    fn validate_password(&self, password: &str) -> Result<()> {
+        let mut errors = validator::ValidationErrors::new();
+
+        if password.len() < 8 {
+            errors.add("password", ValidationError::new("min_length"));
+        }
+        if password.len() > 128 {
+            errors.add("password", ValidationError::new("max_length"));
+        }
+        if !password.chars().any(|c| c.is_uppercase()) {
+            errors.add("password", ValidationError::new("uppercase_required"));
+        }
+        if !password.chars().any(|c| c.is_lowercase()) {
+            errors.add("password", ValidationError::new("lowercase_required"));
+        }
+        if !password.chars().any(|c| c.is_numeric()) {
+            errors.add("password", ValidationError::new("numeric_required"));
+        }
+        if !password.chars().any(|c| c.is_ascii_punctuation()) {
+            errors.add("password", ValidationError::new("special_required"));
+        }
+
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(Error::Validation(errors))
+        }
+    }
 }
 
-impl Argon2PasswordProvider {
+impl BcryptPasswordProvider {
     async fn hash_password(&self, password: String) -> Result<String> {
         tokio::task::spawn_blocking(move || {
-            let salt = SaltString::generate(&mut OsRng);
-            let argon2 = Argon2::default();
-
-            argon2
-                .hash_password(password.as_bytes(), &salt)
-                .map(|hash| hash.to_string())
-                .map_err(|e| {
-                    tracing::error!("failed to generate hash: {}", e);
-                    Error::InternalServerError
-                })
+            hash(password, DEFAULT_COST).map_err(|e| {
+                tracing::error!("failed to generate hash: {}", e);
+                Error::InternalServerError
+            })
         })
         .await
         .map_err(|e| {
@@ -37,26 +62,25 @@ impl Argon2PasswordProvider {
 }
 
 #[async_trait::async_trait]
-impl PasswordProvider for Argon2PasswordProvider {
+impl PasswordProvider for BcryptPasswordProvider {
     async fn generate_hash(&self, password: String) -> Result<String> {
-        self.validator.validate(&password)?;
+        self.validate_password(&password)?;
         self.hash_password(password).await
     }
 
     async fn verify_hash(&self, password: String, hash: String) -> Result<bool> {
         tokio::task::spawn_blocking(move || {
-            let parsed_hash = PasswordHash::new(&hash).map_err(|_| Error::InternalServerError)?;
-
-            Ok(Argon2::default()
-                .verify_password(password.as_bytes(), &parsed_hash)
-                .is_ok())
+            verify(password, &hash).map_err(|e| {
+                tracing::error!("failed to verify hash: {}", e);
+                Error::InternalServerError
+            })
         })
         .await
         .map_err(|_| Error::InternalServerError)?
     }
 
     async fn validate_password(&self, password: &str) -> Result<()> {
-        self.validator.validate(password)
+        self.validate_password(password)
     }
 }
 
@@ -66,18 +90,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_hash() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
             .await
             .unwrap();
-        assert!(hash.starts_with("$argon2id$"));
+        assert!(hash.starts_with("$2b$"));
     }
 
     #[tokio::test]
     async fn test_verify_hash() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -90,7 +114,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_hash_with_wrong_password() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -105,7 +129,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_hash_operations() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
 
         let handles: Vec<_> = (0..5)
@@ -119,13 +143,13 @@ mod tests {
         for handle in handles {
             let result = handle.await.unwrap();
             let hash = result.unwrap();
-            assert!(hash.starts_with("$argon2id$"));
+            assert!(hash.starts_with("$2b$"));
         }
     }
 
     #[tokio::test]
     async fn test_verify_with_invalid_hash() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
         let invalid_hash = "not-a-valid-hash".to_string();
 
@@ -137,7 +161,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hashes_are_different_for_same_password() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
 
         let hash1 = password_repo
@@ -157,7 +181,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_verify_operations() {
-        let password_repo = Argon2PasswordProvider::default();
+        let password_repo = BcryptPasswordProvider::default();
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())

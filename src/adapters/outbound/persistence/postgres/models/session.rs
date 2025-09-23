@@ -42,7 +42,6 @@ pub struct SessionModel {
     pub table_id: Uuid,
     pub scheduled_for: Option<DateTime<Utc>>,
     pub status: ESessionStatus,
-    pub accepting_intents: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -56,7 +55,6 @@ impl From<SessionModel> for Session {
             table_id: model.table_id,
             scheduled_for: model.scheduled_for,
             status: model.status.into(),
-            accepting_intents: model.accepting_intents,
             created_at: model.created_at,
             updated_at: model.updated_at,
         }

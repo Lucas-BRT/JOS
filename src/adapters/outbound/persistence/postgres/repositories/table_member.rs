@@ -1,10 +1,7 @@
 use crate::Result;
 use crate::adapters::outbound::postgres::models::TableMemberModel;
 use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
-use crate::domain::entities::{
-    CreateTableMemberCommand, DeleteTableMemberCommand, GetTableMemberCommand, TableMember,
-    UpdateTableMemberCommand,
-};
+use crate::domain::entities::*;
 use crate::domain::repositories::TableMemberRepository;
 use crate::domain::utils::update::Update;
 use sqlx::PgPool;
@@ -125,34 +122,16 @@ impl TableMemberRepository for PostgresTableMemberRepository {
     }
 
     async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember> {
-        // First get the table member to return it
         let table_member = sqlx::query_as!(
             TableMemberModel,
-            r#"SELECT
-                id,
-                table_id,
-                user_id,
-                joined_at,
-                created_at,
-                updated_at
-            FROM table_members
-            WHERE id = $1
+            r#"DELETE FROM table_members
+                WHERE id = $1
+                RETURNING
+                    *
             "#,
             &command.id
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
-
-        // Then delete it
-        sqlx::query(
-            r#"
-            DELETE FROM table_members
-            WHERE id = $1
-            "#,
-        )
-        .bind(&command.id)
-        .execute(&self.pool)
         .await
         .map_err(RepositoryError::DatabaseError)?;
 

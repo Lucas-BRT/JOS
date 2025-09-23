@@ -109,7 +109,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(session_intent.into())
     }
 
-    async fn get(&self, command: GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
+    async fn read(&self, command: GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
         let mut builder = sqlx::QueryBuilder::new(
             r#"SELECT
             id,
@@ -132,38 +132,29 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
             }
         };
 
-        if let Some(id) = command.filters.id {
+        if let Some(id) = command.id {
             push_filter_separator(&mut builder);
             builder.push("id = ");
             builder.push_bind(id);
         }
 
-        if let Some(user_id) = command.filters.user_id {
+        if let Some(user_id) = command.user_id {
             push_filter_separator(&mut builder);
             builder.push("user_id = ");
             builder.push_bind(user_id);
         }
 
-        if let Some(session_id) = command.filters.session_id {
+        if let Some(session_id) = command.session_id {
             push_filter_separator(&mut builder);
             builder.push("session_id = ");
             builder.push_bind(session_id);
         }
 
-        if let Some(intent_status) = command.filters.intent_status {
+        if let Some(intent_status) = command.status {
             push_filter_separator(&mut builder);
             builder.push("intent_status = ");
             builder.push_bind(EIntentStatus::from(intent_status));
         }
-
-        let page = command.pagination.limit();
-        let offset = command.pagination.offset();
-
-        builder.push(" LIMIT ");
-        builder.push_bind(page as i64);
-
-        builder.push(" OFFSET ");
-        builder.push_bind(offset as i64);
 
         let sessions = builder
             .build_query_as::<SessionIntentModel>()

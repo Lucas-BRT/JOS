@@ -14,6 +14,7 @@ pub struct GetGameSystemCommand {
 
 #[derive(Debug, Clone)]
 pub struct UpdateGameSystemCommand {
+    pub id: Uuid,
     pub name: Update<String>,
 }
 

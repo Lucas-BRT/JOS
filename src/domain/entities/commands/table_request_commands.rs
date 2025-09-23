@@ -8,13 +8,13 @@ pub struct CreateTableRequestCommand {
 }
 
 pub struct UpdateTableRequestCommand {
-    pub table_id: Uuid,
+    pub id: Uuid,
     pub status: Update<TableRequestStatus>,
     pub message: Update<Option<String>>,
 }
 
 pub struct DeleteTableRequestCommand {
-    pub table_id: Uuid,
+    pub id: Uuid,
 }
 
 #[derive(Debug, Clone, Default)]

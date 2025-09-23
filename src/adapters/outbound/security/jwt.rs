@@ -1,6 +1,6 @@
 use crate::domain::auth::{Claims, TokenProvider};
 use crate::{Error, Result};
-use chrono::{Duration, Utc};
+use chrono::Duration;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use uuid::Uuid;
 
@@ -22,16 +22,7 @@ impl JwtTokenProvider {
 #[async_trait::async_trait]
 impl TokenProvider for JwtTokenProvider {
     async fn generate_token(&self, user_id: &Uuid) -> Result<String> {
-        let expiration = Utc::now()
-            .checked_add_signed(self.expiration_duration)
-            .ok_or(Error::InternalServerError)?
-            .timestamp();
-
-        let claims = Claims::new(
-            user_id.clone(),
-            expiration as usize,
-            Utc::now().timestamp() as usize,
-        );
+        let claims = Claims::new(user_id.clone());
 
         encode(
             &Header::default(),

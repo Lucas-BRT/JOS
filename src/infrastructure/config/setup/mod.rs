@@ -7,7 +7,7 @@ mod server;
 use crate::{
     Result,
     adapters::outbound::{
-        Argon2PasswordProvider, JwtTokenProvider,
+        BcryptPasswordProvider, JwtTokenProvider,
         postgres::{
             create_postgres_pool,
             repositories::{
@@ -61,7 +61,7 @@ pub async fn setup_services(router: &Router) -> Result<()> {
     info!("✅ User service initialized");
 
     // Password service
-    let password_repo = Arc::new(Argon2PasswordProvider::default());
+    let password_repo = Arc::new(BcryptPasswordProvider::default());
     let password_service = PasswordService::new(password_repo.clone());
     info!("✅ Password service initialized");
 

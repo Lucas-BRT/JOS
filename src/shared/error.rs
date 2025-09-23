@@ -1,4 +1,7 @@
-use crate::infrastructure::error::SetupError;
+use crate::{
+    adapters::outbound::postgres::RepositoryError, domain::error::DomainError,
+    infrastructure::error::SetupError,
+};
 use validator::ValidationErrors;
 
 #[derive(Debug, thiserror::Error)]
@@ -13,10 +16,12 @@ pub enum Error {
     InternalServerError,
     #[error("Setup error: {0}")]
     Setup(SetupError),
+    #[error("Persistence error: {0}")]
+    Persistence(RepositoryError),
 }
 
-impl From<crate::domain::error::DomainError> for Error {
-    fn from(err: crate::domain::error::DomainError) -> Self {
+impl From<DomainError> for Error {
+    fn from(err: DomainError) -> Self {
         Error::Domain(err)
     }
 }

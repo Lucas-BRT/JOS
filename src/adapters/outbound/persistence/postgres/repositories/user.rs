@@ -27,16 +27,14 @@ impl UserRepository for PostgresUserRepository {
             r#"INSERT INTO users
                 (
                 username,
-                display_name,
                 email,
                 password)
             VALUES
-                ($1, $2, $3, $4)
+                ($1, $2, $3)
             RETURNING
                 *
             "#,
             &user.username,
-            &user.display_name,
             &user.email,
             &user.password,
         )
@@ -50,11 +48,6 @@ impl UserRepository for PostgresUserRepository {
     async fn update(&self, data: UpdateUserCommand) -> Result<User> {
         let mut builder = sqlx::QueryBuilder::new("UPDATE users SET ");
         let mut separated = builder.separated(", ");
-
-        if let Update::Change(display_name) = &data.display_name {
-            separated.push("display_name = ");
-            separated.push_bind_unseparated(display_name);
-        }
 
         if let Update::Change(email) = &data.email {
             separated.push("email = ");
@@ -85,7 +78,6 @@ impl UserRepository for PostgresUserRepository {
             r#"SELECT
                 id,
                 username,
-                display_name,
                 email,
                 password,
                 created_at,
@@ -104,11 +96,6 @@ impl UserRepository for PostgresUserRepository {
         if let Some(username) = &command.username {
             conditions.push("username = ");
             query.push_bind(username);
-        }
-
-        if let Some(display_name) = &command.display_name {
-            conditions.push("display_name = ");
-            query.push_bind(display_name);
         }
 
         if let Some(email) = &command.email {
@@ -136,35 +123,16 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn delete(&self, command: DeleteUserCommand) -> Result<User> {
-        // First get the user to return it
         let user = sqlx::query_as!(
             UserModel,
-            r#"SELECT
-                id,
-                username,
-                display_name,
-                email,
-                password,
-                created_at,
-                updated_at
-            FROM users
+            r#"DELETE FROM users
             WHERE id = $1
+            RETURNING
+                *
             "#,
             &command.id
         )
         .fetch_one(&self.pool)
-        .await
-        .map_err(RepositoryError::DatabaseError)?;
-
-        // Then delete it
-        sqlx::query(
-            r#"
-            DELETE FROM users
-            WHERE id = $1
-            "#,
-        )
-        .bind(&command.id)
-        .execute(&self.pool)
         .await
         .map_err(RepositoryError::DatabaseError)?;
 

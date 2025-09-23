@@ -10,7 +10,6 @@ pub struct Session {
     pub table_id: Uuid,
     pub scheduled_for: Option<Date>,
     pub status: SessionStatus,
-    pub accepting_intents: bool,
     pub created_at: Date,
     pub updated_at: Date,
 }

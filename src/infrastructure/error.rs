@@ -10,4 +10,6 @@ pub enum SetupError {
     FailedToParsePort(String),
     #[error("Failed to establish database connection: {0}")]
     FailedToEstablishDatabaseConnection(String),
+    #[error("Failed to run database migrations: {0}")]
+    FailedToRunDBMigrations(String),
 }
