@@ -1,11 +1,8 @@
 use crate::Result;
 use crate::adapters::outbound::postgres::models::UserModel;
 use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
-use crate::domain::entities::{
-    CreateUserCommand, DeleteUserCommand, GetUserCommand, UpdateUserCommand, User,
-};
+use crate::domain::entities::*;
 use crate::domain::repositories::UserRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -171,5 +168,23 @@ impl UserRepository for PostgresUserRepository {
         .map_err(RepositoryError::DatabaseError)?;
 
         Ok(user.into())
+    }
+
+    async fn search(&self, query: &str) -> Result<Vec<User>> {
+        let search_pattern = format!("%{}%", query);
+        let users = sqlx::query_as!(
+            UserModel,
+            r#"SELECT *
+                FROM users
+                WHERE username ILIKE $1 OR email ILIKE $1
+                LIMIT 10
+            "#,
+            search_pattern
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(users.into_iter().map(|model| model.into()).collect())
     }
 }

@@ -3,7 +3,6 @@ use crate::adapters::outbound::postgres::models::SessionCheckinModel;
 use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
 use crate::domain::repositories::SessionCheckinRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 #[derive(Clone)]

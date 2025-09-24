@@ -16,11 +16,11 @@ impl TableMemberService {
         }
     }
 
-    pub async fn create(&self, command: &CreateTableMemberCommand) -> Result<TableMember> {
+    pub async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
         self.table_member_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &GetTableMemberCommand) -> Result<Vec<TableMember>> {
+    pub async fn get(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>> {
         self.table_member_repository.read(command).await
     }
 
@@ -29,11 +29,11 @@ impl TableMemberService {
             id: Some(*id),
             ..Default::default()
         };
-        let table_members = self.table_member_repository.read(&command).await?;
+        let table_members = self.table_member_repository.read(command).await?;
         table_members
             .into_iter()
             .next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
+            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(format!("Table member not found: {}", id))))
     }
 
     pub async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<TableMember>> {
@@ -41,7 +41,7 @@ impl TableMemberService {
             table_id: Some(*table_id),
             ..Default::default()
         };
-        self.table_member_repository.read(&command).await
+        self.table_member_repository.read(command).await
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<TableMember>> {
@@ -49,14 +49,14 @@ impl TableMemberService {
             user_id: Some(*user_id),
             ..Default::default()
         };
-        self.table_member_repository.read(&command).await
+        self.table_member_repository.read(command).await
     }
 
-    pub async fn update(&self, command: &UpdateTableMemberCommand) -> Result<TableMember> {
+    pub async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember> {
         self.table_member_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteTableMemberCommand) -> Result<TableMember> {
+    pub async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember> {
         self.table_member_repository.delete(command).await
     }
 }

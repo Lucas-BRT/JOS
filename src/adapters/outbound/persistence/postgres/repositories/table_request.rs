@@ -4,7 +4,6 @@ use crate::adapters::outbound::postgres::models::TableRequestModel;
 use crate::adapters::outbound::postgres::models::table_request::ETableRequestStatus;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRequestRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 #[derive(Clone)]

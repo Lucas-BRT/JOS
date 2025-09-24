@@ -3,7 +3,6 @@ use crate::adapters::outbound::postgres::models::TableMemberModel;
 use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
 use crate::domain::repositories::TableMemberRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 #[derive(Clone)]

@@ -7,10 +7,9 @@ use crate::{
     domain::{
         entities::{
             CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
-            SessionIntent, UpdateSessionIntentCommand,
+            SessionIntent, Update, UpdateSessionIntentCommand,
         },
         repositories::SessionIntentRepository,
-        utils::update::Update,
     },
 };
 use sqlx::PgPool;

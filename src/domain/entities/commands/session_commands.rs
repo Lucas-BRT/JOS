@@ -1,5 +1,4 @@
-use crate::domain::entities::SessionStatus;
-use crate::domain::utils::update::Update;
+use crate::domain::entities::{SessionStatus, Update};
 use crate::shared::Date;
 use uuid::Uuid;
 

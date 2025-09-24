@@ -1,4 +1,4 @@
-use crate::domain::game_system::GameSystem;
+use crate::domain::entities::GameSystem;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 

@@ -16,11 +16,11 @@ impl SessionCheckinService {
         }
     }
 
-    pub async fn create(&self, command: &CreateSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
         self.session_checkin_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>> {
+    pub async fn get(&self, command: GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>> {
         self.session_checkin_repository.read(command).await
     }
 
@@ -29,9 +29,9 @@ impl SessionCheckinService {
             id: Some(*id),
             ..Default::default()
         };
-        let session_checkins = self.session_checkin_repository.read(&command).await?;
+        let session_checkins = self.session_checkin_repository.read(command).await?;
         session_checkins.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
+            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(format!("Session checkin not found: {}", id))))
     }
 
     pub async fn find_by_session_intent_id(
@@ -42,7 +42,7 @@ impl SessionCheckinService {
             session_intent_id: Some(*session_intent_id),
             ..Default::default()
         };
-        self.session_checkin_repository.read(&command).await
+        self.session_checkin_repository.read(command).await
     }
 
     pub async fn find_by_attendance(&self, attendance: bool) -> Result<Vec<SessionCheckin>> {
@@ -50,14 +50,14 @@ impl SessionCheckinService {
             attendance: Some(attendance),
             ..Default::default()
         };
-        self.session_checkin_repository.read(&command).await
+        self.session_checkin_repository.read(command).await
     }
 
-    pub async fn update(&self, command: &UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
         self.session_checkin_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
         self.session_checkin_repository.delete(command).await
     }
 }

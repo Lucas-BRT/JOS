@@ -1,16 +1,18 @@
-use crate::{Result, domain::repositories::TableRepository, domain::repositories::UserRepository};
-use serde::{Deserialize, Serialize};
+use crate::Result;
+use crate::domain::repositories::*;
+use crate::domain::search::*;
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SearchService {
-    user_repository: std::sync::Arc<dyn UserRepository>,
-    table_repository: std::sync::Arc<dyn TableRepository>,
+    user_repository: Arc<dyn UserRepository>,
+    table_repository: Arc<dyn TableRepository>,
 }
 
 impl SearchService {
     pub fn new(
-        user_repository: std::sync::Arc<dyn UserRepository>,
-        table_repository: std::sync::Arc<dyn TableRepository>,
+        user_repository: Arc<dyn UserRepository>,
+        table_repository: Arc<dyn TableRepository>,
     ) -> Self {
         Self {
             user_repository,
@@ -28,7 +30,7 @@ impl SearchService {
                 results.push(SearchResult {
                     id: user.id.to_string(),
                     title: user.username,
-                    description: Some(user.display_name),
+                    description: Some(user.email),
                     r#type: "user".to_string(),
                     created_at: user.created_at.to_rfc3339(),
                 });
@@ -50,37 +52,12 @@ impl SearchService {
         }
 
         // TODO: Add session search when session repository is available
-
+        let total = results.len() as u64;
         Ok(SearchResponse {
             results,
-            total: results.len() as u64,
+            total,
             page: query.page.unwrap_or(1),
             limit: query.limit.unwrap_or(10),
         })
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SearchQuery {
-    pub q: String,
-    pub r#type: Option<String>,
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SearchResult {
-    pub id: String,
-    pub title: String,
-    pub description: Option<String>,
-    pub r#type: String,
-    pub created_at: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SearchResponse {
-    pub results: Vec<SearchResult>,
-    pub total: u64,
-    pub page: u32,
-    pub limit: u32,
 }

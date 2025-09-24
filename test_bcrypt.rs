@@ -22,3 +22,4 @@ async fn test_bcrypt_basic_functionality() {
     
     println!("✅ Bcrypt functionality test passed!");
 }
+

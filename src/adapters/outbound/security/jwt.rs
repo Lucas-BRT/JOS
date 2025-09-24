@@ -22,7 +22,7 @@ impl JwtTokenProvider {
 #[async_trait::async_trait]
 impl TokenProvider for JwtTokenProvider {
     async fn generate_token(&self, user_id: &Uuid) -> Result<String> {
-        let claims = Claims::new(user_id.clone());
+        let claims = Claims::new(*user_id, self.expiration_duration);
 
         encode(
             &Header::default(),

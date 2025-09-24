@@ -1,4 +1,4 @@
-use crate::domain::utils::update::Update;
+use crate::domain::entities::Update;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]

@@ -8,4 +8,5 @@ pub trait TableRepository: Send + Sync {
     async fn read(&self, command: GetTableCommand) -> Result<Vec<Table>>;
     async fn update(&self, command: UpdateTableCommand) -> Result<Table>;
     async fn delete(&self, command: DeleteTableCommand) -> Result<Table>;
+    async fn search(&self, query: &str) -> Result<Vec<Table>>;
 }

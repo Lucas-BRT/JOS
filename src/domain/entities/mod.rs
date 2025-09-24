@@ -6,6 +6,7 @@ pub mod session_intent;
 pub mod table;
 pub mod table_member;
 pub mod table_request;
+pub mod update;
 pub mod user;
 
 pub use commands::*;
@@ -17,3 +18,4 @@ pub use table::*;
 pub use table_member::TableMember;
 pub use table_request::{TableRequest, TableRequestStatus};
 pub use user::User;
+pub use update::Update;

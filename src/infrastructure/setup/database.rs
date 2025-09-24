@@ -1,11 +1,8 @@
-use std::sync::Arc;
+use crate::{Db, Error, Result, infrastructure::SetupError};
 use tracing::{error, info};
 
-use crate::{Error, Result, infrastructure::SetupError};
-use sqlx::PgPool;
-
-pub async fn health_check_database(pool: &Arc<PgPool>) -> Result<()> {
-    let result = sqlx::query("SELECT 1").execute(pool.as_ref()).await;
+pub async fn health_check_database(pool: &Db) -> Result<()> {
+    let result = sqlx::query("SELECT 1").execute(pool).await;
 
     match result {
         Ok(_) => {

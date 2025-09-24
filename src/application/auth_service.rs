@@ -3,7 +3,6 @@ use crate::domain::auth::*;
 use crate::domain::entities::*;
 use crate::domain::error::*;
 use crate::domain::repositories::UserRepository;
-use crate::domain::utils::update::Update;
 use crate::{Error, Result};
 use std::sync::Arc;
 

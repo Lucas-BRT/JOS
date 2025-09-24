@@ -1,6 +1,7 @@
-use crate::Result;
 use crate::domain::entities::*;
+use crate::domain::error::*;
 use crate::domain::repositories::UserRepository;
+use crate::{Error, Result};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -14,49 +15,27 @@ impl UserService {
         Self { user_repository }
     }
 
-    pub async fn create(&self, command: &CreateUserCommand) -> Result<User> {
+    pub async fn create(&self, command: &mut CreateUserCommand) -> Result<User> {
         self.user_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &GetUserCommand) -> Result<Vec<User>> {
+    pub async fn get(&self, command: &mut GetUserCommand) -> Result<Vec<User>> {
         self.user_repository.read(command).await
     }
 
     pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
-        let command = GetUserCommand {
-            id: Some(*id),
-            ..Default::default()
-        };
-        let users = self.user_repository.read(&command).await?;
-        users.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
+        let users = self.user_repository.find_by_id(id).await?;
+        users
+            .into_iter()
+            .next()
+            .ok_or_else(|| Error::Domain(DomainError::User(UserDomainError::UserNotFound)))
     }
 
-    pub async fn find_by_username(&self, username: &str) -> Result<User> {
-        let command = GetUserCommand {
-            username: Some(username.to_string()),
-            ..Default::default()
-        };
-        let users = self.user_repository.read(&command).await?;
-        users.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
-    }
-
-    pub async fn find_by_email(&self, email: &str) -> Result<User> {
-        let command = GetUserCommand {
-            email: Some(email.to_string()),
-            ..Default::default()
-        };
-        let users = self.user_repository.read(&command).await?;
-        users.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
-    }
-
-    pub async fn update(&self, command: &UpdateUserCommand) -> Result<User> {
+    pub async fn update(&self, command: &mut UpdateUserCommand) -> Result<User> {
         self.user_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteUserCommand) -> Result<User> {
+    pub async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User> {
         self.user_repository.delete(command).await
     }
 }

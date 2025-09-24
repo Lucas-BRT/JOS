@@ -16,11 +16,11 @@ impl SessionIntentService {
         }
     }
 
-    pub async fn create(&self, command: &CreateSessionIntentCommand) -> Result<SessionIntent> {
+    pub async fn create(&self, command: CreateSessionIntentCommand) -> Result<SessionIntent> {
         self.session_intent_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
+    pub async fn get(&self, command: GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
         self.session_intent_repository.read(command).await
     }
 
@@ -29,9 +29,9 @@ impl SessionIntentService {
             id: Some(*id),
             ..Default::default()
         };
-        let session_intents = self.session_intent_repository.read(&command).await?;
+        let session_intents = self.session_intent_repository.read(command).await?;
         session_intents.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
+            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::SessionIntent(crate::domain::error::SessionIntentDomainError::SessionIntentNotFound(id.to_string()))))
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<SessionIntent>> {
@@ -39,7 +39,7 @@ impl SessionIntentService {
             user_id: Some(*user_id),
             ..Default::default()
         };
-        self.session_intent_repository.read(&command).await
+        self.session_intent_repository.read(command).await
     }
 
     pub async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Vec<SessionIntent>> {
@@ -47,14 +47,14 @@ impl SessionIntentService {
             session_id: Some(*session_id),
             ..Default::default()
         };
-        self.session_intent_repository.read(&command).await
+        self.session_intent_repository.read(command).await
     }
 
-    pub async fn update(&self, command: &UpdateSessionIntentCommand) -> Result<SessionIntent> {
+    pub async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
         self.session_intent_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteSessionIntentCommand) -> Result<SessionIntent> {
+    pub async fn delete(&self, command: DeleteSessionIntentCommand) -> Result<SessionIntent> {
         self.session_intent_repository.delete(command).await
     }
 }

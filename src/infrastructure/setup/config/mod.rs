@@ -1,17 +1,21 @@
 pub mod constants;
 pub mod enviroment;
-pub mod setup;
 
-use crate::infrastructure::{SetupError, constants::*, enviroment::Environment};
+use crate::{
+    Error, Result,
+    infrastructure::{
+        SetupError,
+        setup::config::{constants::*, enviroment::Environment},
+    },
+};
 use chrono::Duration;
-use std::num::ParseIntError;
-use tokio::net::unix::SocketAddr;
+use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
 use tracing::{info, warn};
 
-#[derive(Clone, Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
-    pub database_url: String,
     pub addr: SocketAddr,
+    pub database_url: String,
     pub jwt_secret: String,
     pub jwt_expiration_duration: Duration,
     pub environment: Environment,
@@ -20,15 +24,17 @@ pub struct Config {
 impl Config {
     pub fn from_env() -> Result<Self> {
         let database_url = std::env::var("DATABASE_URL")
-            .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))?;
+            .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?;
 
         let server_port: u32 = std::env::var("PORT")
-            .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))?
+            .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?
             .parse()
-            .map_err(|e: ParseIntError| SetupError::FailedToParsePort(e.to_string()))?;
+            .map_err(|e: ParseIntError| {
+                Error::Setup(SetupError::FailedToParsePort(e.to_string()))
+            })?;
 
-        let addr = SocketAddr::from_str(format!("{DEFAULT_HOST}:{server_port}").as_str())
-            .map_err(|err| SetupError::FailedToSetupServerAddress(err.to_string()))?;
+        let addr = SocketAddr::from_str(&format!("{DEFAULT_HOST}:{server_port}"))
+            .map_err(|err| Error::Setup(SetupError::FailedToSetupServerAddress(err.to_string())))?;
 
         let environment = std::env::var("ENVIRONMENT")
             .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))

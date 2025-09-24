@@ -6,15 +6,13 @@ use validator::ValidationError;
 #[derive(Clone)]
 pub struct BcryptPasswordProvider;
 
-impl BcryptPasswordProvider {
-    pub fn new() -> Self {
+impl Default for BcryptPasswordProvider {
+    fn default() -> Self {
         Self
     }
+}
 
-    pub fn default() -> Self {
-        Self::new()
-    }
-
+impl BcryptPasswordProvider {
     fn validate_password(&self, password: &str) -> Result<()> {
         let mut errors = validator::ValidationErrors::new();
 
@@ -90,7 +88,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_hash() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -101,20 +99,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_hash() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
             .await
             .unwrap();
         let result = password_repo.verify_hash(password.to_string(), hash).await;
+
         assert!(result.is_ok());
         assert!(result.unwrap());
     }
 
     #[tokio::test]
     async fn test_verify_hash_with_wrong_password() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())
@@ -129,7 +128,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_hash_operations() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
 
         let handles: Vec<_> = (0..5)
@@ -149,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_verify_with_invalid_hash() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
         let invalid_hash = "not-a-valid-hash".to_string();
 
@@ -161,7 +160,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hashes_are_different_for_same_password() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
 
         let hash1 = password_repo
@@ -181,7 +180,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_concurrent_verify_operations() {
-        let password_repo = BcryptPasswordProvider::default();
+        let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
         let hash = password_repo
             .generate_hash(password.to_string())

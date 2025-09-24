@@ -4,7 +4,6 @@ use crate::adapters::outbound::postgres::models::SessionModel;
 use crate::adapters::outbound::postgres::models::session::ESessionStatus;
 use crate::domain::entities::*;
 use crate::domain::repositories::SessionRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 pub struct PostgresSessionRepository {

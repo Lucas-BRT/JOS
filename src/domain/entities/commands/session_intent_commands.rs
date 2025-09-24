@@ -1,4 +1,4 @@
-use crate::domain::{entities::IntentStatus, utils::update::Update};
+use crate::domain::entities::{IntentStatus, Update};
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy)]

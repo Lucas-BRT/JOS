@@ -77,8 +77,8 @@ pub enum TableRequestDomainError {
 pub enum GameSystemDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("Game system not found: {0}")]
-    GameSystemNotFound(String),
+    #[error("Game system not found")]
+    GameSystemNotFound,
     #[error("Game system name already exists: {0}")]
     GameSystemNameAlreadyExists(String),
 }

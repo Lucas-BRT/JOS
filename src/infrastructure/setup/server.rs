@@ -1,12 +1,15 @@
-use crate::{Error, Result, infrastructure::SetupError};
+use crate::{
+    Error, Result,
+    infrastructure::{AppState, SetupError},
+};
 use axum::Router;
 use tokio::net::TcpListener;
 use tracing::info;
 
-pub async fn launch_server(router: &Router) -> Result<()> {
+pub async fn launch_server(router: Router, app_state: AppState) -> Result<()> {
     info!("🚀 Launching HTTP server...");
 
-    let listener = TcpListener::bind(&router.config.addr)
+    let listener = TcpListener::bind(&app_state.config.addr)
         .await
         .map_err(|err| Error::Setup(SetupError::FailedToBindAddress(err.to_string())))?;
 

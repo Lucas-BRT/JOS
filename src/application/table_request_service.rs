@@ -16,11 +16,11 @@ impl TableRequestService {
         }
     }
 
-    pub async fn create(&self, command: &CreateTableRequestCommand) -> Result<TableRequest> {
+    pub async fn create(&self, command: CreateTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &GetTableRequestCommand) -> Result<Vec<TableRequest>> {
+    pub async fn get(&self, command: GetTableRequestCommand) -> Result<Vec<TableRequest>> {
         self.table_request_repository.read(command).await
     }
 
@@ -29,9 +29,9 @@ impl TableRequestService {
             id: Some(*id),
             ..Default::default()
         };
-        let table_requests = self.table_request_repository.read(&command).await?;
+        let table_requests = self.table_request_repository.read(command).await?;
         table_requests.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::NotFound))
+            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::TableRequest(crate::domain::error::TableRequestDomainError::TableRequestNotFound(id.to_string()))))
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<TableRequest>> {
@@ -39,7 +39,7 @@ impl TableRequestService {
             user_id: Some(*user_id),
             ..Default::default()
         };
-        self.table_request_repository.read(&command).await
+        self.table_request_repository.read(command).await
     }
 
     pub async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<TableRequest>> {
@@ -47,7 +47,7 @@ impl TableRequestService {
             table_id: Some(*table_id),
             ..Default::default()
         };
-        self.table_request_repository.read(&command).await
+        self.table_request_repository.read(command).await
     }
 
     pub async fn find_by_status(&self, status: &TableRequestStatus) -> Result<Vec<TableRequest>> {
@@ -55,14 +55,14 @@ impl TableRequestService {
             status: Some(*status),
             ..Default::default()
         };
-        self.table_request_repository.read(&command).await
+        self.table_request_repository.read(command).await
     }
 
-    pub async fn update(&self, command: &UpdateTableRequestCommand) -> Result<TableRequest> {
+    pub async fn update(&self, command: UpdateTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteTableRequestCommand) -> Result<TableRequest> {
+    pub async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.delete(command).await
     }
 }

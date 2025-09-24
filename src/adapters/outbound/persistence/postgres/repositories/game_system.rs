@@ -2,8 +2,7 @@ use crate::Result;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::GameSystemModel;
 use crate::domain::entities::*;
-use crate::domain::game_system::*;
-use crate::domain::utils::Update;
+use crate::domain::repositories::GameSystemRepository;
 use sqlx::PgPool;
 
 #[derive(Clone)]
@@ -19,7 +18,7 @@ impl PostgresGameSystemRepository {
 
 #[async_trait::async_trait]
 impl GameSystemRepository for PostgresGameSystemRepository {
-    async fn create(&self, command: CreateGameSystemCommand) -> Result<GameSystem> {
+    async fn create(&self, command: &mut CreateGameSystemCommand) -> Result<GameSystem> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
@@ -36,7 +35,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         Ok(result.into())
     }
 
-    async fn read(&self, command: GetGameSystemCommand) -> Result<Vec<GameSystem>> {
+    async fn read(&self, command: &mut GetGameSystemCommand) -> Result<Vec<GameSystem>> {
         let result = sqlx::query_as!(
             GameSystemModel,
             "SELECT *
@@ -51,7 +50,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         Ok(result.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn update(&self, command: UpdateGameSystemCommand) -> Result<GameSystem> {
+    async fn update(&self, command: &mut UpdateGameSystemCommand) -> Result<GameSystem> {
         let mut builder = sqlx::QueryBuilder::new("UPDATE game_systems SET ");
         let mut separated = builder.separated(", ");
 
@@ -74,7 +73,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         Ok(updated_game_system.into())
     }
 
-    async fn delete(&self, command: DeleteGameSystemCommand) -> Result<GameSystem> {
+    async fn delete(&self, command: &mut DeleteGameSystemCommand) -> Result<GameSystem> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"DELETE FROM game_systems WHERE id = $1 RETURNING *"#,

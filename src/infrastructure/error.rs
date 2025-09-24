@@ -12,4 +12,12 @@ pub enum SetupError {
     FailedToEstablishDatabaseConnection(String),
     #[error("Failed to run database migrations: {0}")]
     FailedToRunDBMigrations(String),
+    #[error("Database health check failed: {0}")]
+    DatabaseHealthCheckFailed(String),
+    #[error("Failed to setup server address: {0}")]
+    FailedToSetupServerAddress(String),
+    #[error("Invalid configuration: {0}")]
+    InvalidConfiguration(String),
+    #[error("Environment validation failed: {0}")]
+    EnvironmentValidationFailed(String),
 }

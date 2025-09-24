@@ -4,7 +4,6 @@ use crate::adapters::outbound::postgres::models::TableModel;
 use crate::domain::entities::commands::*;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRepository;
-use crate::domain::utils::update::Update;
 use sqlx::PgPool;
 
 pub struct PostgresTableRepository {
@@ -187,5 +186,23 @@ impl TableRepository for PostgresTableRepository {
             .map_err(constraint_mapper::map_database_error)?;
 
         Ok(tables.into_iter().map(|m| m.into()).collect())
+    }
+
+    async fn search(&self, query: &str) -> Result<Vec<Table>> {
+        let search_pattern = format!("%{}%", query);
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"SELECT *
+                FROM tables
+                WHERE title ILIKE $1 OR description ILIKE $1
+                LIMIT 10
+            "#,
+            search_pattern
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(tables.into_iter().map(|model| model.into()).collect())
     }
 }

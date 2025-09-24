@@ -1,4 +1,4 @@
-use crate::domain::{entities::TableRequestStatus, utils::update::Update};
+use crate::domain::entities::{TableRequestStatus, Update};
 use uuid::Uuid;
 
 pub struct CreateTableRequestCommand {

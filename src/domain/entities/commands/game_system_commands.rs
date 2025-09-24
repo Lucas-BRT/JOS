@@ -1,4 +1,4 @@
-use crate::domain::utils::Update;
+use crate::domain::entities::Update;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -6,7 +6,7 @@ pub struct CreateGameSystemCommand {
     pub name: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct GetGameSystemCommand {
     pub id: Option<Uuid>,
     pub name: Option<String>,

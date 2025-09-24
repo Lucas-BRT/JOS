@@ -1,14 +1,15 @@
 use jos::{
     Error, Result,
-    setup::{launch_server, setup_services},
+    infrastructure::setup::{launch_server, setup_services},
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Setup services and create router
     match setup_services().await {
-        Ok(state) => launch_server(state).await,
+        Ok((router, app_state)) => launch_server(router, app_state).await,
         Err(Error::Setup(setup_error)) => {
-            eprintln!("\n{}", setup_error.user_friendly_message());
+            eprintln!("\n❌ Setup error: {setup_error}");
             std::process::exit(1);
         }
         Err(other_error) => {
