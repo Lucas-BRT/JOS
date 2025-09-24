@@ -7,6 +7,7 @@ use crate::domain::entities::{
 use crate::domain::repositories::UserRepository;
 use crate::domain::utils::update::Update;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresUserRepository {
@@ -21,7 +22,7 @@ impl PostgresUserRepository {
 
 #[async_trait::async_trait]
 impl UserRepository for PostgresUserRepository {
-    async fn create(&self, user: CreateUserCommand) -> Result<User> {
+    async fn create(&self, user: &mut CreateUserCommand) -> Result<User> {
         let created_user = sqlx::query_as!(
             UserModel,
             r#"INSERT INTO users
@@ -45,7 +46,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(created_user.into())
     }
 
-    async fn update(&self, data: UpdateUserCommand) -> Result<User> {
+    async fn update(&self, data: &mut UpdateUserCommand) -> Result<User> {
         let mut builder = sqlx::QueryBuilder::new("UPDATE users SET ");
         let mut separated = builder.separated(", ");
 
@@ -73,15 +74,10 @@ impl UserRepository for PostgresUserRepository {
         Ok(updated_user.into())
     }
 
-    async fn read(&self, command: GetUserCommand) -> Result<Vec<User>> {
+    async fn read(&self, command: &mut GetUserCommand) -> Result<Vec<User>> {
         let mut query = sqlx::QueryBuilder::new(
             r#"SELECT
-                id,
-                username,
-                email,
-                password,
-                created_at,
-                updated_at
+                *
             FROM users
             "#,
         );
@@ -122,7 +118,45 @@ impl UserRepository for PostgresUserRepository {
         Ok(users.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn delete(&self, command: DeleteUserCommand) -> Result<User> {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            UserModel,
+            r#"SELECT
+                id,
+                username,
+                email,
+                password,
+                created_at,
+                updated_at
+            FROM users
+            WHERE email = $1
+            "#,
+            email
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(user.map(|model| model.into()))
+    }
+
+    async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            UserModel,
+            r#"SELECT *
+                FROM users
+                WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(user.map(|model| model.into()))
+    }
+
+    async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User> {
         let user = sqlx::query_as!(
             UserModel,
             r#"DELETE FROM users

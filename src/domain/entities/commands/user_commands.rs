@@ -17,7 +17,13 @@ pub struct UpdateUserCommand {
     pub password: Update<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
+pub struct UpdatePasswordCommand {
+    pub user_id: Uuid,
+    pub new_password: String,
+}
+
+#[derive(Debug, Clone, Default)]
 pub struct GetUserCommand {
     pub id: Option<Uuid>,
     pub username: Option<String>,
@@ -25,7 +31,7 @@ pub struct GetUserCommand {
     pub email: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DeleteUserCommand {
     pub id: Uuid,
 }

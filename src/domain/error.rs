@@ -5,8 +5,8 @@ use validator::ValidationErrors;
 pub enum UserDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("User not found: {0}")]
-    UserNotFound(String),
+    #[error("User not found")]
+    UserNotFound,
     #[error("Username already exists: {0}")]
     UsernameAlreadyExists(String),
     #[error("Email already exists: {0}")]

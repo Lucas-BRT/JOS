@@ -1,11 +1,13 @@
 use crate::Result;
-use crate::domain::entities::{CreateUserCommand, DeleteUserCommand, UpdateUserCommand};
-use crate::domain::entities::{GetUserCommand, User};
+use crate::domain::entities::*;
+use uuid::Uuid;
 
 #[async_trait::async_trait]
 pub trait UserRepository: Send + Sync {
-    async fn create(&self, command: CreateUserCommand) -> Result<User>;
-    async fn read(&self, command: GetUserCommand) -> Result<Vec<User>>;
-    async fn update(&self, command: UpdateUserCommand) -> Result<User>;
-    async fn delete(&self, command: DeleteUserCommand) -> Result<User>;
+    async fn create(&self, command: &mut CreateUserCommand) -> Result<User>;
+    async fn read(&self, command: &mut GetUserCommand) -> Result<Vec<User>>;
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>>;
+    async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>>;
+    async fn update(&self, command: &mut UpdateUserCommand) -> Result<User>;
+    async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User>;
 }

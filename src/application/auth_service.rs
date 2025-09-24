@@ -1,11 +1,11 @@
-use std::sync::Arc;
-
 use crate::application::error::ApplicationError;
-use crate::domain::auth::{Authenticator, PasswordProvider, TokenProvider};
+use crate::domain::auth::*;
 use crate::domain::entities::*;
+use crate::domain::error::*;
 use crate::domain::repositories::UserRepository;
 use crate::domain::utils::update::Update;
 use crate::{Error, Result};
+use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AuthService {
@@ -30,8 +30,12 @@ impl AuthService {
 
 #[async_trait::async_trait]
 impl Authenticator for AuthService {
-    async fn authenticate(&self, payload: &LoginUserCommand) -> Result<String> {
-        let user = self.user_repository.find_by_email(&payload.email).await?;
+    async fn authenticate(&self, payload: &mut LoginUserCommand) -> Result<String> {
+        let user = match self.user_repository.find_by_email(&payload.email).await? {
+            Some(user) => user,
+            None => return Err(Error::Domain(UserDomainError::UserNotFound.into())),
+        };
+
         if !self
             .password_provider
             .verify_hash(payload.password.clone(), user.password.clone())
@@ -56,12 +60,27 @@ impl Authenticator for AuthService {
         Ok(created_user)
     }
 
-    async fn update_password(&self, payload: &mut UpdateUserCommand) -> Result<()> {
-        match payload.password {
-            Update::Keep => return Err(Error::Application(ApplicationError::InvalidCredentials)),
-            Update::Change(password) => {
-                self.password_provider.validate_password(password).await?;
+    async fn update_password(&self, payload: &mut UpdatePasswordCommand) -> Result<()> {
+        let user = self.user_repository.find_by_id(&payload.user_id).await?;
+
+        match user {
+            Some(user) => {
+                let new_passoword_hash =
+                    self.password_provider.generate_hash(user.password).await?;
+
+                let mut command = UpdateUserCommand {
+                    password: Update::Change(new_passoword_hash),
+                    ..Default::default()
+                };
+
+                self.user_repository.update(&mut command).await?;
+
                 Ok(())
+            }
+            None => {
+                return Err(Error::Domain(DomainError::User(
+                    UserDomainError::UserNotFound,
+                )));
             }
         }
     }
