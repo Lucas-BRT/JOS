@@ -1,0 +1,756 @@
+{
+    "api_info": {
+        "base_url": "http://localhost:3001",
+        "version": "v1",
+        "description": "RPG Tables Management API - Sistema para gerenciamento de mesas de RPG",
+        "authentication": "Bearer JWT Token",
+        "content_type": "application/json"
+    },
+    "endpoints": {
+        "authentication": {
+            "login": {
+                "method": "POST",
+                "path": "/auth/login",
+                "description": "Autentica um usuário e retorna tokens de acesso",
+                "authentication_required": false,
+                "request_payload": {
+                    "email": "string",
+                    "password": "string"
+                },
+                "response_payload": {
+                    "user": {
+                        "id": "UUID",
+                        "username": "string",
+                        "displayName": "string",
+                        "joined_at": "Date",
+                        "email": "string"
+                    },
+                    "token": "string",
+                    "refreshToken": "string",
+                    "expiresIn": "number"
+                },
+                "status_codes": {
+                    "200": "Login successful",
+                    "401": "Invalid credentials",
+                    "400": "Missing required fields"
+                }
+            },
+            "logout": {
+                "method": "POST",
+                "path": "/auth/logout",
+                "description": "Desautentica o usuário e invalida tokens",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Logout successful",
+                    "401": "Invalid token"
+                }
+            },
+            "refresh_token": {
+                "method": "POST",
+                "path": "/auth/refresh",
+                "description": "Renova o token de acesso usando o refresh token",
+                "authentication_required": false,
+                "request_payload": {
+                    "refreshToken": "string"
+                },
+                "response_payload": {
+                    "token": "string",
+                    "refreshToken": "string",
+                    "expiresIn": "number"
+                },
+                "status_codes": {
+                    "200": "Token refreshed successfully",
+                    "401": "Invalid refresh token"
+                }
+            },
+            "register": {
+                "method": "POST",
+                "path": "/auth/register",
+                "description": "Registra um novo usuário no sistema",
+                "authentication_required": false,
+                "request_payload": {
+                    "username": "string",
+                    "displayName": "string",
+                    "email": "string",
+                    "password": "string",
+                    "confirmPassword": "string"
+                },
+                "response_payload": {
+                    "user": {
+                        "id": "UUID",
+                        "username": "string",
+                        "displayName": "string",
+                        "joined_at": "Date",
+                        "email": "string"
+                    },
+                    "token": "string",
+                    "refreshToken": "string",
+                    "expiresIn": "number"
+                },
+                "status_codes": {
+                    "201": "User created successfully",
+                    "400": "Validation error",
+                    "409": "Email or username already exists"
+                }
+            },
+            "get_current_user": {
+                "method": "GET",
+                "path": "/auth/me",
+                "description": "Retorna informações do usuário autenticado",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": {
+                    "id": "UUID",
+                    "username": "string",
+                    "displayName": "string",
+                    "joined_at": "Date",
+                    "email": "string"
+                },
+                "status_codes": {
+                    "200": "User data retrieved",
+                    "401": "Invalid token"
+                }
+            }
+        },
+        "tables": {
+            "get_tables": {
+                "method": "GET",
+                "path": "/tables",
+                "description": "Lista todas as mesas disponíveis",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": [
+                    {
+                        "id": "UUID",
+                        "title": "string",
+                        "game_system": "string",
+                        "game_master": {
+                            "id": "UUID",
+                            "username": "string",
+                            "displayName": "string"
+                        },
+                        "player_slots": "number",
+                        "occupied_slots": "number",
+                        "next_session": "Date",
+                        "description": "string"
+                    }
+                ],
+                "status_codes": {
+                    "200": "Tables retrieved successfully",
+                    "401": "Authentication required"
+                }
+            },
+            "search_tables": {
+                "method": "GET",
+                "path": "/tables?search={term}",
+                "description": "Busca mesas por termo de pesquisa",
+                "authentication_required": true,
+                "request_payload": {
+                    "query_params": {
+                        "search": "string"
+                    }
+                },
+                "response_payload": [
+                    {
+                        "id": "UUID",
+                        "title": "string",
+                        "game_system": "string",
+                        "game_master": {
+                            "id": "UUID",
+                            "username": "string",
+                            "displayName": "string"
+                        },
+                        "player_slots": "number",
+                        "occupied_slots": "number",
+                        "next_session": "Date",
+                        "description": "string"
+                    }
+                ],
+                "status_codes": {
+                    "200": "Search results retrieved",
+                    "401": "Authentication required"
+                }
+            },
+            "get_table_details": {
+                "method": "GET",
+                "path": "/tables/{id}",
+                "description": "Retorna detalhes completos de uma mesa específica",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    }
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "game_system": "string",
+                    "game_master": {
+                        "id": "UUID",
+                        "username": "string",
+                        "displayName": "string"
+                    },
+                    "description": "string",
+                    "player_slots": "number",
+                    "players": [
+                        {
+                            "id": "UUID",
+                            "username": "string",
+                            "displayName": "string"
+                        }
+                    ],
+                    "status": "active | completed | cancelled | archived",
+                    "sessions": [
+                        {
+                            "id": "UUID",
+                            "title": "string",
+                            "description": "string",
+                            "status": "Awaiting Confirmations | Scheduled | Completed",
+                            "scheduled_at": "Date"
+                        }
+                    ]
+                },
+                "status_codes": {
+                    "200": "Table details retrieved",
+                    "404": "Table not found",
+                    "401": "Authentication required"
+                }
+            },
+            "create_table": {
+                "method": "POST",
+                "path": "/tables",
+                "description": "Cria uma nova mesa de RPG",
+                "authentication_required": true,
+                "request_payload": {
+                    "title": "string",
+                    "system": "string",
+                    "description": "string",
+                    "maxPlayers": "number",
+                    "visibility": "private | public"
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "game_system": "string",
+                    "game_master": {
+                        "id": "UUID",
+                        "username": "string",
+                        "displayName": "string"
+                    },
+                    "description": "string",
+                    "player_slots": "number",
+                    "players": [],
+                    "status": "active",
+                    "sessions": []
+                },
+                "status_codes": {
+                    "201": "Table created successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required"
+                }
+            },
+            "update_table": {
+                "method": "PUT",
+                "path": "/tables/{id}",
+                "description": "Atualiza informações de uma mesa existente",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    },
+                    "body": {
+                        "title": "string",
+                        "system": "string",
+                        "description": "string",
+                        "maxPlayers": "number",
+                        "visibility": "private | public",
+                        "status": "active | completed | cancelled | archived"
+                    }
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "game_system": "string",
+                    "game_master": {
+                        "id": "UUID",
+                        "username": "string",
+                        "displayName": "string"
+                    },
+                    "description": "string",
+                    "player_slots": "number",
+                    "players": [],
+                    "status": "string",
+                    "sessions": []
+                },
+                "status_codes": {
+                    "200": "Table updated successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "403": "Not authorized to update this table",
+                    "404": "Table not found"
+                }
+            },
+            "delete_table": {
+                "method": "DELETE",
+                "path": "/tables/{id}",
+                "description": "Remove uma mesa do sistema",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    }
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Table deleted successfully",
+                    "401": "Authentication required",
+                    "403": "Not authorized to delete this table",
+                    "404": "Table not found"
+                }
+            }
+        },
+        "sessions": {
+            "get_sessions": {
+                "method": "GET",
+                "path": "/sessions",
+                "description": "Lista todas as sessões do usuário",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": [
+                    {
+                        "id": "UUID",
+                        "title": "string",
+                        "description": "string",
+                        "status": "Awaiting Confirmations | Scheduled | Completed",
+                        "scheduled_at": "Date"
+                    }
+                ],
+                "status_codes": {
+                    "200": "Sessions retrieved successfully",
+                    "401": "Authentication required"
+                }
+            },
+            "get_session_details": {
+                "method": "GET",
+                "path": "/sessions/{id}",
+                "description": "Retorna detalhes completos de uma sessão",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    }
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "description": "string",
+                    "status": "Awaiting Confirmations | Scheduled | Completed",
+                    "scheduled_at": "Date",
+                    "accepting_proposals": "boolean",
+                    "updated_at": "Date",
+                    "created_at": "Date",
+                    "date": "string",
+                    "time": "string",
+                    "maxPlayers": "number",
+                    "masterId": "UUID",
+                    "tableId": "UUID",
+                    "players": [
+                        {
+                            "id": "UUID",
+                            "name": "string",
+                            "character": "string",
+                            "avatar": "string",
+                            "status": "confirmed | pending | declined",
+                            "isCurrentUser": "boolean"
+                        }
+                    ]
+                },
+                "status_codes": {
+                    "200": "Session details retrieved",
+                    "404": "Session not found",
+                    "401": "Authentication required"
+                }
+            },
+            "create_session": {
+                "method": "POST",
+                "path": "/sessions",
+                "description": "Cria uma nova sessão para uma mesa",
+                "authentication_required": true,
+                "request_payload": {
+                    "title": "string",
+                    "description": "string",
+                    "scheduled_at": "Date",
+                    "tableId": "UUID",
+                    "maxPlayers": "number"
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "description": "string",
+                    "status": "Awaiting Confirmations",
+                    "scheduled_at": "Date",
+                    "accepting_proposals": "boolean",
+                    "updated_at": "Date",
+                    "created_at": "Date",
+                    "date": "string",
+                    "time": "string",
+                    "maxPlayers": "number",
+                    "masterId": "UUID",
+                    "tableId": "UUID",
+                    "players": []
+                },
+                "status_codes": {
+                    "201": "Session created successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "403": "Not authorized to create session for this table"
+                }
+            },
+            "update_session": {
+                "method": "PUT",
+                "path": "/sessions/{id}",
+                "description": "Atualiza informações de uma sessão",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    },
+                    "body": {
+                        "title": "string",
+                        "description": "string",
+                        "scheduled_at": "Date",
+                        "maxPlayers": "number",
+                        "status": "Awaiting Confirmations | Scheduled | Completed"
+                    }
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "title": "string",
+                    "description": "string",
+                    "status": "string",
+                    "scheduled_at": "Date",
+                    "accepting_proposals": "boolean",
+                    "updated_at": "Date",
+                    "created_at": "Date",
+                    "date": "string",
+                    "time": "string",
+                    "maxPlayers": "number",
+                    "masterId": "UUID",
+                    "tableId": "UUID",
+                    "players": []
+                },
+                "status_codes": {
+                    "200": "Session updated successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "403": "Not authorized to update this session",
+                    "404": "Session not found"
+                }
+            },
+            "delete_session": {
+                "method": "DELETE",
+                "path": "/sessions/{id}",
+                "description": "Remove uma sessão",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    }
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Session deleted successfully",
+                    "401": "Authentication required",
+                    "403": "Not authorized to delete this session",
+                    "404": "Session not found"
+                }
+            }
+        },
+        "requests": {
+            "get_sent_requests": {
+                "method": "GET",
+                "path": "/requests/sent",
+                "description": "Lista todas as solicitações enviadas pelo usuário",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": [
+                    {
+                        "id": "UUID",
+                        "tableName": "string",
+                        "master": "string",
+                        "requestDate": "string",
+                        "status": "pending | accepted | rejected | cancelled",
+                        "message": "string"
+                    }
+                ],
+                "status_codes": {
+                    "200": "Sent requests retrieved successfully",
+                    "401": "Authentication required"
+                }
+            },
+            "get_received_requests": {
+                "method": "GET",
+                "path": "/requests/received",
+                "description": "Lista todas as solicitações recebidas pelo usuário",
+                "authentication_required": true,
+                "request_payload": {},
+                "response_payload": [
+                    {
+                        "id": "UUID",
+                        "playerName": "string",
+                        "tableName": "string",
+                        "requestDate": "string",
+                        "experience": "string",
+                        "message": "string",
+                        "playerLevel": "string"
+                    }
+                ],
+                "status_codes": {
+                    "200": "Received requests retrieved successfully",
+                    "401": "Authentication required"
+                }
+            },
+            "create_table_request": {
+                "method": "POST",
+                "path": "/tables/{id}/requests",
+                "description": "Cria uma solicitação para participar de uma mesa",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    },
+                    "body": {
+                        "message": "string"
+                    }
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "tableId": "UUID",
+                    "playerId": "UUID",
+                    "message": "string",
+                    "status": "pending",
+                    "requestDate": "Date"
+                },
+                "status_codes": {
+                    "201": "Request created successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "404": "Table not found",
+                    "409": "Request already exists"
+                }
+            },
+            "accept_request": {
+                "method": "POST",
+                "path": "/requests/{id}/accept",
+                "description": "Aceita uma solicitação de participação",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    },
+                    "body": {}
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Request accepted successfully",
+                    "401": "Authentication required",
+                    "403": "Not authorized to accept this request",
+                    "404": "Request not found"
+                }
+            },
+            "reject_request": {
+                "method": "POST",
+                "path": "/requests/{id}/reject",
+                "description": "Rejeita uma solicitação de participação",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    },
+                    "body": {}
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Request rejected successfully",
+                    "401": "Authentication required",
+                    "403": "Not authorized to reject this request",
+                    "404": "Request not found"
+                }
+            },
+            "cancel_request": {
+                "method": "DELETE",
+                "path": "/requests/{id}",
+                "description": "Cancela uma solicitação de participação",
+                "authentication_required": true,
+                "request_payload": {
+                    "path_params": {
+                        "id": "UUID"
+                    }
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Request cancelled successfully",
+                    "401": "Authentication required",
+                    "403": "Not authorized to cancel this request",
+                    "404": "Request not found"
+                }
+            }
+        },
+        "user_settings": {
+            "update_profile": {
+                "method": "PUT",
+                "path": "/user/profile",
+                "description": "Atualiza informações do perfil do usuário",
+                "authentication_required": true,
+                "request_payload": {
+                    "username": "string",
+                    "displayName": "string",
+                    "email": "string"
+                },
+                "response_payload": {
+                    "id": "UUID",
+                    "username": "string",
+                    "displayName": "string",
+                    "email": "string",
+                    "joined_at": "Date"
+                },
+                "status_codes": {
+                    "200": "Profile updated successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "409": "Username or email already exists"
+                }
+            },
+            "change_password": {
+                "method": "PUT",
+                "path": "/user/password",
+                "description": "Altera a senha do usuário",
+                "authentication_required": true,
+                "request_payload": {
+                    "currentPassword": "string",
+                    "newPassword": "string",
+                    "confirmPassword": "string"
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Password changed successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "403": "Current password is incorrect"
+                }
+            },
+            "delete_account": {
+                "method": "DELETE",
+                "path": "/user/account",
+                "description": "Remove a conta do usuário permanentemente",
+                "authentication_required": true,
+                "request_payload": {
+                    "password": "string"
+                },
+                "response_payload": {
+                    "message": "string"
+                },
+                "status_codes": {
+                    "200": "Account deleted successfully",
+                    "400": "Validation error",
+                    "401": "Authentication required",
+                    "403": "Password is incorrect"
+                }
+            }
+        }
+    },
+    "error_responses": {
+        "400": {
+            "description": "Bad Request - Validation error or invalid data",
+            "payload": {
+                "message": "string",
+                "errors": [
+                    {
+                        "field": "string",
+                        "message": "string"
+                    }
+                ]
+            }
+        },
+        "401": {
+            "description": "Unauthorized - Invalid or missing authentication",
+            "payload": {
+                "message": "string",
+                "code": "INVALID_TOKEN | TOKEN_EXPIRED | MISSING_TOKEN"
+            }
+        },
+        "403": {
+            "description": "Forbidden - Insufficient permissions",
+            "payload": {
+                "message": "string",
+                "code": "INSUFFICIENT_PERMISSIONS"
+            }
+        },
+        "404": {
+            "description": "Not Found - Resource not found",
+            "payload": {
+                "message": "string",
+                "code": "RESOURCE_NOT_FOUND"
+            }
+        },
+        "409": {
+            "description": "Conflict - Resource already exists or conflict state",
+            "payload": {
+                "message": "string",
+                "code": "RESOURCE_CONFLICT"
+            }
+        },
+        "500": {
+            "description": "Internal Server Error - Server error",
+            "payload": {
+                "message": "string",
+                "code": "INTERNAL_ERROR"
+            }
+        }
+    },
+    "authentication": {
+        "type": "Bearer Token",
+        "header": "Authorization: Bearer {token}",
+        "token_expiration": "24 hours",
+        "refresh_token_expiration": "7 days",
+        "token_claims": {
+            "sub": "User ID",
+            "username": "Username",
+            "displayName": "Display Name",
+            "email": "Email",
+            "iat": "Issued at timestamp",
+            "exp": "Expiration timestamp"
+        }
+    },
+    "rate_limiting": {
+        "general": "100 requests per minute per IP",
+        "authentication": "5 attempts per minute per IP",
+        "table_creation": "10 tables per hour per user",
+        "request_creation": "20 requests per hour per user"
+    },
+    "data_types": {
+        "UUID": "Universally unique identifier (v4 format)",
+        "Date": "ISO 8601 date string (YYYY-MM-DDTHH:mm:ss.sssZ)",
+        "TableStatus": "active | completed | cancelled | archived",
+        "SessionStatus": "Awaiting Confirmations | Scheduled | Completed",
+        "RequestStatus": "pending | accepted | rejected | cancelled",
+        "PlayerAttendanceStatus": "confirmed | pending | declined",
+        "TableVisibility": "private | public"
+    }
+}

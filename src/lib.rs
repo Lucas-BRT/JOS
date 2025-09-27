@@ -1,12 +1,8 @@
+pub mod adapters;
 pub mod application;
-pub mod core;
 pub mod domain;
+pub mod dtos;
 pub mod infrastructure;
-pub mod interfaces;
+pub mod shared;
 
-// Re-export commonly used items
-pub use core::error::Error;
-pub use core::setup::SetupError;
-
-// re-export core modules
-pub use core::*;
+pub use shared::{Db, Error, Result};
