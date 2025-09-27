@@ -21,7 +21,7 @@ pub struct GetSessionCommand {
     pub scheduled_for_end: Option<Date>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UpdateSessionCommand {
     pub id: Uuid,
     pub name: Update<String>,

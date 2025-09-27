@@ -1,6 +1,7 @@
-use crate::Result;
 use crate::domain::entities::*;
+use crate::domain::error::{DomainError, SessionIntentDomainError};
 use crate::domain::repositories::SessionIntentRepository;
+use crate::{Error, Result};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -30,8 +31,13 @@ impl SessionIntentService {
             ..Default::default()
         };
         let session_intents = self.session_intent_repository.read(command).await?;
-        session_intents.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::SessionIntent(crate::domain::error::SessionIntentDomainError::SessionIntentNotFound(id.to_string()))))
+
+        session_intents
+            .into_iter()
+            .next()
+            .ok_or(Error::Domain(DomainError::SessionIntent(
+                SessionIntentDomainError::SessionIntentNotFound,
+            )))
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<SessionIntent>> {

@@ -43,38 +43,41 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
 
     match constraint {
         // Unique constraints
-        "t_users_username_key" => {
+        "users_username_key" => {
             tracing::debug!("Username already taken: {}", message);
             RepositoryError::UsernameAlreadyTaken
         }
-        "t_users_email_key" => {
+        "users_email_key" => {
             tracing::debug!("Email already taken: {}", message);
             RepositoryError::EmailAlreadyTaken
         }
-        "t_game_system_name_key" => {
+        "game_systems_name_key" => {
             tracing::debug!("Game system name already taken: {}", message);
             RepositoryError::GameSystemNameAlreadyTaken
         }
-        "t_session_intents_user_id_session_id_key" => {
+        "session_intents_user_id_session_id_key" => {
             tracing::debug!("User session intent already exists: {}", message);
             RepositoryError::UserSessionIntentAlreadyExists
         }
+        "table_members_table_id_user_id_key" => {
+            tracing::debug!("User already member of table: {}", message);
+            RepositoryError::UserAlreadyMemberOfTable
+        }
 
         // Foreign key constraints
-        "t_rpg_tables_gm_id_fkey" => {
+        "tables_gm_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for gm_id: {}", message);
-                let id = extract_field_from_error("gm_id").unwrap_or_else(|| "unknown".to_string());
-                RepositoryError::UserNotFound(id)
+                RepositoryError::UserNotFound
             } else {
                 tracing::warn!("Foreign key violation for gm_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_rpg_tables".to_string(),
+                    table: "tables".to_string(),
                     field: "gm_id".to_string(),
                 }
             }
         }
-        "t_rpg_tables_game_system_id_fkey" => {
+        "tables_game_system_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Game system not found: {}", message);
                 let id = extract_field_from_error("game_system_id")
@@ -83,55 +86,53 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             } else {
                 tracing::warn!("Foreign key violation for game_system_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_rpg_tables".to_string(),
+                    table: "tables".to_string(),
                     field: "game_system_id".to_string(),
                 }
             }
         }
-        "t_sessions_table_id_fkey" => {
+        "sessions_table_id_fkey" => {
             if is_referenced_not_found {
-                tracing::debug!("RPG table not found: {}", message);
+                tracing::debug!("Table not found: {}", message);
                 let id =
                     extract_field_from_error("table_id").unwrap_or_else(|| "unknown".to_string());
                 RepositoryError::RpgTableNotFound(id)
             } else {
                 tracing::warn!("Foreign key violation for table_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_sessions".to_string(),
+                    table: "sessions".to_string(),
                     field: "table_id".to_string(),
                 }
             }
         }
-        "t_session_intents_user_id_fkey" => {
+        "session_intents_user_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for session intent: {}", message);
-                let id =
-                    extract_field_from_error("user_id").unwrap_or_else(|| "unknown".to_string());
-                RepositoryError::UserNotFound(id)
+                RepositoryError::UserNotFound
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in session intents: {}",
                     message
                 );
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_session_intents".to_string(),
+                    table: "session_intents".to_string(),
                     field: "user_id".to_string(),
                 }
             }
         }
-        "t_session_intents_session_id_fkey" => {
+        "session_intents_session_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Session not found: {}", message);
                 RepositoryError::SessionNotFound
             } else {
                 tracing::warn!("Foreign key violation for session_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_session_intents".to_string(),
+                    table: "session_intents".to_string(),
                     field: "session_id".to_string(),
                 }
             }
         }
-        "t_session_checkins_session_intent_id_fkey" => {
+        "session_checkins_session_intent_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Session intent not found: {}", message);
                 let id = extract_field_from_error("session_intent_id")
@@ -140,31 +141,29 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             } else {
                 tracing::warn!("Foreign key violation for session_intent_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_session_checkins".to_string(),
+                    table: "session_checkins".to_string(),
                     field: "session_intent_id".to_string(),
                 }
             }
         }
-        "t_table_requests_user_id_fkey" => {
+        "table_requests_user_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for table request: {}", message);
-                let id =
-                    extract_field_from_error("user_id").unwrap_or_else(|| "unknown".to_string());
-                RepositoryError::UserNotFound(id)
+                RepositoryError::UserNotFound
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in table requests: {}",
                     message
                 );
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_table_requests".to_string(),
+                    table: "table_requests".to_string(),
                     field: "user_id".to_string(),
                 }
             }
         }
-        "t_table_requests_table_id_fkey" => {
+        "table_requests_table_id_fkey" => {
             if is_referenced_not_found {
-                tracing::debug!("RPG table not found for table request: {}", message);
+                tracing::debug!("Table not found for table request: {}", message);
                 let id =
                     extract_field_from_error("table_id").unwrap_or_else(|| "unknown".to_string());
                 RepositoryError::RpgTableNotFound(id)
@@ -174,8 +173,40 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
                     message
                 );
                 RepositoryError::ForeignKeyViolation {
-                    table: "t_table_requests".to_string(),
+                    table: "table_requests".to_string(),
                     field: "table_id".to_string(),
+                }
+            }
+        }
+        "table_members_table_id_fkey" => {
+            if is_referenced_not_found {
+                tracing::debug!("Table not found for table member: {}", message);
+                let id =
+                    extract_field_from_error("table_id").unwrap_or_else(|| "unknown".to_string());
+                RepositoryError::RpgTableNotFound(id)
+            } else {
+                tracing::warn!(
+                    "Foreign key violation for table_id in table members: {}",
+                    message
+                );
+                RepositoryError::ForeignKeyViolation {
+                    table: "table_members".to_string(),
+                    field: "table_id".to_string(),
+                }
+            }
+        }
+        "table_members_user_id_fkey" => {
+            if is_referenced_not_found {
+                tracing::debug!("User not found for table member: {}", message);
+                RepositoryError::UserNotFound
+            } else {
+                tracing::warn!(
+                    "Foreign key violation for user_id in table members: {}",
+                    message
+                );
+                RepositoryError::ForeignKeyViolation {
+                    table: "table_members".to_string(),
+                    field: "user_id".to_string(),
                 }
             }
         }

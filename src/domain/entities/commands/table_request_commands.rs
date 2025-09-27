@@ -7,6 +7,7 @@ pub struct CreateTableRequestCommand {
     pub message: Option<String>,
 }
 
+#[derive(Debug, Clone, Default)]
 pub struct UpdateTableRequestCommand {
     pub id: Uuid,
     pub status: Update<TableRequestStatus>,

@@ -1,6 +1,7 @@
 use crate::Result;
 use crate::domain::entities::TableRequest;
 use crate::domain::entities::*;
+use uuid::Uuid;
 
 #[async_trait::async_trait]
 pub trait TableRequestRepository: Send + Sync {
@@ -8,4 +9,8 @@ pub trait TableRequestRepository: Send + Sync {
     async fn read(&self, command: GetTableRequestCommand) -> Result<Vec<TableRequest>>;
     async fn update(&self, command: UpdateTableRequestCommand) -> Result<TableRequest>;
     async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest>;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableRequest>>;
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>>;
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableRequest>>;
+    async fn find_by_status(&self, status: TableRequestStatus) -> Result<Vec<TableRequest>>;
 }

@@ -4,6 +4,7 @@ use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
 use crate::domain::repositories::TableMemberRepository;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableMemberRepository {
@@ -41,8 +42,10 @@ impl TableMemberRepository for PostgresTableMemberRepository {
     }
 
     async fn read(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>> {
-        let mut query = sqlx::QueryBuilder::new(
-            r#"SELECT
+        let table_members = sqlx::query_as!(
+            TableMemberModel,
+            r#"
+            SELECT
                 id,
                 table_id,
                 user_id,
@@ -50,41 +53,17 @@ impl TableMemberRepository for PostgresTableMemberRepository {
                 created_at,
                 updated_at
             FROM table_members
+            WHERE ($1::uuid IS NULL OR id = $1)
+              AND ($2::uuid IS NULL OR table_id = $2)
+              AND ($3::uuid IS NULL OR user_id = $3)
             "#,
-        );
-
-        let mut conditions = Vec::new();
-
-        if let Some(id) = &command.id {
-            conditions.push("id = ");
-            query.push_bind(id);
-        }
-
-        if let Some(table_id) = &command.table_id {
-            conditions.push("table_id = ");
-            query.push_bind(table_id);
-        }
-
-        if let Some(user_id) = &command.user_id {
-            conditions.push("user_id = ");
-            query.push_bind(user_id);
-        }
-
-        if !conditions.is_empty() {
-            query.push(" WHERE ");
-            for (i, condition) in conditions.iter().enumerate() {
-                if i > 0 {
-                    query.push(" AND ");
-                }
-                query.push(condition);
-            }
-        }
-
-        let table_members = query
-            .build_query_as::<TableMemberModel>()
-            .fetch_all(&self.pool)
-            .await
-            .map_err(RepositoryError::DatabaseError)?;
+            command.id,
+            command.table_id,
+            command.user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
 
         Ok(table_members
             .into_iter()
@@ -93,29 +72,43 @@ impl TableMemberRepository for PostgresTableMemberRepository {
     }
 
     async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember> {
-        let mut builder = sqlx::QueryBuilder::new("UPDATE table_members SET ");
-        let mut separated = builder.separated(", ");
+        let has_table_id_update = matches!(command.table_id, Update::Change(_));
+        let has_user_id_update = matches!(command.user_id, Update::Change(_));
 
-        if let Update::Change(table_id) = &command.table_id {
-            separated.push("table_id = ");
-            separated.push_bind_unseparated(table_id);
+        if !has_table_id_update && !has_user_id_update {
+            return Err(crate::shared::Error::Persistence(
+                RepositoryError::DatabaseError(sqlx::Error::RowNotFound),
+            ));
         }
 
-        if let Update::Change(user_id) = &command.user_id {
-            separated.push("user_id = ");
-            separated.push_bind_unseparated(user_id);
-        }
+        let table_id_value = match &command.table_id {
+            Update::Change(table_id) => Some(*table_id),
+            Update::Keep => None,
+        };
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(command.id);
+        let user_id_value = match &command.user_id {
+            Update::Change(user_id) => Some(*user_id),
+            Update::Keep => None,
+        };
 
-        builder.push(" RETURNING *");
-
-        let updated_table_member = builder
-            .build_query_as::<TableMemberModel>()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+        let updated_table_member = sqlx::query_as!(
+            TableMemberModel,
+            r#"
+            UPDATE table_members 
+            SET 
+                table_id = COALESCE($2, table_id),
+                user_id = COALESCE($3, user_id),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+            "#,
+            command.id,
+            table_id_value,
+            user_id_value
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(updated_table_member.into())
     }
@@ -135,5 +128,80 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         .map_err(RepositoryError::DatabaseError)?;
 
         Ok(table_member.into())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>> {
+        let table_member = sqlx::query_as!(
+            TableMemberModel,
+            r#"
+            SELECT
+                id,
+                table_id,
+                user_id,
+                joined_at,
+                created_at,
+                updated_at
+            FROM table_members
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(table_member.map(|model| model.into()))
+    }
+
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableMember>> {
+        let table_members = sqlx::query_as!(
+            TableMemberModel,
+            r#"
+            SELECT
+                id,
+                table_id,
+                user_id,
+                joined_at,
+                created_at,
+                updated_at
+            FROM table_members
+            WHERE table_id = $1
+            "#,
+            table_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(table_members
+            .into_iter()
+            .map(|model| model.into())
+            .collect())
+    }
+
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableMember>> {
+        let table_members = sqlx::query_as!(
+            TableMemberModel,
+            r#"
+            SELECT
+                id,
+                table_id,
+                user_id,
+                joined_at,
+                created_at,
+                updated_at
+            FROM table_members
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(RepositoryError::DatabaseError)?;
+
+        Ok(table_members
+            .into_iter()
+            .map(|model| model.into())
+            .collect())
     }
 }

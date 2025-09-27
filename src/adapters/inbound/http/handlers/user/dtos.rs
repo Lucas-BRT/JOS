@@ -7,9 +7,7 @@ use validator::Validate;
 pub struct MeResponse {
     pub id: String,
     pub username: String,
-    pub display_name: String,
     pub email: String,
-    pub role: String,
     pub created_at: String,
 }
 
@@ -18,9 +16,7 @@ impl From<User> for MeResponse {
         MeResponse {
             id: user.id.to_string(),
             username: user.username,
-            display_name: user.display_name,
             email: user.email,
-            role: user.role.to_string(),
             created_at: user.created_at.to_rfc3339(),
         }
     }
@@ -30,8 +26,6 @@ impl From<User> for MeResponse {
 pub struct UpdateUserDto {
     #[validate(length(min = 4, max = 100))]
     pub username: Option<String>,
-    #[validate(length(min = 4, max = 100))]
-    pub display_name: Option<String>,
     #[validate(email)]
     pub email: Option<String>,
 }

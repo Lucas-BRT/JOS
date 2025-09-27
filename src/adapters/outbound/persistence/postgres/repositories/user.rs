@@ -1,8 +1,9 @@
-use crate::Result;
+use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::UserModel;
-use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
+use crate::domain::error::UserDomainError;
 use crate::domain::repositories::UserRepository;
+use crate::{Error, Result};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -44,41 +45,47 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn update(&self, data: &mut UpdateUserCommand) -> Result<User> {
-        let mut builder = sqlx::QueryBuilder::new("UPDATE users SET ");
-        let mut separated = builder.separated(", ");
+        let has_email_update = matches!(data.email, Update::Change(_));
+        let has_password_update = matches!(data.password, Update::Change(_));
 
-        if let Update::Change(email) = &data.email {
-            separated.push("email = ");
-            separated.push_bind_unseparated(email);
+        if !has_email_update && !has_password_update {
+            return Err(Error::Domain(UserDomainError::UserNotFound.into()));
         }
 
-        if let Update::Change(password) = &data.password {
-            separated.push("password = ");
-            separated.push_bind_unseparated(password);
-        }
+        let email_value = match &data.email {
+            Update::Change(email) => Some(email.as_str()),
+            Update::Keep => None,
+        };
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(data.user_id);
+        let password_value = match &data.password {
+            Update::Change(password) => Some(password.as_str()),
+            Update::Keep => None,
+        };
 
-        builder.push(" RETURNING *");
-
-        let updated_user = builder
-            .build_query_as::<UserModel>()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+        let updated_user = sqlx::query_as!(
+            UserModel,
+            r#"
+            UPDATE users 
+            SET 
+                email = COALESCE($2, email),
+                password = COALESCE($3, password),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING *
+            "#,
+            data.user_id,
+            email_value,
+            password_value
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(updated_user.into())
     }
 
     async fn read(&self, command: &mut GetUserCommand) -> Result<Vec<User>> {
-        let mut query = sqlx::QueryBuilder::new(
-            r#"SELECT
-                *
-            FROM users
-            "#,
-        );
-
+        let mut query = sqlx::QueryBuilder::new("SELECT * FROM users");
         let mut conditions = Vec::new();
 
         if let Some(id) = &command.id {
@@ -110,7 +117,7 @@ impl UserRepository for PostgresUserRepository {
             .build_query_as::<UserModel>()
             .fetch_all(&self.pool)
             .await
-            .map_err(RepositoryError::DatabaseError)?;
+            .map_err(constraint_mapper::map_database_error)?;
 
         Ok(users.into_iter().map(|model| model.into()).collect())
     }
@@ -132,7 +139,7 @@ impl UserRepository for PostgresUserRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(user.map(|model| model.into()))
     }
@@ -148,7 +155,7 @@ impl UserRepository for PostgresUserRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(user.map(|model| model.into()))
     }
@@ -165,7 +172,7 @@ impl UserRepository for PostgresUserRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(user.into())
     }
@@ -183,7 +190,7 @@ impl UserRepository for PostgresUserRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(users.into_iter().map(|model| model.into()).collect())
     }

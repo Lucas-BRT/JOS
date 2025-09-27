@@ -14,12 +14,14 @@ pub enum RepositoryError {
     GameSystemNameAlreadyTaken,
     #[error("user already has intent for this session")]
     UserSessionIntentAlreadyExists,
+    #[error("user already member of table")]
+    UserAlreadyMemberOfTable,
     #[error("foreign key violation: table {table}, field {field}")]
     ForeignKeyViolation { table: String, field: String },
     #[error("database error {0}")]
     DatabaseError(#[from] sqlx::Error),
-    #[error("user not found: {0}")]
-    UserNotFound(String),
+    #[error("user not found")]
+    UserNotFound,
     #[error("game system not found: {0}")]
     GameSystemNotFound(String),
     #[error("rpg table not found: {0}")]

@@ -11,8 +11,6 @@ use validator::Validate;
 pub struct SignupDto {
     #[validate(length(min = 4, max = 100))]
     pub username: String,
-    #[validate(length(min = 4, max = 100))]
-    pub display_name: String,
     #[validate(email)]
     pub email: String,
     #[validate(length(min = 8, max = 200))]
@@ -58,8 +56,7 @@ pub struct LoginResponse {
 pub struct UserResponse {
     pub id: String,
     pub username: String,
-    pub display_name: String,
-    pub role: String,
+    pub email: String,
     pub created_at: String,
 }
 
@@ -68,8 +65,7 @@ impl From<User> for UserResponse {
         UserResponse {
             id: user.id.to_string(),
             username: user.username,
-            display_name: user.display_name,
-            role: user.role.to_string(),
+            email: user.email,
             created_at: user.created_at.to_string(),
         }
     }
@@ -79,7 +75,6 @@ impl From<SignupDto> for CreateUserCommand {
     fn from(dto: SignupDto) -> Self {
         CreateUserCommand {
             username: dto.username,
-            display_name: dto.display_name,
             email: dto.email,
             password: dto.password,
         }

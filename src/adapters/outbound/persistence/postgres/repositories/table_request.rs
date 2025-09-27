@@ -1,10 +1,12 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::TableRequestModel;
 use crate::adapters::outbound::postgres::models::table_request::ETableRequestStatus;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRequestRepository;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableRequestRepository {
@@ -52,39 +54,76 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     }
 
     async fn update(&self, update_data: UpdateTableRequestCommand) -> Result<TableRequest> {
-        let mut builder = sqlx::QueryBuilder::new(r#"UPDATE table_requests SET "#);
+        let has_status_update = matches!(update_data.status, Update::Change(_));
+        let has_message_update = matches!(update_data.message, Update::Change(_));
 
-        let mut separated = builder.separated(", ");
-
-        if let Update::Change(status) = &update_data.status {
-            separated.push("status = ");
-            separated.push_bind_unseparated(ETableRequestStatus::from(*status));
+        if !has_status_update && !has_message_update {
+            return Err(crate::shared::Error::Persistence(
+                RepositoryError::DatabaseError(sqlx::Error::RowNotFound),
+            ));
         }
 
-        if let Update::Change(message) = &update_data.message {
-            separated.push("message = ");
-            separated.push_bind_unseparated(message);
-        }
+        let status_value = match update_data.status {
+            Update::Change(status) => Some(ETableRequestStatus::from(status)),
+            Update::Keep => None,
+        };
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(update_data.id);
+        let message_value = match &update_data.message {
+            Update::Change(message) => message.as_ref().map(|m| m.as_str()),
+            Update::Keep => None,
+        };
 
-        builder.push(
-            r#" RETURNING
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at"#,
-        );
-
-        let updated_request = builder
-            .build_query_as::<TableRequestModel>()
+        let updated_request = if let Some(status) = status_value {
+            sqlx::query_as!(
+                TableRequestModel,
+                r#"
+                UPDATE table_requests 
+                SET 
+                    status = $2::request_status,
+                    message = COALESCE($3, message),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                "#,
+                update_data.id,
+                status as ETableRequestStatus,
+                message_value
+            )
             .fetch_one(&self.pool)
             .await
-            .map_err(constraint_mapper::map_database_error)?;
+            .map_err(constraint_mapper::map_database_error)?
+        } else {
+            sqlx::query_as!(
+                TableRequestModel,
+                r#"
+                UPDATE table_requests 
+                SET 
+                    message = COALESCE($2, message),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                "#,
+                update_data.id,
+                message_value
+            )
+            .fetch_one(&self.pool)
+            .await
+            .map_err(constraint_mapper::map_database_error)?
+        };
 
         Ok(updated_request.into())
     }
@@ -113,8 +152,10 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     }
 
     async fn read(&self, command: GetTableRequestCommand) -> Result<Vec<TableRequest>> {
-        let mut builder = sqlx::QueryBuilder::new(
-            r#"SELECT
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
                 id,
                 user_id,
                 table_id,
@@ -122,49 +163,117 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                 status as "status: ETableRequestStatus",
                 created_at,
                 updated_at
-            FROM table_requests"#,
-        );
-
-        let mut has_where = false;
-        let mut push_filter_separator = |b: &mut sqlx::QueryBuilder<'_, sqlx::Postgres>| {
-            if !has_where {
-                b.push(" WHERE ");
-                has_where = true;
-            } else {
-                b.push(" AND ");
-            }
-        };
-
-        if let Some(id) = &command.id {
-            push_filter_separator(&mut builder);
-            builder.push("id = ");
-            builder.push_bind(id);
-        }
-
-        if let Some(user_id) = &command.user_id {
-            push_filter_separator(&mut builder);
-            builder.push("user_id = ");
-            builder.push_bind(user_id);
-        }
-
-        if let Some(table_id) = &command.table_id {
-            push_filter_separator(&mut builder);
-            builder.push("table_id = ");
-            builder.push_bind(table_id);
-        }
-
-        if let Some(status) = &command.status {
-            push_filter_separator(&mut builder);
-            builder.push("status = ");
-            builder.push_bind(ETableRequestStatus::from(*status));
-        }
-
-        let requests = builder
-            .build_query_as::<TableRequestModel>()
-            .fetch_all(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+            FROM table_requests
+            WHERE ($1::uuid IS NULL OR id = $1)
+              AND ($2::uuid IS NULL OR user_id = $2)
+              AND ($3::uuid IS NULL OR table_id = $3)
+            "#,
+            command.id,
+            command.user_id,
+            command.table_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(requests.into_iter().map(|m| m.into()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableRequest>> {
+        let request = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(request.map(|model| model.into()))
+    }
+
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>> {
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(requests.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableRequest>> {
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE table_id = $1
+            "#,
+            table_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(requests.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_status(&self, status: TableRequestStatus) -> Result<Vec<TableRequest>> {
+        let status = ETableRequestStatus::from(status);
+
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE status = $1
+            "#,
+            status as ETableRequestStatus
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 }

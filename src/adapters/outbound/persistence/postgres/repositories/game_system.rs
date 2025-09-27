@@ -1,9 +1,11 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::GameSystemModel;
 use crate::domain::entities::*;
 use crate::domain::repositories::GameSystemRepository;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresGameSystemRepository {
@@ -38,10 +40,12 @@ impl GameSystemRepository for PostgresGameSystemRepository {
     async fn read(&self, command: &mut GetGameSystemCommand) -> Result<Vec<GameSystem>> {
         let result = sqlx::query_as!(
             GameSystemModel,
-            "SELECT *
+            r#"
+            SELECT *
             FROM game_systems
-            WHERE name ILIKE $1",
-            command.name,
+            WHERE ($1::text IS NULL OR name ILIKE $1)
+            "#,
+            command.name.as_ref().map(|s| format!("%{}%", s))
         )
         .fetch_all(&self.pool)
         .await
@@ -51,24 +55,35 @@ impl GameSystemRepository for PostgresGameSystemRepository {
     }
 
     async fn update(&self, command: &mut UpdateGameSystemCommand) -> Result<GameSystem> {
-        let mut builder = sqlx::QueryBuilder::new("UPDATE game_systems SET ");
-        let mut separated = builder.separated(", ");
+        let has_name_update = matches!(command.name, Update::Change(_));
 
-        if let Update::Change(name) = &command.name {
-            separated.push("name = ");
-            separated.push_bind_unseparated(name);
+        if !has_name_update {
+            return Err(crate::shared::Error::Persistence(
+                RepositoryError::DatabaseError(sqlx::Error::RowNotFound),
+            ));
         }
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(command.id);
+        let name_value = match &command.name {
+            Update::Change(name) => Some(name.as_str()),
+            Update::Keep => None,
+        };
 
-        builder.push(" RETURNING *");
-
-        let updated_game_system = builder
-            .build_query_as::<GameSystemModel>()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+        let updated_game_system = sqlx::query_as!(
+            GameSystemModel,
+            r#"
+            UPDATE game_systems 
+            SET 
+                name = COALESCE($2, name),
+                created_at = NOW()
+            WHERE id = $1
+            RETURNING *
+            "#,
+            command.id,
+            name_value
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(updated_game_system.into())
     }
@@ -84,5 +99,39 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         .map_err(constraint_mapper::map_database_error)?;
 
         Ok(result.into())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<GameSystem>> {
+        let game_system = sqlx::query_as!(
+            GameSystemModel,
+            r#"
+            SELECT *
+            FROM game_systems
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(game_system.map(|model| model.into()))
+    }
+
+    async fn find_by_name(&self, name: &str) -> Result<Option<GameSystem>> {
+        let game_system = sqlx::query_as!(
+            GameSystemModel,
+            r#"
+            SELECT *
+            FROM game_systems
+            WHERE name = $1
+            "#,
+            name
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(game_system.map(|model| model.into()))
     }
 }

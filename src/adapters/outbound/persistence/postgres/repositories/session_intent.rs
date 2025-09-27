@@ -1,5 +1,5 @@
 use crate::{
-    Result,
+    Error, Result,
     adapters::outbound::postgres::{
         constraint_mapper,
         models::{SessionIntentModel, session_intent::EIntentStatus},
@@ -9,10 +9,12 @@ use crate::{
             CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
             SessionIntent, Update, UpdateSessionIntentCommand,
         },
+        error::SessionIntentDomainError,
         repositories::SessionIntentRepository,
     },
 };
 use sqlx::PgPool;
+use uuid::Uuid;
 
 pub struct PostgresSessionIntentRepository {
     pool: PgPool,
@@ -55,35 +57,51 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
     }
 
     async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
-        let mut builder = sqlx::QueryBuilder::new("UPDATE session_intents SET ");
-        let mut separated = builder.separated(" ,");
+        let status_to_update = matches!(command.status, Update::Change(_));
 
-        if let Update::Change(status) = command.status {
-            separated.push("intent_status = ");
-            separated.push_bind_unseparated(EIntentStatus::from(status));
+        if !status_to_update {
+            let session_intent = self.find_by_id(command.id).await?;
+
+            match session_intent {
+                Some(session_intent) => return Ok(session_intent),
+                None => {
+                    return Err(Error::Domain(
+                        SessionIntentDomainError::SessionIntentNotFound.into(),
+                    ));
+                }
+            }
         }
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(command.id);
+        // Extrair o novo status apenas se for Change
+        let new_status: Option<EIntentStatus> = match command.status {
+            Update::Change(status) => Some(status.into()), // Retorna Some com o novo status
+            Update::Keep => None,                          // Retorna None para manter o atual
+        };
 
-        builder.push(
-            r#" RETURNING
-            id,
-            user_id,
-            session_id,
-            intent_status as "intent_status: EIntentStatus",
-            created_at,
-            updated_at
+        let updated_model = sqlx::query_as!(
+            SessionIntentModel,
+            r#"
+                UPDATE session_intents 
+                SET 
+                    intent_status = COALESCE($2, intent_status),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
             "#,
-        );
+            command.id,
+            new_status as Option<EIntentStatus>
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
-        let updated_session_intent = builder
-            .build_query_as::<SessionIntentModel>()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(updated_session_intent.into())
+        Ok(updated_model.into())
     }
 
     async fn delete(&self, command: DeleteSessionIntentCommand) -> Result<SessionIntent> {
@@ -109,58 +127,104 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
     }
 
     async fn read(&self, command: GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
-        let mut builder = sqlx::QueryBuilder::new(
-            r#"SELECT
-            id,
-            user_id,
-            session_id,
-            intent_status as "intent_status: EIntentStatus",
-            created_at,
-            updated_at
-            FROM session_intents "#,
-        );
-
-        let mut has_where = false;
-
-        let mut push_filter_separator = |b: &mut sqlx::QueryBuilder<'_, sqlx::Postgres>| {
-            if !has_where {
-                b.push(" WHERE ");
-                has_where = true;
-            } else {
-                b.push(" AND ");
-            }
-        };
-
-        if let Some(id) = command.id {
-            push_filter_separator(&mut builder);
-            builder.push("id = ");
-            builder.push_bind(id);
-        }
-
-        if let Some(user_id) = command.user_id {
-            push_filter_separator(&mut builder);
-            builder.push("user_id = ");
-            builder.push_bind(user_id);
-        }
-
-        if let Some(session_id) = command.session_id {
-            push_filter_separator(&mut builder);
-            builder.push("session_id = ");
-            builder.push_bind(session_id);
-        }
-
-        if let Some(intent_status) = command.status {
-            push_filter_separator(&mut builder);
-            builder.push("intent_status = ");
-            builder.push_bind(EIntentStatus::from(intent_status));
-        }
-
-        let sessions = builder
-            .build_query_as::<SessionIntentModel>()
-            .fetch_all(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+        let sessions = sqlx::query_as!(
+            SessionIntentModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                session_id,
+                intent_status as "intent_status: EIntentStatus",
+                created_at,
+                updated_at
+            FROM session_intents
+            WHERE ($1::uuid IS NULL OR id = $1)
+              AND ($2::uuid IS NULL OR user_id = $2)
+              AND ($3::uuid IS NULL OR session_id = $3)
+            "#,
+            command.id,
+            command.user_id,
+            command.session_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(sessions.into_iter().map(|s| s.into()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>> {
+        let session_intent = sqlx::query_as!(
+            SessionIntentModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                session_id,
+                intent_status as "intent_status: EIntentStatus",
+                created_at,
+                updated_at
+            FROM session_intents
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(session_intent.map(|model| model.into()))
+    }
+
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<SessionIntent>> {
+        let session_intents = sqlx::query_as!(
+            SessionIntentModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                session_id,
+                intent_status as "intent_status: EIntentStatus",
+                created_at,
+                updated_at
+            FROM session_intents
+            WHERE user_id = $1
+            "#,
+            user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(session_intents
+            .into_iter()
+            .map(|model| model.into())
+            .collect())
+    }
+
+    async fn find_by_session_id(&self, session_id: Uuid) -> Result<Vec<SessionIntent>> {
+        let session_intents = sqlx::query_as!(
+            SessionIntentModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                session_id,
+                intent_status as "intent_status: EIntentStatus",
+                created_at,
+                updated_at
+            FROM session_intents
+            WHERE session_id = $1
+            "#,
+            session_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(session_intents
+            .into_iter()
+            .map(|model| model.into())
+            .collect())
     }
 }

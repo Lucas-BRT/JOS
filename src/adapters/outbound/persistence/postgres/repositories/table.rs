@@ -1,10 +1,12 @@
 use crate::Result;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::TableModel;
 use crate::domain::entities::commands::*;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRepository;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 pub struct PostgresTableRepository {
     pool: PgPool,
@@ -54,34 +56,53 @@ impl TableRepository for PostgresTableRepository {
     }
 
     async fn update(&self, command: UpdateTableCommand) -> Result<Table> {
-        let mut builder = sqlx::QueryBuilder::new("UPDATE tables SET ");
-        let mut separated = builder.separated(", ");
+        let has_title_update = matches!(command.title, Update::Change(_));
+        let has_description_update = matches!(command.description, Update::Change(_));
+        let has_slots_update = matches!(command.slots, Update::Change(_));
+        let has_game_system_update = matches!(command.game_system_id, Update::Change(_));
 
-        if let Update::Change(title) = &command.title {
-            separated.push("title = ");
-            separated.push_bind_unseparated(title);
+        if !has_title_update
+            && !has_description_update
+            && !has_slots_update
+            && !has_game_system_update
+        {
+            return Err(crate::shared::Error::Persistence(
+                RepositoryError::DatabaseError(sqlx::Error::RowNotFound),
+            ));
         }
 
-        if let Update::Change(description) = &command.description {
-            separated.push("description = ");
-            separated.push_bind_unseparated(description);
-        }
+        let title_value = match &command.title {
+            Update::Change(title) => Some(title.as_str()),
+            Update::Keep => None,
+        };
 
-        if let Update::Change(slots) = &command.slots {
-            separated.push("slots = ");
-            separated.push_bind_unseparated(*slots as i32);
-        }
+        let description_value = match &command.description {
+            Update::Change(description) => Some(description.as_str()),
+            Update::Keep => None,
+        };
 
-        if let Update::Change(game_system_id) = &command.game_system_id {
-            separated.push("game_system_id = ");
-            separated.push_bind_unseparated(game_system_id);
-        }
+        let slots_value = match command.slots {
+            Update::Change(slots) => Some(slots as i32),
+            Update::Keep => None,
+        };
 
-        builder.push(" WHERE id = ");
-        builder.push_bind(command.id);
+        let game_system_id_value = match &command.game_system_id {
+            Update::Change(game_system_id) => Some(*game_system_id),
+            Update::Keep => None,
+        };
 
-        builder.push(
-            r#" RETURNING
+        let updated_table = sqlx::query_as!(
+            TableModel,
+            r#"
+            UPDATE tables 
+            SET 
+                title = COALESCE($2, title),
+                description = COALESCE($3, description),
+                slots = COALESCE($4, slots),
+                game_system_id = COALESCE($5, game_system_id),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING
                 id,
                 gm_id,
                 title,
@@ -89,14 +110,17 @@ impl TableRepository for PostgresTableRepository {
                 slots,
                 game_system_id,
                 created_at,
-                updated_at"#,
-        );
-
-        let updated_table = builder
-            .build_query_as::<TableModel>()
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+                updated_at
+            "#,
+            command.id,
+            title_value,
+            description_value,
+            slots_value,
+            game_system_id_value
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(updated_table.into())
     }
@@ -126,8 +150,10 @@ impl TableRepository for PostgresTableRepository {
     }
 
     async fn read(&self, command: GetTableCommand) -> Result<Vec<Table>> {
-        let mut builder = sqlx::QueryBuilder::new(
-            r#"SELECT
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT
                 id,
                 gm_id,
                 title,
@@ -136,54 +162,22 @@ impl TableRepository for PostgresTableRepository {
                 game_system_id,
                 created_at,
                 updated_at
-            FROM tables"#,
-        );
-
-        let mut has_where = false;
-        let mut push_filter_separator = |b: &mut sqlx::QueryBuilder<'_, sqlx::Postgres>| {
-            if !has_where {
-                b.push(" WHERE ");
-                has_where = true;
-            } else {
-                b.push(" AND ");
-            }
-        };
-
-        if let Some(id) = &command.id {
-            push_filter_separator(&mut builder);
-            builder.push("id = ");
-            builder.push_bind(id);
-        }
-
-        if let Some(gm_id) = &command.gm_id {
-            push_filter_separator(&mut builder);
-            builder.push("gm_id = ");
-            builder.push_bind(gm_id);
-        }
-
-        if let Some(title) = &command.title {
-            push_filter_separator(&mut builder);
-            builder.push("title = ");
-            builder.push_bind(title);
-        }
-
-        if let Some(game_system_id) = &command.game_system_id {
-            push_filter_separator(&mut builder);
-            builder.push("game_system_id = ");
-            builder.push_bind(game_system_id);
-        }
-
-        if let Some(slots) = &command.slots {
-            push_filter_separator(&mut builder);
-            builder.push("slots = ");
-            builder.push_bind(*slots as i32);
-        }
-
-        let tables = builder
-            .build_query_as::<TableModel>()
-            .fetch_all(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?;
+            FROM tables
+            WHERE ($1::uuid IS NULL OR id = $1)
+              AND ($2::uuid IS NULL OR gm_id = $2)
+              AND ($3::text IS NULL OR title = $3)
+              AND ($4::uuid IS NULL OR game_system_id = $4)
+              AND ($5::int4 IS NULL OR slots = $5)
+            "#,
+            command.id,
+            command.gm_id,
+            command.title,
+            command.game_system_id,
+            command.slots.map(|s| s as i32)
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(tables.into_iter().map(|m| m.into()).collect())
     }
@@ -198,6 +192,81 @@ impl TableRepository for PostgresTableRepository {
                 LIMIT 10
             "#,
             search_pattern
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(tables.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Table>> {
+        let table = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT
+                id,
+                gm_id,
+                title,
+                description,
+                slots,
+                game_system_id,
+                created_at,
+                updated_at
+            FROM tables
+            WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(table.map(|model| model.into()))
+    }
+
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Table>> {
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT
+                id,
+                gm_id,
+                title,
+                description,
+                slots,
+                game_system_id,
+                created_at,
+                updated_at
+            FROM tables
+            WHERE id = $1
+            "#,
+            table_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(tables.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<Table>> {
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT
+                id,
+                gm_id,
+                title,
+                description,
+                slots,
+                game_system_id,
+                created_at,
+                updated_at
+            FROM tables
+            WHERE gm_id = $1
+            "#,
+            user_id
         )
         .fetch_all(&self.pool)
         .await

@@ -6,7 +6,7 @@ use uuid::Uuid;
 #[sqlx(type_name = "intent_status", rename_all = "lowercase")]
 pub enum EIntentStatus {
     Confirmed,
-    Tentative,
+    Unsure,
     Declined,
 }
 
@@ -14,7 +14,7 @@ impl From<EIntentStatus> for IntentStatus {
     fn from(status: EIntentStatus) -> Self {
         match status {
             EIntentStatus::Confirmed => IntentStatus::Confirmed,
-            EIntentStatus::Tentative => IntentStatus::Tentative,
+            EIntentStatus::Unsure => IntentStatus::Tentative,
             EIntentStatus::Declined => IntentStatus::Declined,
         }
     }
@@ -24,7 +24,7 @@ impl From<IntentStatus> for EIntentStatus {
     fn from(status: IntentStatus) -> Self {
         match status {
             IntentStatus::Confirmed => EIntentStatus::Confirmed,
-            IntentStatus::Tentative => EIntentStatus::Tentative,
+            IntentStatus::Tentative => EIntentStatus::Unsure,
             IntentStatus::Declined => EIntentStatus::Declined,
         }
     }

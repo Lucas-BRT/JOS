@@ -47,8 +47,8 @@ pub enum SessionDomainError {
 pub enum SessionIntentDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("Session intent not found: {0}")]
-    SessionIntentNotFound(String),
+    #[error("Session intent not found")]
+    SessionIntentNotFound,
     #[error("User already has intent for this session")]
     IntentAlreadyExists,
     #[error("Cannot change intent status: session has already started")]
