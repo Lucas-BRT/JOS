@@ -1,19 +1,26 @@
-use jos::{
-    Error, Result,
-    infrastructure::setup::{launch_server, setup_services},
+use jos::infrastructure::{
+    config::AppConfig,
+    setup::{database::setup_database, launch_server, logging::init_logging},
+    state::setup_app_state,
 };
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    match setup_services().await {
-        Ok((router, app_state)) => launch_server(router, app_state).await,
-        Err(Error::Setup(setup_error)) => {
-            eprintln!("\n❌ Setup error: {setup_error}");
-            std::process::exit(1);
-        }
-        Err(other_error) => {
-            eprintln!("\n❌ Application error: {other_error}");
-            std::process::exit(1);
-        }
-    }
+async fn main() {
+    init_logging();
+    let config = AppConfig::from_env().expect("failed to load configuration");
+    let database = setup_database(&config.database_url)
+        .await
+        .expect("failed to setup database");
+
+    let app_state = setup_app_state(&database)
+        .await
+        .expect("failed to setup app state");
+
+    let server = create_router
+
+        .with_state(app_state.clone()).;
+
+    launch_server(server, &app_state)
+        .await
+        .expect("failed to launch server");
 }

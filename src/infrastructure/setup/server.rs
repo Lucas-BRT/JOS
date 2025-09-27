@@ -1,12 +1,17 @@
-use crate::{
-    Error, Result,
-    infrastructure::{AppState, SetupError},
-};
 use axum::Router;
 use tokio::net::TcpListener;
 use tracing::info;
 
-pub async fn launch_server(router: Router, app_state: AppState) -> Result<()> {
+use crate::{
+    Error, Result,
+    infrastructure::{SetupError, state::AppState},
+};
+
+pub fn setup_server(app_state: AppState) -> Router {
+    Router::new().with_state(app_state)
+}
+
+pub async fn launch_server(router: Router, app_state: &AppState) -> Result<()> {
     info!("🚀 Launching HTTP server...");
 
     let listener = TcpListener::bind(&app_state.config.addr)

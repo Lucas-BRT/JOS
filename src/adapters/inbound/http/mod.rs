@@ -1,11 +1,4 @@
-pub mod auth;
 pub mod error;
-pub mod health;
+pub mod handlers;
 pub mod middleware;
-pub mod openapi;
-pub mod routers;
-pub mod table;
-pub mod table_request;
-pub mod user;
-
-pub use routers::create_router;
+pub mod open_api;

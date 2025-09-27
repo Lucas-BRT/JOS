@@ -1,21 +1,9 @@
 use crate::Result;
-use crate::domain::table::commands::DeleteTableCommand;
-use crate::domain::table::search_filters::TableFilters;
-use crate::domain::utils::pagination::Pagination;
-use crate::domain::{
-    auth::Claims,
-    table::commands::{CreateTableCommand, GetTableCommand},
-};
-use crate::interfaces::http::table::dtos::{
-    AvaliableTableResponse, CreateTableDto, UpdateTableDto,
-};
-use crate::state::AppState;
 use axum::extract::Query;
 use axum::{
     Json, Router,
     extract::{Path, State},
     routing::{delete, get, post, put},
-    http::StatusCode,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -151,7 +139,10 @@ pub async fn update_table(
         return Err(crate::Error::Validation(validation_error));
     }
 
-    let table = app_state.table_service.update_table(&table_id, &claims.user_id, &update_payload.into()).await?;
+    let table = app_state
+        .table_service
+        .update_table(&table_id, &claims.user_id, &update_payload.into())
+        .await?;
     Ok(Json(table.into()))
 }
 
@@ -170,7 +161,10 @@ pub async fn get_my_tables(
     State(app_state): State<Arc<AppState>>,
     claims: Claims,
 ) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state.table_service.get_user_tables(&claims.user_id).await?;
+    let tables = app_state
+        .table_service
+        .get_user_tables(&claims.user_id)
+        .await?;
     let tables = tables.iter().map(AvaliableTableResponse::from).collect();
     Ok(Json(tables))
 }
@@ -216,9 +210,17 @@ pub async fn join_table(
     Json(payload): Json<serde_json::Value>,
     claims: Claims,
 ) -> Result<Json<serde_json::Value>> {
-    let message = payload.get("message").and_then(|v| v.as_str()).unwrap_or("");
-    app_state.table_service.join_table(&table_id, &claims.user_id, message).await?;
-    Ok(Json(serde_json::json!({"message": "Joined table successfully"})))
+    let message = payload
+        .get("message")
+        .and_then(|v| v.as_str())
+        .unwrap_or("");
+    app_state
+        .table_service
+        .join_table(&table_id, &claims.user_id, message)
+        .await?;
+    Ok(Json(
+        serde_json::json!({"message": "Joined table successfully"}),
+    ))
 }
 
 #[utoipa::path(
@@ -241,8 +243,13 @@ pub async fn leave_table(
     Path(table_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<serde_json::Value>> {
-    app_state.table_service.leave_table(&table_id, &claims.user_id).await?;
-    Ok(Json(serde_json::json!({"message": "Left table successfully"})))
+    app_state
+        .table_service
+        .leave_table(&table_id, &claims.user_id)
+        .await?;
+    Ok(Json(
+        serde_json::json!({"message": "Left table successfully"}),
+    ))
 }
 
 #[utoipa::path(
@@ -267,8 +274,13 @@ pub async fn remove_player(
     Path((table_id, player_id)): Path<(Uuid, Uuid)>,
     claims: Claims,
 ) -> Result<Json<serde_json::Value>> {
-    app_state.table_service.remove_player(&table_id, &player_id, &claims.user_id).await?;
-    Ok(Json(serde_json::json!({"message": "Player removed successfully"})))
+    app_state
+        .table_service
+        .remove_player(&table_id, &player_id, &claims.user_id)
+        .await?;
+    Ok(Json(
+        serde_json::json!({"message": "Player removed successfully"}),
+    ))
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {

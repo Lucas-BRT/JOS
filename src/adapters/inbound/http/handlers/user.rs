@@ -1,17 +1,7 @@
-use crate::{
-    Result,
-    adapters::inbound::http::handlers::user::dtos::{
-        ChangePasswordDto, ChangePasswordResponse, DeleteUserResponse, MeResponse, UpdateUserDto,
-        UpdateUserResponse,
-    },
-    domain::auth::Claims,
-    interfaces::http::auth::dtos::UserResponse,
-    state::AppState,
-};
+use crate::{Result, domain::auth::Claims};
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::StatusCode,
     routing::{delete, get, put},
 };
 use std::sync::Arc;

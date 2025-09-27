@@ -1,15 +1,3 @@
-use super::dtos::{CreateTableRequestDto, TableRequestResponse, UpdateTableRequestDto};
-use crate::{
-    Result,
-    core::state::AppState,
-    domain::{
-        auth::Claims,
-        table_request::dtos::{
-            CreateTableRequestCommand, DeleteTableRequestCommand, GetTableRequestCommand,
-            UpdateTableRequestCommand,
-        },
-    },
-};
 use axum::{
     Json, Router,
     extract::{Path, Query, State},

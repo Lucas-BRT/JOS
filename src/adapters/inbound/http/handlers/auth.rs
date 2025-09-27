@@ -1,11 +1,3 @@
-use crate::{
-    Error, Result,
-    core::state::AppState,
-    domain::auth::{Authenticator, Claims},
-    interfaces::http::auth::dtos::{
-        LoginDto, LoginResponse, SignupDto, UserResponse, UserSignupResponse,
-    },
-};
 use axum::{
     Json, Router,
     extract::State,
@@ -15,6 +7,8 @@ use axum::{
 };
 use std::sync::Arc;
 use validator::Validate;
+
+use crate::{application::AuthService, domain::auth::Claims};
 
 #[utoipa::path(
     post,
@@ -28,14 +22,14 @@ use validator::Validate;
 )]
 #[axum::debug_handler]
 async fn signup(
-    State(app_state): State<Arc<AppState>>,
+    State(auth_service): State<AuthService>,
     Json(payload): Json<SignupDto>,
 ) -> Result<UserSignupResponse> {
     if let Err(sanitization_error) = payload.validate() {
         return Err(Error::Validation(sanitization_error));
     }
 
-    let user = app_state.auth_service.register(&mut payload.into()).await?;
+    let user = auth_service.register(&mut payload.into()).await?;
 
     Ok(user.into())
 }
@@ -52,17 +46,14 @@ async fn signup(
 )]
 #[axum::debug_handler]
 async fn login(
-    State(app_state): State<Arc<AppState>>,
+    State(auth_service): State<AuthService>,
     Json(login_payload): Json<LoginDto>,
 ) -> Result<LoginResponse> {
     if let Err(sanitization_error) = login_payload.validate() {
         return Err(Error::Validation(sanitization_error));
     }
 
-    let jwt_token = app_state
-        .auth_service
-        .authenticate(&login_payload.into())
-        .await?;
+    let jwt_token = auth_service.authenticate(&login_payload.into()).await?;
 
     let user = app_state
         .user_service
@@ -87,14 +78,14 @@ async fn login(
 )]
 #[axum::debug_handler]
 async fn register(
-    State(app_state): State<Arc<AppState>>,
+    State(auth_service): State<AuthService>,
     Json(payload): Json<SignupDto>,
 ) -> Result<UserSignupResponse> {
     if let Err(sanitization_error) = payload.validate() {
         return Err(Error::Validation(sanitization_error));
     }
 
-    let user = app_state.auth_service.register(&mut payload.into()).await?;
+    let user = auth_service.register(&mut payload.into()).await?;
 
     Ok(user.into())
 }
@@ -126,14 +117,16 @@ async fn logout(_claims: Claims) -> Result<impl IntoResponse> {
     )
 )]
 #[axum::debug_handler]
-async fn refresh(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<LoginResponse> {
-    let new_token = app_state
-        .auth_service
+async fn refresh(State(auth_service): State<AuthService>, claims: Claims) -> Result<LoginResponse> {
+    let new_token = auth_service
         .jwt_provider
         .generate_token(&claims.user_id)
         .await?;
 
-    let user = app_state.user_service.find_by_id(&claims.user_id).await?;
+    let user = auth_service
+        .user_service
+        .find_by_id(&claims.user_id)
+        .await?;
 
     Ok(LoginResponse {
         user: user.into(),
@@ -151,8 +144,11 @@ async fn refresh(State(app_state): State<Arc<AppState>>, claims: Claims) -> Resu
     )
 )]
 #[axum::debug_handler]
-async fn me(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<UserResponse> {
-    let user = app_state.user_service.find_by_id(&claims.user_id).await?;
+async fn me(State(auth_service): State<AuthService>, claims: Claims) -> Result<UserResponse> {
+    let user = auth_service
+        .user_service
+        .find_by_id(&claims.user_id)
+        .await?;
     Ok(user.into())
 }
 

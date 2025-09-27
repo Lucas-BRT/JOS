@@ -1,16 +1,8 @@
-use crate::{
-    Result, domain::auth::Claims, state::AppState,
-    adapters::inbound::http::handlers::session::dtos::{
-        CreateSessionDto, UpdateSessionDto, JoinSessionDto, SessionResponse, 
-        SessionListResponse, JoinSessionResponse, LeaveSessionResponse,
-        ConfirmSessionResponse, DeclineSessionResponse, SessionFilters
-    },
-};
+use crate::{Result, domain::auth::Claims};
 use axum::{
     Json, Router,
-    extract::{Path, State, Query},
-    routing::{get, post, put, delete},
-    http::StatusCode,
+    extract::{Path, Query, State},
+    routing::{delete, get, post, put},
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -62,7 +54,10 @@ pub async fn create_session(
         return Err(crate::Error::Validation(validation_error));
     }
 
-    let session = app_state.session_service.create_session(&claims.user_id, &payload.into()).await?;
+    let session = app_state
+        .session_service
+        .create_session(&claims.user_id, &payload.into())
+        .await?;
     Ok(Json(session.into()))
 }
 
@@ -82,7 +77,10 @@ pub async fn get_session_by_id(
     State(app_state): State<Arc<AppState>>,
     Path(session_id): Path<Uuid>,
 ) -> Result<Json<SessionResponse>> {
-    let session = app_state.session_service.get_session_by_id(&session_id).await?;
+    let session = app_state
+        .session_service
+        .get_session_by_id(&session_id)
+        .await?;
     Ok(Json(session.into()))
 }
 
@@ -113,7 +111,10 @@ pub async fn update_session(
         return Err(crate::Error::Validation(validation_error));
     }
 
-    let session = app_state.session_service.update_session(&session_id, &claims.user_id, &payload.into()).await?;
+    let session = app_state
+        .session_service
+        .update_session(&session_id, &claims.user_id, &payload.into())
+        .await?;
     Ok(Json(session.into()))
 }
 
@@ -138,8 +139,13 @@ pub async fn delete_session(
     Path(session_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<serde_json::Value>> {
-    app_state.session_service.delete_session(&session_id, &claims.user_id).await?;
-    Ok(Json(serde_json::json!({"message": "Session deleted successfully"})))
+    app_state
+        .session_service
+        .delete_session(&session_id, &claims.user_id)
+        .await?;
+    Ok(Json(
+        serde_json::json!({"message": "Session deleted successfully"}),
+    ))
 }
 
 #[utoipa::path(
@@ -168,7 +174,10 @@ pub async fn join_session(
         return Err(crate::Error::Validation(validation_error));
     }
 
-    app_state.session_service.join_session(&session_id, &claims.user_id, &payload.character_name).await?;
+    app_state
+        .session_service
+        .join_session(&session_id, &claims.user_id, &payload.character_name)
+        .await?;
     Ok(Json(JoinSessionResponse {
         message: "Joined session successfully".to_string(),
     }))
@@ -194,7 +203,10 @@ pub async fn leave_session(
     Path(session_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<LeaveSessionResponse>> {
-    app_state.session_service.leave_session(&session_id, &claims.user_id).await?;
+    app_state
+        .session_service
+        .leave_session(&session_id, &claims.user_id)
+        .await?;
     Ok(Json(LeaveSessionResponse {
         message: "Left session successfully".to_string(),
     }))
@@ -220,7 +232,10 @@ pub async fn confirm_session(
     Path(session_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<ConfirmSessionResponse>> {
-    app_state.session_service.confirm_session(&session_id, &claims.user_id).await?;
+    app_state
+        .session_service
+        .confirm_session(&session_id, &claims.user_id)
+        .await?;
     Ok(Json(ConfirmSessionResponse {
         message: "Session confirmed successfully".to_string(),
     }))
@@ -246,7 +261,10 @@ pub async fn decline_session(
     Path(session_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<DeclineSessionResponse>> {
-    app_state.session_service.decline_session(&session_id, &claims.user_id).await?;
+    app_state
+        .session_service
+        .decline_session(&session_id, &claims.user_id)
+        .await?;
     Ok(Json(DeclineSessionResponse {
         message: "Session declined successfully".to_string(),
     }))

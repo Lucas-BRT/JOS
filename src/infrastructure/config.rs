@@ -1,19 +1,13 @@
-pub mod constants;
-pub mod enviroment;
-
-use crate::{
-    Error, Result,
-    infrastructure::{
-        SetupError,
-        setup::config::{constants::*, enviroment::Environment},
-    },
-};
+use crate::infrastructure::SetupError;
+use crate::infrastructure::constants::*;
+use crate::infrastructure::setup::environment::Environment;
+use crate::{Error, Result};
 use chrono::Duration;
 use std::{net::SocketAddr, num::ParseIntError, str::FromStr};
 use tracing::{info, warn};
 
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct AppConfig {
     pub addr: SocketAddr,
     pub database_url: String,
     pub jwt_secret: String,
@@ -21,8 +15,13 @@ pub struct Config {
     pub environment: Environment,
 }
 
-impl Config {
+impl AppConfig {
     pub fn from_env() -> Result<Self> {
+        match dotenvy::dotenv() {
+            Ok(_) => info!("✅ Environment variables loaded from .env file"),
+            Err(_) => warn!("⚠️  No .env file found, using system environment variables"),
+        }
+
         let database_url = std::env::var("DATABASE_URL")
             .map_err(|e| Error::Setup(SetupError::FailedToGetEnvironmentVariable(e.to_string())))?;
 

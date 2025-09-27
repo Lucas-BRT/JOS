@@ -1,4 +1,4 @@
-use crate::{Result, domain::auth::Claims, state::AppState};
+use crate::{Result, domain::auth::Claims};
 use axum::{
     Json, Router,
     extract::{Query, State},
