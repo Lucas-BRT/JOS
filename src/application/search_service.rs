@@ -23,7 +23,6 @@ impl SearchService {
     pub async fn search(&self, query: &SearchQuery) -> Result<SearchResponse> {
         let mut results = Vec::new();
 
-        // Search users
         if query.r#type.is_none() || query.r#type.as_ref().unwrap() == "users" {
             let users = self.user_repository.search(&query.q).await?;
             for user in users {
@@ -37,7 +36,6 @@ impl SearchService {
             }
         }
 
-        // Search tables
         if query.r#type.is_none() || query.r#type.as_ref().unwrap() == "tables" {
             let tables = self.table_repository.search(&query.q).await?;
             for table in tables {
@@ -51,7 +49,6 @@ impl SearchService {
             }
         }
 
-        // TODO: Add session search when session repository is available
         let total = results.len() as u64;
         Ok(SearchResponse {
             results,

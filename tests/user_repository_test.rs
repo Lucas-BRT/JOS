@@ -56,8 +56,6 @@ async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
 
     assert!(result.is_err());
 
-    // result.unwrap();
-
     match result {
         Err(Error::Persistence(RepositoryError::UsernameAlreadyTaken)) => {}
         _ => panic!("Unexpected error: {result:?}"),
@@ -203,7 +201,7 @@ async fn test_update_user_email(pool: PgPool) {
 
     let updated_user = repo.find_by_id(&created_user.id).await.unwrap();
     if let Some(user) = updated_user {
-        assert_eq!(user.username, "testuser"); // Not changed
+        assert_eq!(user.username, "testuser");
         assert_eq!(user.email, "newemail@example.com");
     } else {
         panic!("User not found");

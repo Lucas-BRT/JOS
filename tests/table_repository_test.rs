@@ -192,7 +192,7 @@ async fn test_update_table_title(pool: PgPool) {
     assert_eq!(found_tables.len(), 1);
     let updated_table = &found_tables[0];
     assert_eq!(updated_table.title, "Updated Title");
-    assert_eq!(updated_table.description, "A test table for RPG"); // Not changed
+    assert_eq!(updated_table.description, "A test table for RPG");
 }
 
 #[sqlx::test]

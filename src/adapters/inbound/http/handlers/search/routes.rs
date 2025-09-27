@@ -1,19 +1,17 @@
-use crate::{
-    Result, domain::auth::Claims, state::AppState,
-};
+use crate::{Result, domain::auth::Claims, state::AppState};
 use axum::{
     Json, Router,
     extract::{Query, State},
     routing::get,
 };
-use std::sync::Arc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use utoipa::ToSchema;
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct SearchQuery {
     pub q: String,
-    pub r#type: Option<String>, // "tables", "sessions", "users"
+    pub r#type: Option<String>,
     pub page: Option<u32>,
     pub limit: Option<u32>,
 }

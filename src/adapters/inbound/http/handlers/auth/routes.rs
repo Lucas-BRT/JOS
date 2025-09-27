@@ -64,7 +64,6 @@ async fn login(
         .authenticate(&login_payload.into())
         .await?;
 
-    // Get user information
     let user = app_state
         .user_service
         .find_by_email(&login_payload.email)
@@ -111,8 +110,6 @@ async fn register(
 )]
 #[axum::debug_handler]
 async fn logout(_claims: Claims) -> Result<impl IntoResponse> {
-    // In a stateless JWT implementation, logout is handled client-side
-    // by removing the token. We could implement a blacklist here if needed.
     Ok((
         StatusCode::OK,
         Json(serde_json::json!({"message": "Logout successful"})),
@@ -130,14 +127,12 @@ async fn logout(_claims: Claims) -> Result<impl IntoResponse> {
 )]
 #[axum::debug_handler]
 async fn refresh(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<LoginResponse> {
-    // Generate a new token with the same claims
     let new_token = app_state
         .auth_service
         .jwt_provider
         .generate_token(&claims.user_id)
         .await?;
 
-    // Get user information
     let user = app_state.user_service.find_by_id(&claims.user_id).await?;
 
     Ok(LoginResponse {

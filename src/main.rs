@@ -5,7 +5,6 @@ use jos::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Setup services and create router
     match setup_services().await {
         Ok((router, app_state)) => launch_server(router, app_state).await,
         Err(Error::Setup(setup_error)) => {

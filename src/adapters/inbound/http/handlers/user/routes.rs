@@ -1,15 +1,18 @@
 use crate::{
-    Result, domain::auth::Claims, interfaces::http::auth::dtos::UserResponse, state::AppState,
+    Result,
     adapters::inbound::http::handlers::user::dtos::{
-        MeResponse, UpdateUserDto, ChangePasswordDto, UpdateUserResponse, 
-        ChangePasswordResponse, DeleteUserResponse
+        ChangePasswordDto, ChangePasswordResponse, DeleteUserResponse, MeResponse, UpdateUserDto,
+        UpdateUserResponse,
     },
+    domain::auth::Claims,
+    interfaces::http::auth::dtos::UserResponse,
+    state::AppState,
 };
 use axum::{
     Json, Router,
     extract::{Path, State},
-    routing::{get, put, delete},
     http::StatusCode,
+    routing::{delete, get, put},
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -82,16 +85,20 @@ pub async fn update_user(
     Path(user_id): Path<Uuid>,
     Json(payload): Json<UpdateUserDto>,
 ) -> Result<Json<UserResponse>> {
-    // Check if user is updating their own profile
     if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized("You can only update your own profile".to_string()));
+        return Err(crate::Error::Unauthorized(
+            "You can only update your own profile".to_string(),
+        ));
     }
 
     if let Err(validation_error) = payload.validate() {
         return Err(crate::Error::Validation(validation_error));
     }
 
-    let user = app_state.user_service.update_user(&user_id, &payload.into()).await?;
+    let user = app_state
+        .user_service
+        .update_user(&user_id, &payload.into())
+        .await?;
     Ok(Json(user.into()))
 }
 
@@ -118,17 +125,21 @@ pub async fn change_password(
     Path(user_id): Path<Uuid>,
     Json(payload): Json<ChangePasswordDto>,
 ) -> Result<Json<ChangePasswordResponse>> {
-    // Check if user is changing their own password
     if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized("You can only change your own password".to_string()));
+        return Err(crate::Error::Unauthorized(
+            "You can only change your own password".to_string(),
+        ));
     }
 
     if let Err(validation_error) = payload.validate() {
         return Err(crate::Error::Validation(validation_error));
     }
 
-    app_state.user_service.change_password(&user_id, &payload.current_password, &payload.new_password).await?;
-    
+    app_state
+        .user_service
+        .change_password(&user_id, &payload.current_password, &payload.new_password)
+        .await?;
+
     Ok(Json(ChangePasswordResponse {
         message: "Password changed successfully".to_string(),
     }))
@@ -155,13 +166,14 @@ pub async fn delete_user(
     claims: Claims,
     Path(user_id): Path<Uuid>,
 ) -> Result<Json<DeleteUserResponse>> {
-    // Check if user is deleting their own account
     if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized("You can only delete your own account".to_string()));
+        return Err(crate::Error::Unauthorized(
+            "You can only delete your own account".to_string(),
+        ));
     }
 
     app_state.user_service.delete_user(&user_id).await?;
-    
+
     Ok(Json(DeleteUserResponse {
         message: "User deleted successfully".to_string(),
     }))

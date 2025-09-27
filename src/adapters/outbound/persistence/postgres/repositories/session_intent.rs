@@ -72,10 +72,9 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
             }
         }
 
-        // Extrair o novo status apenas se for Change
         let new_status: Option<EIntentStatus> = match command.status {
-            Update::Change(status) => Some(status.into()), // Retorna Some com o novo status
-            Update::Keep => None,                          // Retorna None para manter o atual
+            Update::Change(status) => Some(status.into()),
+            Update::Keep => None,
         };
 
         let updated_model = sqlx::query_as!(

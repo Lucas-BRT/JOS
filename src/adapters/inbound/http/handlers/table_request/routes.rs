@@ -12,13 +12,13 @@ use crate::{
 };
 use axum::{
     Json, Router,
-    extract::{Path, State, Query},
+    extract::{Path, Query, State},
     routing::{delete, get, patch, post},
 };
-use std::sync::Arc;
-use uuid::Uuid;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[utoipa::path(
     post,
@@ -167,7 +167,7 @@ pub async fn delete_table_request(
 
 #[derive(Debug, Deserialize, ToSchema)]
 pub struct RequestFilters {
-    pub r#type: Option<String>, // "sent" or "received"
+    pub r#type: Option<String>,
     pub status: Option<String>,
     pub page: Option<u32>,
     pub limit: Option<u32>,
@@ -214,7 +214,10 @@ pub async fn get_requests(
     Query(filters): Query<RequestFilters>,
     claims: Claims,
 ) -> Result<Json<RequestListResponse>> {
-    let requests = app_state.table_request_service.get_requests(&filters, &claims.user_id).await?;
+    let requests = app_state
+        .table_request_service
+        .get_requests(&filters, &claims.user_id)
+        .await?;
     Ok(Json(requests))
 }
 
@@ -271,7 +274,10 @@ pub async fn accept_request(
     Path(request_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<AcceptRequestResponse>> {
-    app_state.table_request_service.accept_request(&request_id, &claims.user_id).await?;
+    app_state
+        .table_request_service
+        .accept_request(&request_id, &claims.user_id)
+        .await?;
     Ok(Json(AcceptRequestResponse {
         message: "Request accepted successfully".to_string(),
     }))
@@ -298,7 +304,10 @@ pub async fn reject_request(
     Path(request_id): Path<Uuid>,
     claims: Claims,
 ) -> Result<Json<RejectRequestResponse>> {
-    app_state.table_request_service.reject_request(&request_id, &claims.user_id).await?;
+    app_state
+        .table_request_service
+        .reject_request(&request_id, &claims.user_id)
+        .await?;
     Ok(Json(RejectRequestResponse {
         message: "Request rejected successfully".to_string(),
     }))
@@ -311,7 +320,10 @@ pub fn routes(state: Arc<AppState>) -> Router {
         .route("/{id}", patch(update_table_request))
         .route("/{id}", delete(delete_table_request))
         .route("/requests", get(get_requests))
-        .route("/tables/{id}/requests", post(create_table_request_by_table_id))
+        .route(
+            "/tables/{id}/requests",
+            post(create_table_request_by_table_id),
+        )
         .route("/requests/{id}/accept", post(accept_request))
         .route("/requests/{id}/reject", post(reject_request))
         .with_state(state.clone())

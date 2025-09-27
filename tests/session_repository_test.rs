@@ -254,7 +254,7 @@ async fn test_update_session_name(pool: PgPool) {
     assert_eq!(found_sessions.len(), 1);
     let updated_session = &found_sessions[0];
     assert_eq!(updated_session.name, "Updated Name");
-    assert_eq!(updated_session.description, "A test session"); // Not changed
+    assert_eq!(updated_session.description, "A test session");
 }
 
 #[sqlx::test]
