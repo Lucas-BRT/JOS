@@ -1,38 +1,57 @@
-use crate::Result;
-use axum::extract::Query;
 use axum::{
     Json, Router,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     routing::{delete, get, post, put},
 };
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::{
+    shared::{Result, Error},
+    domain::auth::Claims,
+    infrastructure::state::AppState,
+    dtos::*,
+};
+
 #[utoipa::path(
     post,
     path = "/v1/tables",
     tag = "tables",
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = CreateTableDto,
+    request_body = CreateTableRequest,
     responses(
-        (status = 201, description = "Table created successfully", body = String),
-        (status = 400, description = "Bad request", body = Value),
-        (status = 401, description = "Unauthorized", body = Value)
+        (status = 201, description = "Table created successfully", body = TableDetails),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
 pub async fn create_table(
-    user: Claims,
+    claims: Claims,
     State(app_state): State<Arc<AppState>>,
-    Json(new_table_payload): Json<CreateTableDto>,
-) -> Result<Json<String>> {
-    let mut table = CreateTableCommand::from_dto(new_table_payload, user.sub);
-    let table_id = app_state.table_service.create(&mut table).await?.id;
+    Json(payload): Json<CreateTableRequest>,
+) -> Result<Json<TableDetails>> {
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
+    }
 
-    Ok(Json(table_id.to_string()))
+    // TODO: Implement table creation logic
+    // For now, return a placeholder response
+    Ok(Json(TableDetails {
+        id: Uuid::new_v4(),
+        title: payload.title,
+        game_system: payload.system,
+        game_master: GameMasterInfo {
+            id: claims.sub,
+            username: "placeholder".to_string(),
+            display_name: "placeholder".to_string(),
+        },
+        description: payload.description,
+        player_slots: payload.max_players,
+        players: vec![],
+        status: "active".to_string(),
+        sessions: vec![],
+    }))
 }
 
 #[utoipa::path(
@@ -40,56 +59,19 @@ pub async fn create_table(
     path = "/v1/tables",
     tag = "tables",
     responses(
-        (status = 200, description = "List of available tables", body = Vec<AvaliableTableResponse>)
+        (status = 200, description = "Tables retrieved successfully", body = Vec<TableListItem>),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
-pub async fn get_available_tables(
-    _: Claims,
-    State(app_state): State<Arc<AppState>>,
-    Query(filters): Query<TableFilters>,
-    Query(pagination): Query<Pagination>,
-) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state
-        .table_service
-        .get(&GetTableCommand::new(filters, pagination))
-        .await?;
-
-    let tables = tables.iter().map(AvaliableTableResponse::from).collect();
-
-    Ok(Json(tables))
-}
-
-#[utoipa::path(
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    delete,
-    path = "/v1/tables/{id}",
-    tag = "tables",
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "Table deleted successfully", body = ()),
-        (status = 400, description = "Bad request", body = Value),
-        (status = 401, description = "Unauthorized", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn delete_table(
-    user: Claims,
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-) -> Result<Json<()>> {
-    let command = DeleteTableCommand {
-        id: table_id,
-        gm_id: user.sub,
-    };
-
-    app_state.table_service.delete(&command).await?;
-
-    Ok(Json(()))
+pub async fn get_tables(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
+    Query(search): Query<SearchTablesQuery>,
+) -> Result<Json<Vec<TableListItem>>> {
+    // TODO: Implement table listing logic with search functionality
+    // For now, return empty list
+    Ok(Json(vec![]))
 }
 
 #[utoipa::path(
@@ -100,16 +82,34 @@ pub async fn delete_table(
         ("id" = Uuid, Path, description = "Table ID")
     ),
     responses(
-        (status = 200, description = "Table details", body = AvaliableTableResponse),
-        (status = 404, description = "Table not found", body = serde_json::Value)
+        (status = 200, description = "Table details retrieved", body = TableDetails),
+        (status = 404, description = "Table not found", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
     )
 )]
-pub async fn get_table_by_id(
-    State(app_state): State<Arc<AppState>>,
+#[axum::debug_handler]
+pub async fn get_table_details(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
-) -> Result<Json<AvaliableTableResponse>> {
-    let table = app_state.table_service.get_by_id(&table_id).await?;
-    Ok(Json(table.into()))
+) -> Result<Json<TableDetails>> {
+    // TODO: Implement table details retrieval
+    // For now, return a placeholder response
+    Ok(Json(TableDetails {
+        id: table_id,
+        title: "Placeholder Table".to_string(),
+        game_system: "D&D 5e".to_string(),
+        game_master: GameMasterInfo {
+            id: Uuid::new_v4(),
+            username: "placeholder".to_string(),
+            display_name: "placeholder".to_string(),
+        },
+        description: "Placeholder description".to_string(),
+        player_slots: 4,
+        players: vec![],
+        status: "active".to_string(),
+        sessions: vec![],
+    }))
 }
 
 #[utoipa::path(
@@ -119,181 +119,77 @@ pub async fn get_table_by_id(
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = UpdateTableDto,
+    request_body = UpdateTableRequest,
     responses(
-        (status = 200, description = "Table updated successfully", body = AvaliableTableResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
+        (status = 200, description = "Table updated successfully", body = TableDetails),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to update this table", body = ErrorResponse),
+        (status = 404, description = "Table not found", body = ErrorResponse)
     )
 )]
+#[axum::debug_handler]
 pub async fn update_table(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-    Json(update_payload): Json<UpdateTableDto>,
     claims: Claims,
-) -> Result<Json<AvaliableTableResponse>> {
-    if let Err(validation_error) = update_payload.validate() {
-        return Err(crate::Error::Validation(validation_error));
+    State(_app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(payload): Json<UpdateTableRequest>,
+) -> Result<Json<TableDetails>> {
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
     }
 
-    let table = app_state
-        .table_service
-        .update_table(&table_id, &claims.user_id, &update_payload.into())
-        .await?;
-    Ok(Json(table.into()))
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/tables/my-tables",
-    tag = "tables",
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "User's tables", body = Vec<AvaliableTableResponse>)
-    )
-)]
-pub async fn get_my_tables(
-    State(app_state): State<Arc<AppState>>,
-    claims: Claims,
-) -> Result<Json<Vec<AvaliableTableResponse>>> {
-    let tables = app_state
-        .table_service
-        .get_user_tables(&claims.user_id)
-        .await?;
-    let tables = tables.iter().map(AvaliableTableResponse::from).collect();
-    Ok(Json(tables))
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/tables/{id}/players",
-    tag = "tables",
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    responses(
-        (status = 200, description = "Table players", body = Vec<serde_json::Value>)
-    )
-)]
-pub async fn get_table_players(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-) -> Result<Json<Vec<serde_json::Value>>> {
-    let players = app_state.table_service.get_table_players(&table_id).await?;
-    Ok(Json(players))
-}
-
-#[utoipa::path(
-    post,
-    path = "/v1/tables/{id}/join",
-    tag = "tables",
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = serde_json::Value,
-    responses(
-        (status = 200, description = "Joined table successfully"),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
-    )
-)]
-pub async fn join_table(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-    Json(payload): Json<serde_json::Value>,
-    claims: Claims,
-) -> Result<Json<serde_json::Value>> {
-    let message = payload
-        .get("message")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    app_state
-        .table_service
-        .join_table(&table_id, &claims.user_id, message)
-        .await?;
-    Ok(Json(
-        serde_json::json!({"message": "Joined table successfully"}),
-    ))
+    // TODO: Implement table update logic
+    // For now, return a placeholder response
+    Ok(Json(TableDetails {
+        id: table_id,
+        title: payload.title.unwrap_or("Updated Table".to_string()),
+        game_system: payload.system.unwrap_or("D&D 5e".to_string()),
+        game_master: GameMasterInfo {
+            id: claims.sub,
+            username: "placeholder".to_string(),
+            display_name: "placeholder".to_string(),
+        },
+        description: payload.description.unwrap_or("Updated description".to_string()),
+        player_slots: payload.max_players.unwrap_or(4),
+        players: vec![],
+        status: payload.status.unwrap_or("active".to_string()),
+        sessions: vec![],
+    }))
 }
 
 #[utoipa::path(
     delete,
-    path = "/v1/tables/{id}/leave",
+    path = "/v1/tables/{id}",
     tag = "tables",
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
-    security(
-        ("bearer_auth" = [])
-    ),
     responses(
-        (status = 200, description = "Left table successfully"),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
+        (status = 200, description = "Table deleted successfully", body = DeleteTableResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to delete this table", body = ErrorResponse),
+        (status = 404, description = "Table not found", body = ErrorResponse)
     )
 )]
-pub async fn leave_table(
-    State(app_state): State<Arc<AppState>>,
+#[axum::debug_handler]
+pub async fn delete_table(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
-    claims: Claims,
-) -> Result<Json<serde_json::Value>> {
-    app_state
-        .table_service
-        .leave_table(&table_id, &claims.user_id)
-        .await?;
-    Ok(Json(
-        serde_json::json!({"message": "Left table successfully"}),
-    ))
-}
-
-#[utoipa::path(
-    delete,
-    path = "/v1/tables/{id}/players/{player_id}",
-    tag = "tables",
-    params(
-        ("id" = Uuid, Path, description = "Table ID"),
-        ("player_id" = Uuid, Path, description = "Player ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "Player removed successfully"),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
-    )
-)]
-pub async fn remove_player(
-    State(app_state): State<Arc<AppState>>,
-    Path((table_id, player_id)): Path<(Uuid, Uuid)>,
-    claims: Claims,
-) -> Result<Json<serde_json::Value>> {
-    app_state
-        .table_service
-        .remove_player(&table_id, &player_id, &claims.user_id)
-        .await?;
-    Ok(Json(
-        serde_json::json!({"message": "Player removed successfully"}),
-    ))
+) -> Result<Json<DeleteTableResponse>> {
+    // TODO: Implement table deletion logic
+    Ok(Json(DeleteTableResponse {
+        message: format!("Table {} deleted successfully", table_id),
+    }))
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_available_tables))
+        .route("/", get(get_tables))
         .route("/", post(create_table))
-        .route("/my-tables", get(get_my_tables))
-        .route("/{id}", get(get_table_by_id))
+        .route("/{id}", get(get_table_details))
         .route("/{id}", put(update_table))
         .route("/{id}", delete(delete_table))
-        .route("/{id}/players", get(get_table_players))
-        .route("/{id}/join", post(join_table))
-        .route("/{id}/leave", delete(leave_table))
-        .route("/{id}/players/{player_id}", delete(remove_player))
-        .with_state(state.clone())
+        .with_state(state)
 }

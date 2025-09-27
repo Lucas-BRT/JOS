@@ -1,27 +1,115 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
+use chrono::{DateTime, Utc};
+use validator::Validate;
+use axum::response::IntoResponse;
 
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct LoginRequest {
-    pub username: String,
+    #[validate(email)]
+    pub email: String,
+    #[validate(length(min = 6))]
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
-pub struct LoginResponse {
-    pub access_token: String,
-    pub refresh_token: String,
-    pub user: UserDto,
+#[derive(Deserialize, Serialize, ToSchema, Validate)]
+pub struct RegisterRequest {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+    #[validate(length(min = 1, max = 100))]
+    pub display_name: String,
+    #[validate(email)]
+    pub email: String,
+    #[validate(length(min = 6))]
+    pub password: String,
+    #[validate(length(min = 6))]
+    pub confirm_password: String,
 }
 
-#[derive(Serialize, Deserialize, utoipa::ToSchema)]
-pub struct UserDto {
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct RefreshTokenRequest {
+    pub refresh_token: String,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
+    pub display_name: String,
+    pub joined_at: DateTime<Utc>,
     pub email: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct RefreshTokenRequest {
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct LoginResponse {
+    pub user: UserResponse,
+    pub token: String,
     pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct RegisterResponse {
+    pub user: UserResponse,
+    pub token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct RefreshTokenResponse {
+    pub token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct LogoutResponse {
+    pub message: String,
+}
+
+// IntoResponse implementations
+impl IntoResponse for LoginResponse {
+    fn into_response(self) -> axum::response::Response {
+        axum::Json(self).into_response()
+    }
+}
+
+impl IntoResponse for RegisterResponse {
+    fn into_response(self) -> axum::response::Response {
+        axum::Json(self).into_response()
+    }
+}
+
+impl IntoResponse for LogoutResponse {
+    fn into_response(self) -> axum::response::Response {
+        axum::Json(self).into_response()
+    }
+}
+
+impl IntoResponse for RefreshTokenResponse {
+    fn into_response(self) -> axum::response::Response {
+        axum::Json(self).into_response()
+    }
+}
+
+impl IntoResponse for UserResponse {
+    fn into_response(self) -> axum::response::Response {
+        axum::Json(self).into_response()
+    }
+}
+
+// Conversion implementations
+impl From<crate::domain::entities::User> for UserResponse {
+    fn from(user: crate::domain::entities::User) -> Self {
+        let username = user.username.clone();
+        UserResponse {
+            id: user.id,
+            username: username.clone(),
+            display_name: username, // TODO: Add display_name field to User entity
+            joined_at: user.created_at,
+            email: user.email,
+        }
+    }
 }

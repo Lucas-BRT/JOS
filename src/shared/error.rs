@@ -3,6 +3,12 @@ use crate::{
     infrastructure::error::SetupError,
 };
 use validator::ValidationErrors;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde_json::json;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -23,5 +29,25 @@ pub enum Error {
 impl From<DomainError> for Error {
     fn from(err: DomainError) -> Self {
         Error::Domain(err)
+    }
+}
+
+impl IntoResponse for Error {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            Error::Domain(_) => (StatusCode::BAD_REQUEST, "Domain error"),
+            Error::Application(_) => (StatusCode::BAD_REQUEST, "Application error"),
+            Error::Validation(_) => (StatusCode::BAD_REQUEST, "Validation error"),
+            Error::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
+            Error::Setup(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error"),
+            Error::Persistence(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Persistence error"),
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+            "message": self.to_string()
+        }));
+
+        (status, body).into_response()
     }
 }

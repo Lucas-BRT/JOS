@@ -3,6 +3,7 @@ use jos::infrastructure::{
     setup::{database::setup_database, launch_server, logging::init_logging},
     state::setup_app_state,
 };
+use jos::adapters::inbound::http::handlers::create_router;
 
 #[tokio::main]
 async fn main() {
@@ -16,11 +17,10 @@ async fn main() {
         .await
         .expect("failed to setup app state");
 
-    let server = create_router
+    let app_state_arc = std::sync::Arc::new(app_state);
+    let server = create_router(app_state_arc.clone());
 
-        .with_state(app_state.clone()).;
-
-    launch_server(server, &app_state)
+    launch_server(server, &app_state_arc)
         .await
         .expect("failed to launch server");
 }

@@ -1,11 +1,26 @@
 use crate::{domain::auth::Claims, infrastructure::state::AppState};
 use axum::{
-    extract::{Request, State},
-    http::StatusCode,
+    extract::{FromRequestParts, Request, State},
+    http::{request::Parts, StatusCode},
     middleware::Next,
     response::Response,
 };
 use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
+
+impl<S> FromRequestParts<S> for Claims
+where
+    S: Send + Sync,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        parts
+            .extensions
+            .get::<Claims>()
+            .cloned()
+            .ok_or(StatusCode::UNAUTHORIZED)
+    }
+}
 
 pub async fn auth_middleware(
     State(auth_state): State<AppState>,

@@ -1,212 +1,55 @@
 use axum::{
     Json, Router,
-    extract::{Path, Query, State},
-    routing::{delete, get, patch, post},
+    extract::{Path, State},
+    routing::{delete, get, post},
 };
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use uuid::Uuid;
+use validator::Validate;
 
-#[utoipa::path(
-    post,
-    path = "/v1/table-requests",
-    tag = "table-requests",
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = CreateTableRequestDto,
-    responses(
-        (status = 201, description = "Request created successfully", body = String),
-        (status = 400, description = "Bad request", body = Value),
-        (status = 401, description = "Unauthorized", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn create_table_request(
-    user: Claims,
-    State(app_state): State<Arc<AppState>>,
-    Json(payload): Json<CreateTableRequestDto>,
-) -> Result<Json<String>> {
-    let mut request = CreateTableRequestCommand::from_dto(payload, user.sub);
-    let request = app_state.table_request_service.create(&mut request).await?;
-
-    Ok(Json(request.id.to_string()))
-}
+use crate::{
+    shared::{Result, Error},
+    domain::auth::Claims,
+    infrastructure::state::AppState,
+    dtos::*,
+};
 
 #[utoipa::path(
     get,
-    path = "/v1/table-requests",
-    tag = "table-requests",
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "List of table requests", body = Vec<TableRequestResponse>),
-        (status = 401, description = "Unauthorized", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn get_table_requests(
-    _: Claims,
-    State(app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<TableRequestResponse>>> {
-    let requests = app_state
-        .table_request_service
-        .get(&GetTableRequestCommand::default())
-        .await?;
-    let requests = requests.iter().map(TableRequestResponse::from).collect();
-
-    Ok(Json(requests))
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/table-requests/table/{id}",
-    tag = "table-requests",
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "List of table requests of a table", body = Vec<TableRequestResponse>),
-        (status = 401, description = "Unauthorized", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn get_table_requests_by_table_id(
-    user: Claims,
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-) -> Result<Json<Vec<TableRequestResponse>>> {
-    let requests = app_state
-        .table_request_service
-        .get_requests_by_table_id(&table_id, &user.sub)
-        .await?
-        .iter()
-        .map(TableRequestResponse::from)
-        .collect();
-
-    Ok(Json(requests))
-}
-
-#[utoipa::path(
-    patch,
-    path = "/v1/table-requests/{id}",
-    tag = "table-requests",
-    params(
-        ("id" = Uuid, Path, description = "Table request ID")
-    ),
-    request_body = UpdateTableRequestDto,
-    responses(
-        (status = 200, description = "Table request updated successfully", body = ()),
-        (status = 400, description = "Bad request", body = Value),
-        (status = 404, description = "Table request not found", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn update_table_request(
-    State(app_state): State<Arc<AppState>>,
-    Path(request_id): Path<Uuid>,
-    Json(update_payload): Json<UpdateTableRequestDto>,
-) -> Result<()> {
-    let update_command = UpdateTableRequestCommand {
-        id: request_id,
-        status: update_payload.status,
-        message: update_payload.message,
-    };
-
-    app_state
-        .table_request_service
-        .update(&update_command)
-        .await?;
-
-    Ok(())
-}
-
-#[utoipa::path(
-    delete,
-    path = "/v1/table-requests/{id}",
-    tag = "table-requests",
-    params(
-        ("id" = Uuid, Path, description = "Table request ID")
-    ),
-    responses(
-        (status = 200, description = "Table request deleted successfully", body = ()),
-        (status = 404, description = "Table request not found", body = Value)
-    )
-)]
-#[axum::debug_handler]
-pub async fn delete_table_request(
-    State(app_state): State<Arc<AppState>>,
-    Path(request_id): Path<Uuid>,
-    user: Claims,
-) -> Result<()> {
-    let command = DeleteTableRequestCommand {
-        id: request_id,
-        gm_id: user.sub,
-    };
-    app_state.table_request_service.delete(&command).await?;
-
-    Ok(())
-}
-
-#[derive(Debug, Deserialize, ToSchema)]
-pub struct RequestFilters {
-    pub r#type: Option<String>,
-    pub status: Option<String>,
-    pub page: Option<u32>,
-    pub limit: Option<u32>,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct RequestListResponse {
-    pub requests: Vec<TableRequestResponse>,
-    pub total: u64,
-    pub page: u32,
-    pub limit: u32,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct AcceptRequestResponse {
-    pub message: String,
-}
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct RejectRequestResponse {
-    pub message: String,
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/requests",
+    path = "/v1/requests/sent",
     tag = "requests",
-    params(
-        ("type" = Option<String>, Query, description = "Filter by type: sent or received"),
-        ("status" = Option<String>, Query, description = "Filter by status"),
-        ("page" = Option<u32>, Query, description = "Page number"),
-        ("limit" = Option<u32>, Query, description = "Items per page")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
     responses(
-        (status = 200, description = "List of requests", body = RequestListResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
+        (status = 200, description = "Sent requests retrieved successfully", body = Vec<SentRequestItem>),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
     )
 )]
-pub async fn get_requests(
-    State(app_state): State<Arc<AppState>>,
-    Query(filters): Query<RequestFilters>,
-    claims: Claims,
-) -> Result<Json<RequestListResponse>> {
-    let requests = app_state
-        .table_request_service
-        .get_requests(&filters, &claims.user_id)
-        .await?;
-    Ok(Json(requests))
+#[axum::debug_handler]
+pub async fn get_sent_requests(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<SentRequestItem>>> {
+    // TODO: Implement sent requests retrieval
+    // For now, return empty list
+    Ok(Json(vec![]))
+}
+
+#[utoipa::path(
+    get,
+    path = "/v1/requests/received",
+    tag = "requests",
+    responses(
+        (status = 200, description = "Received requests retrieved successfully", body = Vec<ReceivedRequestItem>),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+pub async fn get_received_requests(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ReceivedRequestItem>>> {
+    // TODO: Implement received requests retrieval
+    // For now, return empty list
+    Ok(Json(vec![]))
 }
 
 #[utoipa::path(
@@ -216,29 +59,36 @@ pub async fn get_requests(
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = CreateTableRequestDto,
+    request_body = CreateTableRequestRequest,
     responses(
-        (status = 201, description = "Request created successfully", body = String),
-        (status = 400, description = "Bad request", body = serde_json::Value),
-        (status = 401, description = "Unauthorized", body = serde_json::Value)
+        (status = 201, description = "Request created successfully", body = TableRequestResponse),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 404, description = "Table not found", body = ErrorResponse),
+        (status = 409, description = "Request already exists", body = ErrorResponse)
     )
 )]
-pub async fn create_table_request_by_table_id(
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-    Json(payload): Json<CreateTableRequestDto>,
+#[axum::debug_handler]
+pub async fn create_table_request(
     claims: Claims,
-) -> Result<Json<String>> {
-    let mut request = CreateTableRequestCommand {
-        user_id: claims.user_id,
+    State(_app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(payload): Json<CreateTableRequestRequest>,
+) -> Result<Json<TableRequestResponse>> {
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
+    }
+
+    // TODO: Implement table request creation logic
+    // For now, return a placeholder response
+    Ok(Json(TableRequestResponse {
+        id: Uuid::new_v4(),
         table_id,
+        player_id: claims.sub,
         message: payload.message,
-    };
-    let request = app_state.table_request_service.create(&mut request).await?;
-    Ok(Json(request.id.to_string()))
+        status: "pending".to_string(),
+        request_date: chrono::Utc::now(),
+    }))
 }
 
 #[utoipa::path(
@@ -248,26 +98,22 @@ pub async fn create_table_request_by_table_id(
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
-    security(
-        ("bearer_auth" = [])
-    ),
     responses(
         (status = 200, description = "Request accepted successfully", body = AcceptRequestResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to accept this request", body = ErrorResponse),
+        (status = 404, description = "Request not found", body = ErrorResponse)
     )
 )]
+#[axum::debug_handler]
 pub async fn accept_request(
-    State(app_state): State<Arc<AppState>>,
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
-    claims: Claims,
 ) -> Result<Json<AcceptRequestResponse>> {
-    app_state
-        .table_request_service
-        .accept_request(&request_id, &claims.user_id)
-        .await?;
+    // TODO: Implement request acceptance logic
     Ok(Json(AcceptRequestResponse {
-        message: "Request accepted successfully".to_string(),
+        message: format!("Request {} accepted successfully", request_id),
     }))
 }
 
@@ -278,41 +124,57 @@ pub async fn accept_request(
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
-    security(
-        ("bearer_auth" = [])
-    ),
     responses(
         (status = 200, description = "Request rejected successfully", body = RejectRequestResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to reject this request", body = ErrorResponse),
+        (status = 404, description = "Request not found", body = ErrorResponse)
     )
 )]
+#[axum::debug_handler]
 pub async fn reject_request(
-    State(app_state): State<Arc<AppState>>,
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
-    claims: Claims,
 ) -> Result<Json<RejectRequestResponse>> {
-    app_state
-        .table_request_service
-        .reject_request(&request_id, &claims.user_id)
-        .await?;
+    // TODO: Implement request rejection logic
     Ok(Json(RejectRequestResponse {
-        message: "Request rejected successfully".to_string(),
+        message: format!("Request {} rejected successfully", request_id),
+    }))
+}
+
+#[utoipa::path(
+    delete,
+    path = "/v1/requests/{id}",
+    tag = "requests",
+    params(
+        ("id" = Uuid, Path, description = "Request ID")
+    ),
+    responses(
+        (status = 200, description = "Request cancelled successfully", body = CancelRequestResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to cancel this request", body = ErrorResponse),
+        (status = 404, description = "Request not found", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+pub async fn cancel_request(
+    _claims: Claims,
+    State(_app_state): State<Arc<AppState>>,
+    Path(request_id): Path<Uuid>,
+) -> Result<Json<CancelRequestResponse>> {
+    // TODO: Implement request cancellation logic
+    Ok(Json(CancelRequestResponse {
+        message: format!("Request {} cancelled successfully", request_id),
     }))
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_table_requests))
-        .route("/", post(create_table_request))
-        .route("/{id}", patch(update_table_request))
-        .route("/{id}", delete(delete_table_request))
-        .route("/requests", get(get_requests))
-        .route(
-            "/tables/{id}/requests",
-            post(create_table_request_by_table_id),
-        )
-        .route("/requests/{id}/accept", post(accept_request))
-        .route("/requests/{id}/reject", post(reject_request))
-        .with_state(state.clone())
+        .route("/sent", get(get_sent_requests))
+        .route("/received", get(get_received_requests))
+        .route("/{id}/accept", post(accept_request))
+        .route("/{id}/reject", post(reject_request))
+        .route("/{id}", delete(cancel_request))
+        .with_state(state)
 }

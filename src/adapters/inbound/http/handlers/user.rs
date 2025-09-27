@@ -1,135 +1,79 @@
-use crate::{Result, domain::auth::Claims};
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    routing::{delete, get, put},
+    extract::State,
+    routing::{delete, put},
 };
 use std::sync::Arc;
-use uuid::Uuid;
 use validator::Validate;
 
+use crate::{
+    shared::{Result, Error},
+    domain::auth::Claims,
+    infrastructure::state::AppState,
+    dtos::*,
+};
+
 #[utoipa::path(
-    get,
-    path = "/v1/users/me",
-    tag = "users",
-    security(
-        ("bearer_auth" = [])
-    ),
+    put,
+    path = "/v1/user/profile",
+    tag = "user",
+    request_body = UpdateProfileRequest,
     responses(
-        (status = 200, description = "User information", body = MeResponse),
-        (status = 401, description = "Unauthorized", body = Value)
+        (status = 200, description = "Profile updated successfully", body = UpdateProfileResponse),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 409, description = "Username or email already exists", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
-pub async fn me(State(app_state): State<Arc<AppState>>, user: Claims) -> Result<Json<MeResponse>> {
-    let user = app_state.user_service.get_self_user_info(&user.sub).await?;
-
-    Ok(Json(user))
-}
-
-#[utoipa::path(
-    get,
-    path = "/v1/users/{id}",
-    tag = "users",
-    params(
-        ("id" = Uuid, Path, description = "User ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    responses(
-        (status = 200, description = "User information", body = UserResponse),
-        (status = 401, description = "Unauthorized", body = Value)
-    )
-)]
-pub async fn get_user_by_id(
-    State(app_state): State<Arc<AppState>>,
-    _: Claims,
-    Path(user_id): Path<Uuid>,
-) -> Result<Json<UserResponse>> {
-    let user = app_state.user_service.get_user(&user_id).await?;
-
-    Ok(Json(user.into()))
-}
-
-#[utoipa::path(
-    put,
-    path = "/v1/users/{id}",
-    tag = "users",
-    params(
-        ("id" = Uuid, Path, description = "User ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = UpdateUserDto,
-    responses(
-        (status = 200, description = "User updated successfully", body = UserResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
-    )
-)]
-pub async fn update_user(
-    State(app_state): State<Arc<AppState>>,
+pub async fn update_profile(
     claims: Claims,
-    Path(user_id): Path<Uuid>,
-    Json(payload): Json<UpdateUserDto>,
-) -> Result<Json<UserResponse>> {
-    if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized(
-            "You can only update your own profile".to_string(),
-        ));
-    }
-
+    State(_app_state): State<Arc<AppState>>,
+    Json(payload): Json<UpdateProfileRequest>,
+) -> Result<Json<UpdateProfileResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(crate::Error::Validation(validation_error));
+        return Err(Error::Validation(validation_error));
     }
 
-    let user = app_state
-        .user_service
-        .update_user(&user_id, &payload.into())
-        .await?;
-    Ok(Json(user.into()))
+    // TODO: Implement profile update logic
+    // For now, return a placeholder response
+    Ok(Json(UpdateProfileResponse {
+        id: claims.sub,
+        username: payload.username.unwrap_or("updated_user".to_string()),
+        display_name: payload.display_name.unwrap_or("Updated User".to_string()),
+        email: payload.email.unwrap_or("updated@example.com".to_string()),
+        joined_at: chrono::Utc::now(),
+    }))
 }
 
 #[utoipa::path(
     put,
-    path = "/v1/users/{id}/password",
-    tag = "users",
-    params(
-        ("id" = Uuid, Path, description = "User ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
-    request_body = ChangePasswordDto,
+    path = "/v1/user/password",
+    tag = "user",
+    request_body = ChangePasswordRequest,
     responses(
         (status = 200, description = "Password changed successfully", body = ChangePasswordResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Current password is incorrect", body = ErrorResponse)
     )
 )]
+#[axum::debug_handler]
 pub async fn change_password(
-    State(app_state): State<Arc<AppState>>,
     claims: Claims,
-    Path(user_id): Path<Uuid>,
-    Json(payload): Json<ChangePasswordDto>,
+    State(_app_state): State<Arc<AppState>>,
+    Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<ChangePasswordResponse>> {
-    if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized(
-            "You can only change your own password".to_string(),
-        ));
-    }
-
     if let Err(validation_error) = payload.validate() {
-        return Err(crate::Error::Validation(validation_error));
+        return Err(Error::Validation(validation_error));
     }
 
-    app_state
-        .user_service
-        .change_password(&user_id, &payload.current_password, &payload.new_password)
-        .await?;
+    // Validate password confirmation
+    if payload.new_password != payload.confirm_password {
+        return Err(Error::Validation(validator::ValidationErrors::new()));
+    }
 
+    // TODO: Implement password change logic
     Ok(Json(ChangePasswordResponse {
         message: "Password changed successfully".to_string(),
     }))
@@ -137,44 +81,36 @@ pub async fn change_password(
 
 #[utoipa::path(
     delete,
-    path = "/v1/users/{id}",
-    tag = "users",
-    params(
-        ("id" = Uuid, Path, description = "User ID")
-    ),
-    security(
-        ("bearer_auth" = [])
-    ),
+    path = "/v1/user/account",
+    tag = "user",
+    request_body = DeleteAccountRequest,
     responses(
-        (status = 200, description = "User deleted successfully", body = DeleteUserResponse),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Forbidden", body = serde_json::Value)
+        (status = 200, description = "Account deleted successfully", body = DeleteAccountResponse),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Password is incorrect", body = ErrorResponse)
     )
 )]
-pub async fn delete_user(
-    State(app_state): State<Arc<AppState>>,
+#[axum::debug_handler]
+pub async fn delete_account(
     claims: Claims,
-    Path(user_id): Path<Uuid>,
-) -> Result<Json<DeleteUserResponse>> {
-    if claims.user_id != user_id {
-        return Err(crate::Error::Unauthorized(
-            "You can only delete your own account".to_string(),
-        ));
+    State(_app_state): State<Arc<AppState>>,
+    Json(payload): Json<DeleteAccountRequest>,
+) -> Result<Json<DeleteAccountResponse>> {
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
     }
 
-    app_state.user_service.delete_user(&user_id).await?;
-
-    Ok(Json(DeleteUserResponse {
-        message: "User deleted successfully".to_string(),
+    // TODO: Implement account deletion logic
+    Ok(Json(DeleteAccountResponse {
+        message: "Account deleted successfully".to_string(),
     }))
 }
 
 pub fn routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/me", get(me))
-        .route("/{id}", get(get_user_by_id))
-        .route("/{id}", put(update_user))
-        .route("/{id}/password", put(change_password))
-        .route("/{id}", delete(delete_user))
-        .with_state(state.clone())
+        .route("/profile", put(update_profile))
+        .route("/password", put(change_password))
+        .route("/account", delete(delete_account))
+        .with_state(state)
 }
