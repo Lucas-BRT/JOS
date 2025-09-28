@@ -1,7 +1,7 @@
 use axum::{
-    Json, Router,
-    extract::State,
-    routing::{delete, put},
+    extract::State, routing::{delete, put},
+    Json,
+    Router,
 };
 use std::sync::Arc;
 use validator::Validate;
@@ -60,7 +60,7 @@ pub async fn update_profile(
 )]
 #[axum::debug_handler]
 pub async fn change_password(
-    claims: Claims,
+    _claims: Claims,
     State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<ChangePasswordResponse>> {
@@ -93,7 +93,7 @@ pub async fn change_password(
 )]
 #[axum::debug_handler]
 pub async fn delete_account(
-    claims: Claims,
+    _claims: Claims,
     State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<DeleteAccountRequest>,
 ) -> Result<Json<DeleteAccountResponse>> {

@@ -1,7 +1,7 @@
 use axum::{
-    Json, Router,
-    extract::{Path, Query, State},
-    routing::{delete, get, post, put},
+    extract::{Path, Query, State}, routing::{delete, get, post, put},
+    Json,
+    Router,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -28,7 +28,7 @@ use crate::{
 #[axum::debug_handler]
 pub async fn create_table(
     claims: Claims,
-    State(app_state): State<Arc<AppState>>,
+    State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequest>,
 ) -> Result<Json<TableDetails>> {
     if let Err(validation_error) = payload.validate() {
@@ -67,7 +67,7 @@ pub async fn create_table(
 pub async fn get_tables(
     _claims: Claims,
     State(_app_state): State<Arc<AppState>>,
-    Query(search): Query<SearchTablesQuery>,
+    Query(_search): Query<SearchTablesQuery>,
 ) -> Result<Json<Vec<TableListItem>>> {
     // TODO: Implement table listing logic with search functionality
     // For now, return empty list

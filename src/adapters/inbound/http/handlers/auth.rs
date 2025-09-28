@@ -1,7 +1,7 @@
 use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
+    extract::State, routing::{get, post},
+    Json,
+    Router,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -148,7 +148,7 @@ async fn logout(_claims: Claims) -> Result<LogoutResponse> {
 #[axum::debug_handler]
 async fn refresh(
     State(app_state): State<Arc<AppState>>,
-    Json(payload): Json<RefreshTokenRequest>,
+    Json(_payload): Json<RefreshTokenRequest>,
 ) -> Result<RefreshTokenResponse> {
     // TODO: Implement proper refresh token validation
     let new_token = app_state
