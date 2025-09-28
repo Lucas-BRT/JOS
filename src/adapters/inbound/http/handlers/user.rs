@@ -1,7 +1,7 @@
 use axum::{
-    extract::State, routing::{delete, put},
-    Json,
-    Router,
+    Json, Router,
+    extract::State,
+    routing::{delete, put},
 };
 use std::sync::Arc;
 use validator::Validate;

@@ -1,7 +1,7 @@
 use axum::{
-    extract::{Path, Query, State}, routing::{delete, get, post, put},
-    Json,
-    Router,
+    Json, Router,
+    extract::{Path, Query, State},
+    routing::{delete, get, post, put},
 };
 use std::sync::Arc;
 use uuid::Uuid;
