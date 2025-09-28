@@ -52,6 +52,10 @@ jobs:
       - name: Prepare sqlx data
         run: cargo sqlx prepare
 
+      - name: Check .sqlx directory contents
+        run: ls -laR .sqlx
+        continue-on-error: true
+        
       - name: Check Formatting
         run: cargo fmt --check
 
