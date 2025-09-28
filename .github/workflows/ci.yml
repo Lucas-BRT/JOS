@@ -69,7 +69,6 @@ jobs:
 
   build-and-push:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     needs: validate
     permissions:
       contents: read
@@ -106,7 +105,6 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     needs: build-and-push
     steps:
       - name: Trigger Dokploy Webhook
