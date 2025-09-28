@@ -65,11 +65,14 @@ jobs:
       - name: Run Tests
         run: cargo test
 
+      - name: Rename .sqlx directory to avoid path issues
+        run: mv .sqlx sqlx_for_upload
+
       - name: Upload .sqlx artifact
         uses: actions/upload-artifact@v4
         with:
           name: sqlx-data
-          path: .sqlx/*.json
+          path: sqlx_for_upload/
 
   build-and-push:
     runs-on: ubuntu-latest
