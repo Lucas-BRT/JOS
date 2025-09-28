@@ -30,8 +30,11 @@ impl TableRequestService {
             ..Default::default()
         };
         let table_requests = self.table_request_repository.read(command).await?;
-        table_requests.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::TableRequest(crate::domain::error::TableRequestDomainError::TableRequestNotFound(id.to_string()))))
+        table_requests.into_iter().next().ok_or_else(|| {
+            crate::Error::Domain(crate::domain::error::DomainError::TableRequest(
+                crate::domain::error::TableRequestDomainError::TableRequestNotFound(id.to_string()),
+            ))
+        })
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<TableRequest>> {

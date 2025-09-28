@@ -1,7 +1,7 @@
 use crate::{domain::auth::Claims, infrastructure::state::AppState};
 use axum::{
     extract::{FromRequestParts, Request, State},
-    http::{request::Parts, StatusCode},
+    http::{StatusCode, request::Parts},
     middleware::Next,
     response::Response,
 };

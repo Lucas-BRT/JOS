@@ -1,4 +1,7 @@
-use crate::{Result, domain::auth::Claims, infrastructure::state::AppState, domain::search::SearchQuery as DomainSearchQuery};
+use crate::{
+    Result, domain::auth::Claims, domain::search::SearchQuery as DomainSearchQuery,
+    infrastructure::state::AppState,
+};
 use axum::{
     Json, Router,
     extract::{Query, State},
@@ -33,7 +36,6 @@ pub struct SearchResponse {
     pub limit: u32,
 }
 
-
 #[utoipa::path(
     get,
     path = "/v1/search",
@@ -60,21 +62,25 @@ pub async fn search(
         limit: query.limit,
     };
     let domain_results = app_state.search_service.search(&domain_query).await?;
-    
+
     // Convert domain results to local SearchResponse
     let results = SearchResponse {
-        results: domain_results.results.into_iter().map(|r| SearchResult {
-            id: r.id.to_string(),
-            title: r.title,
-            description: r.description,
-            r#type: r.r#type,
-            created_at: r.created_at,
-        }).collect(),
+        results: domain_results
+            .results
+            .into_iter()
+            .map(|r| SearchResult {
+                id: r.id.to_string(),
+                title: r.title,
+                description: r.description,
+                r#type: r.r#type,
+                created_at: r.created_at,
+            })
+            .collect(),
         total: domain_results.total,
         page: domain_results.page,
         limit: domain_results.limit,
     };
-    
+
     Ok(Json(results))
 }
 

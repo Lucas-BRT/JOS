@@ -1,6 +1,6 @@
 use crate::domain::entities::{IntentStatus, SessionIntent};
-use uuid::Uuid;
 use crate::shared::Date;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "intent_status", rename_all = "lowercase")]

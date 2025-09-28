@@ -30,8 +30,11 @@ impl SessionCheckinService {
             ..Default::default()
         };
         let session_checkins = self.session_checkin_repository.read(command).await?;
-        session_checkins.into_iter().next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(format!("Session checkin not found: {}", id))))
+        session_checkins.into_iter().next().ok_or_else(|| {
+            crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(
+                format!("Session checkin not found: {}", id),
+            ))
+        })
     }
 
     pub async fn find_by_session_intent_id(

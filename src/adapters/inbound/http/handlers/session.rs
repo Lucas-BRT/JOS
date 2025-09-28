@@ -1,6 +1,6 @@
 use crate::{
-    dtos::*,
     domain::auth::Claims,
+    dtos::*,
     infrastructure::state::AppState,
     shared::{Error, Result},
 };

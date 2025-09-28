@@ -8,11 +8,11 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    domain::auth::{Claims, Authenticator},
+    domain::auth::{Authenticator, Claims},
     domain::entities::commands::{CreateUserCommand, LoginUserCommand},
+    dtos::auth::*,
     infrastructure::state::AppState,
     shared::{Error, Result},
-    dtos::auth::*,
 };
 
 // Conversion implementations
@@ -57,14 +57,19 @@ async fn login(
 
     let email = login_payload.email.clone();
     let mut login_command = login_payload.into();
-    let jwt_token = app_state.auth_service.authenticate(&mut login_command).await?;
+    let jwt_token = app_state
+        .auth_service
+        .authenticate(&mut login_command)
+        .await?;
 
     let user = app_state
         .auth_service
         .user_repository
         .find_by_email(&email)
         .await?
-        .ok_or(Error::Application(crate::application::error::ApplicationError::InvalidCredentials))?;
+        .ok_or(Error::Application(
+            crate::application::error::ApplicationError::InvalidCredentials,
+        ))?;
 
     Ok(LoginResponse {
         user: user.into(),
@@ -100,7 +105,11 @@ async fn register(
     }
 
     let user = app_state.auth_service.register(&mut payload.into()).await?;
-    let jwt_token = app_state.auth_service.jwt_provider.generate_token(&user.id).await?;
+    let jwt_token = app_state
+        .auth_service
+        .jwt_provider
+        .generate_token(&user.id)
+        .await?;
 
     Ok(RegisterResponse {
         user: user.into(),
@@ -139,7 +148,7 @@ async fn logout(_claims: Claims) -> Result<LogoutResponse> {
 #[axum::debug_handler]
 async fn refresh(
     State(app_state): State<Arc<AppState>>,
-    Json(payload): Json<RefreshTokenRequest>,
+    Json(_payload): Json<RefreshTokenRequest>,
 ) -> Result<RefreshTokenResponse> {
     // TODO: Implement proper refresh token validation
     let new_token = app_state
@@ -171,7 +180,9 @@ async fn me(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<Us
         .user_repository
         .find_by_id(&claims.sub)
         .await?
-        .ok_or(Error::Application(crate::application::error::ApplicationError::InvalidCredentials))?;
+        .ok_or(Error::Application(
+            crate::application::error::ApplicationError::InvalidCredentials,
+        ))?;
     Ok(user.into())
 }
 

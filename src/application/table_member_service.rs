@@ -30,10 +30,11 @@ impl TableMemberService {
             ..Default::default()
         };
         let table_members = self.table_member_repository.read(command).await?;
-        table_members
-            .into_iter()
-            .next()
-            .ok_or_else(|| crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(format!("Table member not found: {}", id))))
+        table_members.into_iter().next().ok_or_else(|| {
+            crate::Error::Domain(crate::domain::error::DomainError::BusinessRuleViolation(
+                format!("Table member not found: {}", id),
+            ))
+        })
     }
 
     pub async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<TableMember>> {

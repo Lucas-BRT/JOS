@@ -2,13 +2,13 @@ use crate::{
     adapters::outbound::postgres::RepositoryError, domain::error::DomainError,
     infrastructure::error::SetupError,
 };
-use validator::ValidationErrors;
 use axum::{
+    Json,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use serde_json::json;
+use validator::ValidationErrors;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -38,7 +38,9 @@ impl IntoResponse for Error {
             Error::Domain(_) => (StatusCode::BAD_REQUEST, "Domain error"),
             Error::Application(_) => (StatusCode::BAD_REQUEST, "Application error"),
             Error::Validation(_) => (StatusCode::BAD_REQUEST, "Validation error"),
-            Error::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
+            Error::InternalServerError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+            }
             Error::Setup(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error"),
             Error::Persistence(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Persistence error"),
         };

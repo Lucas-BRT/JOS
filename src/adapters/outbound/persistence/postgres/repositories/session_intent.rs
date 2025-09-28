@@ -1,8 +1,10 @@
 use crate::{
+    Error, Result,
     adapters::outbound::postgres::{
         constraint_mapper,
-        models::{session_intent::EIntentStatus, SessionIntentModel},
-    }, domain::{
+        models::{SessionIntentModel, session_intent::EIntentStatus},
+    },
+    domain::{
         entities::{
             CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
             SessionIntent, Update, UpdateSessionIntentCommand,
@@ -10,8 +12,6 @@ use crate::{
         error::SessionIntentDomainError,
         repositories::SessionIntentRepository,
     },
-    Error,
-    Result,
 };
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};

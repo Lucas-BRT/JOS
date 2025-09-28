@@ -8,10 +8,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    shared::{Result, Error},
     domain::auth::Claims,
-    infrastructure::state::AppState,
     dtos::*,
+    infrastructure::state::AppState,
+    shared::{Error, Result},
 };
 
 #[utoipa::path(
@@ -28,7 +28,7 @@ use crate::{
 #[axum::debug_handler]
 pub async fn create_table(
     claims: Claims,
-    State(app_state): State<Arc<AppState>>,
+    State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequest>,
 ) -> Result<Json<TableDetails>> {
     if let Err(validation_error) = payload.validate() {
@@ -67,7 +67,7 @@ pub async fn create_table(
 pub async fn get_tables(
     _claims: Claims,
     State(_app_state): State<Arc<AppState>>,
-    Query(search): Query<SearchTablesQuery>,
+    Query(_search): Query<SearchTablesQuery>,
 ) -> Result<Json<Vec<TableListItem>>> {
     // TODO: Implement table listing logic with search functionality
     // For now, return empty list
@@ -150,7 +150,9 @@ pub async fn update_table(
             username: "placeholder".to_string(),
             display_name: "placeholder".to_string(),
         },
-        description: payload.description.unwrap_or("Updated description".to_string()),
+        description: payload
+            .description
+            .unwrap_or("Updated description".to_string()),
         player_slots: payload.max_players.unwrap_or(4),
         players: vec![],
         status: payload.status.unwrap_or("active".to_string()),

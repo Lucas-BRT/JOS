@@ -1,105 +1,40 @@
-name: Rust CI/CD
+services:
+  app:
+    container_name: jos-local-api
+    build:
+      context: .
+      dockerfile: .local/Dockerfile
+    volumes:
+      - ./:/app
+      - cargo-cache:/usr/local/cargo/registry
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - RUST_LOG=info
+    depends_on:
+      db:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
 
-on:
-  pull_request:
-    branches: [main, development]
-  push:
-    branches: [main, development]
+  db:
+    container_name: jos-local-db
+    image: postgres:18.0-alpine3.22
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-env:
-  BINARY_NAME: jos
-  IMAGE_NAME: ${{ secrets.DOCKER_USERNAME }}/jos # Ex: meu-usuario/minha-app-rust
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/testdb
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
-
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install and cache sqlx-cli
-        uses: actions/cache@v4
-        id: cache-sqlx-cli
-        with:
-          path: ~/.cargo/bin/sqlx
-          key: ${{ runner.os }}-sqlx-cli
-      - run: |
-          if [[ "${{ steps.cache-sqlx-cli.outputs.cache-hit }}" != 'true' ]]; then
-            cargo install sqlx-cli --no-default-features --features postgres
-          fi
-
-      - name: Run Migrations
-        run: sqlx migrate run
-
-      - name: Check Formatting
-        run: cargo fmt --check
-
-      - name: Run Linter
-        run: cargo clippy -- -D warnings
-
-      - name: Run Tests
-        run: cargo test
-
-  build-and-push:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: validate
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          push: true
-          tags: ${{ env.IMAGE_NAME }}:latest, ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          cache-from: type=gha,scope=${{ github.workflow }}
-          cache-to: type=gha,scope=${{ github.workflow }},mode=max
-
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: build-and-push
-    steps:
-      - name: Trigger Dokploy Webhook
-        run: curl -X POST ${{ secrets.DOKPLOY_WEBHOOK_URL }}
+volumes:
+  postgres_data:
+  cargo-cache:

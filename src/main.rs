@@ -1,9 +1,9 @@
+use jos::adapters::inbound::http::handlers::create_router;
 use jos::infrastructure::{
     config::AppConfig,
     setup::{database::setup_database, launch_server, logging::init_logging},
     state::setup_app_state,
 };
-use jos::adapters::inbound::http::handlers::create_router;
 
 #[tokio::main]
 async fn main() {

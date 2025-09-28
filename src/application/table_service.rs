@@ -36,10 +36,11 @@ impl TableService {
             ..Default::default()
         };
         let tables = self.table_repository.read(command).await?;
-        tables
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::Domain(DomainError::Table(TableDomainError::TableNotFound(table_id.to_string()))))
+        tables.into_iter().next().ok_or_else(|| {
+            Error::Domain(DomainError::Table(TableDomainError::TableNotFound(
+                table_id.to_string(),
+            )))
+        })
     }
 
     pub async fn get(&self, command: GetTableCommand) -> Result<Vec<Table>> {
