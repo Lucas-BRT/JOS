@@ -1,12 +1,12 @@
-use crate::Result;
-use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
-use crate::adapters::outbound::postgres::models::SessionModel;
 use crate::adapters::outbound::postgres::models::session::ESessionStatus;
+use crate::adapters::outbound::postgres::models::SessionModel;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::domain::entities::*;
 use crate::domain::repositories::SessionRepository;
+use crate::Result;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 pub struct PostgresSessionRepository {
     pool: PgPool,
@@ -21,19 +21,23 @@ impl PostgresSessionRepository {
 #[async_trait::async_trait]
 impl SessionRepository for PostgresSessionRepository {
     async fn create(&self, session: CreateSessionCommand) -> Result<Session> {
-        let status: ESessionStatus = session.status.into();
+        let status = ESessionStatus::from(session.status);
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let created_session = sqlx::query_as!(
             SessionModel,
             r#"INSERT INTO sessions
                 (
+                id,
                 name,
                 description,
                 table_id,
                 scheduled_for,
-                status)
+                status,
+                created_at,
+                updated_at)
             VALUES
-                ($1, $2, $3, $4, $5)
+                ($1, $2, $3, $4, $5, $6, NOW(), NOW())
             RETURNING
                 id,
                 name,
@@ -44,11 +48,12 @@ impl SessionRepository for PostgresSessionRepository {
                 created_at,
                 updated_at
             "#,
+            uuid,
             session.name,
             session.description,
             session.table_id,
             session.scheduled_for,
-            status as _,
+            status as ESessionStatus
         )
         .fetch_one(&self.pool)
         .await

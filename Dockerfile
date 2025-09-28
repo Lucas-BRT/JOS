@@ -1,50 +1,38 @@
-FROM rust:1.85-alpine AS builder
+# --- Builder Stage ---
+# Usamos uma imagem completa do Rust para compilar a aplicação
+FROM rust:1.90-slim as builder
 
-# Install system dependencies
-RUN apk add --no-cache build-base jpeg-dev libpng-dev
+# Instala dependências de compilação, como o linker para build estático
+RUN apt-get update && apt-get install -y musl-tools musl-dev
 
+# Cria um diretório de trabalho
 WORKDIR /app
 
-# Copy dependency files
+# Copia os arquivos de dependência e compila apenas as dependências (cache layer)
 COPY Cargo.toml Cargo.lock ./
-COPY jos-cli/Cargo.toml ./jos-cli/
+# Cria um projeto dummy para compilar as dependências separadamente
+RUN mkdir src && echo "fn main(){}" > src/main.rs && \
+    cargo build --release --target=x86_64-unknown-linux-musl && \
+    rm -rf src
 
-# Create dummy source files for dependency resolution
-RUN mkdir -p src jos-cli/src && \
-    echo "fn main() {}" > src/main.rs && \
-    echo "fn main() {}" > jos-cli/src/main.rs
+# Copia o código-fonte da aplicação
+COPY src ./src
+COPY migrations ./migrations
+COPY .sqlx ./.sqlx
 
-# Build dependencies only (this layer will be cached)
-RUN cargo build --release
+# Compila a aplicação final
+# O --touch força o cargo a verificar se algo mudou
+RUN touch src/main.rs && cargo build --release --target=x86_64-unknown-linux-musl
 
-# Copy source code
-COPY . .
+# --- Final Stage ---
+# Usamos uma imagem mínima para a versão final. `scratch` é a menor possível.
+FROM scratch
 
-# Build the application
-RUN cargo build --release
+# Copia apenas o binário compilado do estágio de build
+COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/jos /jos
 
-# Production stage
-FROM alpine:latest
+# Expõe a porta que sua aplicação usa (ajuste se necessário)
+EXPOSE 8000
 
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates postgresql-client
-
-# Create non-root user
-RUN addgroup -g 1001 -S jos && \
-    adduser -S jos -u 1001
-
-# Copy binary from builder
-COPY --from=builder /app/target/release/jos /usr/local/bin/
-
-# Switch to non-root user
-USER jos
-
-# Expose port
-EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
-# Run the application
-CMD ["jos"]
+# Comando para executar a aplicação
+CMD ["/jos"]

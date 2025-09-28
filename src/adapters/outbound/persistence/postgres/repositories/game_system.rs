@@ -1,11 +1,11 @@
-use crate::Result;
-use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::GameSystemModel;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::domain::entities::*;
 use crate::domain::repositories::GameSystemRepository;
+use crate::Result;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
 pub struct PostgresGameSystemRepository {
@@ -21,14 +21,17 @@ impl PostgresGameSystemRepository {
 #[async_trait::async_trait]
 impl GameSystemRepository for PostgresGameSystemRepository {
     async fn create(&self, command: &mut CreateGameSystemCommand) -> Result<GameSystem> {
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
-            INSERT INTO game_systems (name)
-            VALUES ($1)
+            INSERT INTO game_systems (id, name, created_at, updated_at)
+            VALUES ($1, $2, NOW(), NOW())
             RETURNING *
             "#,
-            command.name,
+            uuid,
+            command.name
         )
         .fetch_one(&self.pool)
         .await
@@ -74,7 +77,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
             UPDATE game_systems 
             SET 
                 name = COALESCE($2, name),
-                created_at = NOW()
+                updated_at = NOW()
             WHERE id = $1
             RETURNING *
             "#,

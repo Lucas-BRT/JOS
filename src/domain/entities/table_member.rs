@@ -7,7 +7,6 @@ pub struct TableMember {
     pub id: Uuid,
     pub table_id: Uuid,
     pub user_id: Uuid,
-    pub joined_at: Date,
     pub created_at: Date,
     pub updated_at: Date,
 }

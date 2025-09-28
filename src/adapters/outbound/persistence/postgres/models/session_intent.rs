@@ -1,6 +1,6 @@
 use crate::domain::entities::{IntentStatus, SessionIntent};
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use crate::shared::Date;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "intent_status", rename_all = "lowercase")]
@@ -36,8 +36,8 @@ pub struct SessionIntentModel {
     pub user_id: Uuid,
     pub session_id: Uuid,
     pub intent_status: EIntentStatus,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Date,
+    pub updated_at: Date,
 }
 
 impl From<SessionIntentModel> for SessionIntent {

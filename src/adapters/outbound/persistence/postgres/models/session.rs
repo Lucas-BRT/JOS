@@ -1,7 +1,6 @@
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
-
 use crate::domain::entities::{Session, SessionStatus};
+use crate::shared::Date;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "session_status", rename_all = "snake_case")]
@@ -40,10 +39,10 @@ pub struct SessionModel {
     pub name: String,
     pub description: String,
     pub table_id: Uuid,
-    pub scheduled_for: Option<DateTime<Utc>>,
+    pub scheduled_for: Option<Date>,
     pub status: ESessionStatus,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Date,
+    pub updated_at: Date,
 }
 
 impl From<SessionModel> for Session {

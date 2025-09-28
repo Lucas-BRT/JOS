@@ -5,7 +5,7 @@ use crate::domain::error::UserDomainError;
 use crate::domain::repositories::UserRepository;
 use crate::{Error, Result};
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
 pub struct PostgresUserRepository {
@@ -21,18 +21,25 @@ impl PostgresUserRepository {
 #[async_trait::async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn create(&self, user: &mut CreateUserCommand) -> Result<User> {
+
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let created_user = sqlx::query_as!(
             UserModel,
             r#"INSERT INTO users
                 (
+                id,
                 username,
                 email,
-                password)
+                password,
+                created_at,
+                updated_at)
             VALUES
-                ($1, $2, $3)
+                ($1, $2, $3, $4, NOW(), NOW())
             RETURNING
                 *
             "#,
+            uuid,
             &user.username,
             &user.email,
             &user.password,

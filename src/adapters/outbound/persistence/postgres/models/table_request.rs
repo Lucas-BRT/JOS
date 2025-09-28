@@ -1,6 +1,6 @@
 use crate::domain::entities::{TableRequest, TableRequestStatus};
-use chrono::{DateTime, Utc};
 use uuid::Uuid;
+use crate::shared::Date;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "request_status", rename_all = "lowercase")]
@@ -37,8 +37,8 @@ pub struct TableRequestModel {
     pub table_id: Uuid,
     pub message: Option<String>,
     pub status: ETableRequestStatus,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: Date,
+    pub updated_at: Date,
 }
 
 impl From<TableRequestModel> for TableRequest {

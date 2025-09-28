@@ -6,7 +6,7 @@ use crate::domain::entities::commands::*;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRepository;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 pub struct PostgresTableRepository {
     pool: PgPool,
@@ -21,17 +21,23 @@ impl PostgresTableRepository {
 #[async_trait::async_trait]
 impl TableRepository for PostgresTableRepository {
     async fn create(&self, command: CreateTableCommand) -> Result<Table> {
+
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let created_table = sqlx::query_as!(
             TableModel,
             r#"INSERT INTO tables
                 (
+                id,
                 gm_id,
                 title,
                 description,
                 slots,
-                game_system_id)
+                game_system_id,
+                created_at,
+                updated_at)
             VALUES
-                ($1, $2, $3, $4, $5)
+                ($1, $2, $3, $4, $5, $6, NOW(), NOW())
             RETURNING
                 id,
                 gm_id,
@@ -42,6 +48,7 @@ impl TableRepository for PostgresTableRepository {
                 created_at,
                 updated_at
             "#,
+            uuid,
             command.gm_id,
             command.title,
             command.description,
