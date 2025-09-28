@@ -2,6 +2,7 @@ name: Rust CI/CD
 
 on:
   pull_request:
+
     branches: [ main, development ]
   push:
     branches: [ main, development ]
@@ -40,6 +41,7 @@ jobs:
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
+
 
       - name: Install sqlx-cli
         run: cargo install sqlx-cli --no-default-features --features postgres
