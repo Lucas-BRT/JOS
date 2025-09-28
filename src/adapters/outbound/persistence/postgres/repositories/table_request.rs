@@ -1,12 +1,12 @@
-use crate::Result;
-use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
-use crate::adapters::outbound::postgres::models::TableRequestModel;
 use crate::adapters::outbound::postgres::models::table_request::ETableRequestStatus;
+use crate::adapters::outbound::postgres::models::TableRequestModel;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRequestRepository;
+use crate::Result;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
 pub struct PostgresTableRequestRepository {
@@ -22,16 +22,21 @@ impl PostgresTableRequestRepository {
 #[async_trait::async_trait]
 impl TableRequestRepository for PostgresTableRequestRepository {
     async fn create(&self, request_data: CreateTableRequestCommand) -> Result<TableRequest> {
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let result = sqlx::query_as!(
             TableRequestModel,
             r#"INSERT INTO table_requests
                     (
+                    id,
                     user_id,
                     table_id,
                     message,
-                    status)
+                    status,
+                    created_at,
+                    updated_at)
                 VALUES
-                    ($1, $2, $3, $4)
+                    ($1, $2, $3, $4, $5, NOW(), NOW())
                 RETURNING
                     id,
                     user_id,
@@ -41,10 +46,11 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     created_at,
                     updated_at
                 "#,
+            uuid,
             request_data.user_id,
             request_data.table_id,
             request_data.message,
-            ETableRequestStatus::Pending as _,
+            ETableRequestStatus::Pending as ETableRequestStatus,
         )
         .fetch_one(&self.pool)
         .await
@@ -77,8 +83,8 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             sqlx::query_as!(
                 TableRequestModel,
                 r#"
-                UPDATE table_requests 
-                SET 
+                UPDATE table_requests
+                SET
                     status = $2::request_status,
                     message = COALESCE($3, message),
                     updated_at = NOW()
@@ -103,8 +109,8 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             sqlx::query_as!(
                 TableRequestModel,
                 r#"
-                UPDATE table_requests 
-                SET 
+                UPDATE table_requests
+                SET
                     message = COALESCE($2, message),
                     updated_at = NOW()
                 WHERE id = $1

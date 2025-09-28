@@ -4,7 +4,7 @@ use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
 use crate::domain::repositories::TableMemberRepository;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
 pub struct PostgresTableMemberRepository {
@@ -20,17 +20,24 @@ impl PostgresTableMemberRepository {
 #[async_trait::async_trait]
 impl TableMemberRepository for PostgresTableMemberRepository {
     async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
+
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let created_table_member = sqlx::query_as!(
             TableMemberModel,
             r#"INSERT INTO table_members
                 (
+                id,
                 table_id,
-                user_id)
+                user_id,
+                created_at,
+                updated_at)
             VALUES
-                ($1, $2)
+                ($1, $2, $3, NOW(), NOW())
             RETURNING
                 *
             "#,
+            uuid,
             &command.table_id,
             &command.user_id,
         )
@@ -46,12 +53,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
             TableMemberModel,
             r#"
             SELECT
-                id,
-                table_id,
-                user_id,
-                joined_at,
-                created_at,
-                updated_at
+                *
             FROM table_members
             WHERE ($1::uuid IS NULL OR id = $1)
               AND ($2::uuid IS NULL OR table_id = $2)
@@ -135,12 +137,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
             TableMemberModel,
             r#"
             SELECT
-                id,
-                table_id,
-                user_id,
-                joined_at,
-                created_at,
-                updated_at
+                *
             FROM table_members
             WHERE id = $1
             "#,
@@ -158,12 +155,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
             TableMemberModel,
             r#"
             SELECT
-                id,
-                table_id,
-                user_id,
-                joined_at,
-                created_at,
-                updated_at
+                *
             FROM table_members
             WHERE table_id = $1
             "#,
@@ -184,12 +176,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
             TableMemberModel,
             r#"
             SELECT
-                id,
-                table_id,
-                user_id,
-                joined_at,
-                created_at,
-                updated_at
+                *
             FROM table_members
             WHERE user_id = $1
             "#,

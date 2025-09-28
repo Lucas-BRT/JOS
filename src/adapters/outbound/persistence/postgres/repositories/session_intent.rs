@@ -1,10 +1,8 @@
 use crate::{
-    Error, Result,
     adapters::outbound::postgres::{
         constraint_mapper,
-        models::{SessionIntentModel, session_intent::EIntentStatus},
-    },
-    domain::{
+        models::{session_intent::EIntentStatus, SessionIntentModel},
+    }, domain::{
         entities::{
             CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
             SessionIntent, Update, UpdateSessionIntentCommand,
@@ -12,9 +10,11 @@ use crate::{
         error::SessionIntentDomainError,
         repositories::SessionIntentRepository,
     },
+    Error,
+    Result,
 };
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 pub struct PostgresSessionIntentRepository {
     pool: PgPool,
@@ -29,14 +29,20 @@ impl PostgresSessionIntentRepository {
 #[async_trait::async_trait]
 impl SessionIntentRepository for PostgresSessionIntentRepository {
     async fn create(&self, command: CreateSessionIntentCommand) -> Result<SessionIntent> {
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+        let status = EIntentStatus::from(command.status);
+
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"INSERT INTO session_intents
             (
+                id,
                 user_id,
                 session_id,
-                intent_status)
-            VALUES ($1, $2, $3)
+                intent_status,
+                created_at,
+                updated_at)
+            VALUES ($1, $2, $3, $4, NOW(), NOW())
             RETURNING
                 id,
                 user_id,
@@ -45,9 +51,10 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
                 created_at,
                 updated_at
             "#,
+            uuid,
             command.player_id,
             command.session_id,
-            EIntentStatus::from(command.status) as _,
+            status as EIntentStatus,
         )
         .fetch_one(&self.pool)
         .await
@@ -62,14 +69,12 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         if !status_to_update {
             let session_intent = self.find_by_id(command.id).await?;
 
-            match session_intent {
-                Some(session_intent) => return Ok(session_intent),
-                None => {
-                    return Err(Error::Domain(
-                        SessionIntentDomainError::SessionIntentNotFound.into(),
-                    ));
-                }
-            }
+            return match session_intent {
+                Some(session_intent) => Ok(session_intent),
+                None => Err(Error::Domain(
+                    SessionIntentDomainError::SessionIntentNotFound.into(),
+                )),
+            };
         }
 
         let new_status: Option<EIntentStatus> = match command.status {

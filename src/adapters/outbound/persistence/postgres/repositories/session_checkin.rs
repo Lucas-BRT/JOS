@@ -1,10 +1,10 @@
-use crate::Result;
 use crate::adapters::outbound::postgres::models::SessionCheckinModel;
-use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
+use crate::adapters::outbound::postgres::{constraint_mapper, RepositoryError};
 use crate::domain::entities::*;
 use crate::domain::repositories::SessionCheckinRepository;
+use crate::Result;
 use sqlx::PgPool;
-use uuid::Uuid;
+use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
 pub struct PostgresSessionCheckinRepository {
@@ -20,18 +20,24 @@ impl PostgresSessionCheckinRepository {
 #[async_trait::async_trait]
 impl SessionCheckinRepository for PostgresSessionCheckinRepository {
     async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
+        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+
         let created_session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"INSERT INTO session_checkins
                 (
+                id,
                 session_intent_id,
                 attendance,
-                notes)
+                notes,
+                created_at,
+                updated_at)
             VALUES
-                ($1, $2, $3)
+                ($1, $2, $3, $4, NOW(), NOW())
             RETURNING
                 *
             "#,
+            uuid,
             &command.session_intent_id,
             &command.attendance,
             command.notes.as_deref(),
