@@ -1,6 +1,6 @@
 use crate::domain::entities::{TableRequest, TableRequestStatus};
-use uuid::Uuid;
 use crate::shared::Date;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "request_status", rename_all = "lowercase")]

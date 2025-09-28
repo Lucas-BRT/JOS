@@ -20,7 +20,6 @@ impl PostgresTableMemberRepository {
 #[async_trait::async_trait]
 impl TableMemberRepository for PostgresTableMemberRepository {
     async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
-
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let created_table_member = sqlx::query_as!(

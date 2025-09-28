@@ -1,9 +1,9 @@
+use crate::Result;
+use crate::adapters::outbound::postgres::RepositoryError;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::GameSystemModel;
-use crate::adapters::outbound::postgres::RepositoryError;
 use crate::domain::entities::*;
 use crate::domain::repositories::GameSystemRepository;
-use crate::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 

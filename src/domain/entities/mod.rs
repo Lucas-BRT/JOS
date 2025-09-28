@@ -17,5 +17,5 @@ pub use session_intent::{IntentStatus, SessionIntent};
 pub use table::*;
 pub use table_member::TableMember;
 pub use table_request::{TableRequest, TableRequestStatus};
-pub use user::User;
 pub use update::Update;
+pub use user::User;

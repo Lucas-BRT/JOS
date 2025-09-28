@@ -21,7 +21,6 @@ impl PostgresUserRepository {
 #[async_trait::async_trait]
 impl UserRepository for PostgresUserRepository {
     async fn create(&self, user: &mut CreateUserCommand) -> Result<User> {
-
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let created_user = sqlx::query_as!(

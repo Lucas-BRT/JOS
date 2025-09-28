@@ -1,6 +1,6 @@
-use uuid::Uuid;
 use crate::domain::entities::{Session, SessionStatus};
 use crate::shared::Date;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
 #[sqlx(type_name = "session_status", rename_all = "snake_case")]

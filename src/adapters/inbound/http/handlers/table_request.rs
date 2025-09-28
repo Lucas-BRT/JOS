@@ -8,10 +8,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    shared::{Result, Error},
     domain::auth::Claims,
-    infrastructure::state::AppState,
     dtos::*,
+    infrastructure::state::AppState,
+    shared::{Error, Result},
 };
 
 #[utoipa::path(

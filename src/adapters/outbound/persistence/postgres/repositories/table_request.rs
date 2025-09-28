@@ -1,10 +1,10 @@
-use crate::adapters::outbound::postgres::constraint_mapper;
-use crate::adapters::outbound::postgres::models::table_request::ETableRequestStatus;
-use crate::adapters::outbound::postgres::models::TableRequestModel;
+use crate::Result;
 use crate::adapters::outbound::postgres::RepositoryError;
+use crate::adapters::outbound::postgres::constraint_mapper;
+use crate::adapters::outbound::postgres::models::TableRequestModel;
+use crate::adapters::outbound::postgres::models::table_request::ETableRequestStatus;
 use crate::domain::entities::*;
 use crate::domain::repositories::TableRequestRepository;
-use crate::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 

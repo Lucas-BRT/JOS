@@ -8,10 +8,10 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    shared::{Result, Error},
     domain::auth::Claims,
-    infrastructure::state::AppState,
     dtos::*,
+    infrastructure::state::AppState,
+    shared::{Error, Result},
 };
 
 #[utoipa::path(
@@ -150,7 +150,9 @@ pub async fn update_table(
             username: "placeholder".to_string(),
             display_name: "placeholder".to_string(),
         },
-        description: payload.description.unwrap_or("Updated description".to_string()),
+        description: payload
+            .description
+            .unwrap_or("Updated description".to_string()),
         player_slots: payload.max_players.unwrap_or(4),
         players: vec![],
         status: payload.status.unwrap_or("active".to_string()),

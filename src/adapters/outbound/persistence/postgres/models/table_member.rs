@@ -1,6 +1,6 @@
 use crate::domain::entities::TableMember;
-use uuid::Uuid;
 use crate::shared::Date;
+use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
 pub struct TableMemberModel {

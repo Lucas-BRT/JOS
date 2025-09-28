@@ -1,6 +1,6 @@
+use crate::shared::Date;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use crate::shared::Date;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameSystem {

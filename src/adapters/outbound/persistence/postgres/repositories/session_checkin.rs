@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::adapters::outbound::postgres::models::SessionCheckinModel;
-use crate::adapters::outbound::postgres::{constraint_mapper, RepositoryError};
+use crate::adapters::outbound::postgres::{RepositoryError, constraint_mapper};
 use crate::domain::entities::*;
 use crate::domain::repositories::SessionCheckinRepository;
-use crate::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
