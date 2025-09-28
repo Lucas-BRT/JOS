@@ -94,8 +94,10 @@ jobs:
           name: sqlx-data
           path: .
 
-      - name: Restore .sqlx directory name
-        run: mv sqlx_for_upload .sqlx
+      - name: Recreate .sqlx directory from artifact files
+        run: |
+          mkdir .sqlx
+          mv *.json .sqlx/
 
       - name: Build static release binary
         run: cargo build --release --target=x86_64-unknown-linux-musl
