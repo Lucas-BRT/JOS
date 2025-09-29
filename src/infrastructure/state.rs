@@ -76,24 +76,15 @@ impl FromRef<AppState> for PasswordService {
     }
 }
 
-pub async fn setup_app_state(database: &Db) -> Result<AppState> {
-    let config = AppConfig::from_env()?;
-    config.validate_config()?;
-    config.display_startup_info();
-
-    let app_state = setup_services(database).await?;
+pub async fn setup_app_state(database: &Db, config: &AppConfig) -> Result<AppState> {
+    let app_state = setup_services(database, config).await?;
 
     Ok(app_state)
 }
 
-pub async fn setup_services(database: &Db) -> Result<AppState> {
+pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppState> {
     info!("🔧 Initializing application setup...");
     info!("📝 Logging system initialized");
-
-    let config = AppConfig::from_env()?;
-    config.validate_config()?;
-    config.display_startup_info();
-
     info!("🏗️  Initializing services...");
 
     // User service

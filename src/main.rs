@@ -13,7 +13,7 @@ async fn main() {
         .await
         .expect("failed to setup database");
 
-    let app_state = setup_app_state(&database)
+    let app_state = setup_app_state(&database, &config)
         .await
         .expect("failed to setup app state");
 
