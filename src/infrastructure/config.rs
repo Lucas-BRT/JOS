@@ -1,6 +1,6 @@
+use crate::infrastructure::SetupError;
 use crate::infrastructure::constants::*;
 use crate::infrastructure::setup::environment::Environment;
-use crate::infrastructure::SetupError;
 use crate::{Error, Result};
 use chrono::Duration;
 use std::{net::SocketAddr, str::FromStr};
