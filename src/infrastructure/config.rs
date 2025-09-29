@@ -1,6 +1,6 @@
-use crate::infrastructure::SetupError;
 use crate::infrastructure::constants::*;
 use crate::infrastructure::setup::environment::Environment;
+use crate::infrastructure::SetupError;
 use crate::{Error, Result};
 use chrono::Duration;
 use std::{net::SocketAddr, str::FromStr};
@@ -64,9 +64,9 @@ impl AppConfig {
             Environment::Production => match jwt_secret_env {
                 Ok(secret) => secret,
                 Err(_) => {
-                    return Err(Error::Setup(
-                        SetupError::FailedToGetEnvironmentVariable("JWT_SECRET".to_string()).into(),
-                    ));
+                    return Err(Error::Setup(SetupError::FailedToGetEnvironmentVariable(
+                        "JWT_SECRET".to_string(),
+                    )));
                 }
             },
             Environment::Development => jwt_secret_env.unwrap_or_else(|_| {
