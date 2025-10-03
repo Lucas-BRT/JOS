@@ -2,7 +2,7 @@ use axum::extract::FromRef;
 
 use crate::adapters::outbound::postgres::repositories::{
     PostgresSessionRepository, PostgresTableRepository, PostgresTableRequestRepository,
-    PostgresUserRepository,
+    PostgresUserRepository, PostgresRefreshTokenRepository,
 };
 use crate::adapters::outbound::{BcryptPasswordProvider, JwtTokenProvider};
 use crate::application::auth_service::AuthService;
@@ -121,10 +121,12 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         config.jwt_secret.clone(),
         config.jwt_expiration_duration,
     ));
+    let refresh_token_repo = Arc::new(PostgresRefreshTokenRepository::new(database.clone()));
     let auth_service = AuthService::new(
         user_repo.clone(),
         password_repo.clone(),
         jwt_provider.clone(),
+        refresh_token_repo.clone(),
     );
     info!("✅ Auth service initialized");
 

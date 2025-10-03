@@ -1036,11 +1036,13 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
+ "base64",
  "bcrypt",
  "chrono",
  "dotenvy",
  "futures",
  "jsonwebtoken",
+ "rand",
  "serde",
  "serde_json",
  "sqlx",

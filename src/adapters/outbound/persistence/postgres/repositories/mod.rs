@@ -6,6 +6,7 @@ pub mod table;
 pub mod table_member;
 pub mod table_request;
 pub mod user;
+pub mod refresh_token;
 
 pub use game_system::*;
 pub use session::*;
@@ -15,3 +16,4 @@ pub use table::*;
 pub use table_member::*;
 pub use table_request::*;
 pub use user::*;
+pub use refresh_token::*;

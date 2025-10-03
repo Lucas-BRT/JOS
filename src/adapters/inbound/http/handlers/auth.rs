@@ -1,10 +1,9 @@
 use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
+    extract::State, routing::{get, post},
+    Json,
+    Router,
 };
 use std::sync::Arc;
-use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
@@ -71,11 +70,13 @@ async fn login(
             crate::application::error::ApplicationError::InvalidCredentials,
         ))?;
 
+    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
+
     Ok(LoginResponse {
         user: user.into(),
         token: jwt_token,
-        refresh_token: "refresh_token_placeholder".to_string(), // TODO: Implement refresh token
-        expires_in: 86400,                                      // 24 hours in seconds
+        refresh_token,
+        expires_in: 86400,
     })
 }
 
@@ -99,23 +100,18 @@ async fn register(
         return Err(Error::Validation(sanitization_error));
     }
 
-    // Validate password confirmation
-    if payload.password != payload.confirm_password {
-        return Err(Error::Validation(validator::ValidationErrors::new()));
-    }
-
     let user = app_state.auth_service.register(&mut payload.into()).await?;
     let jwt_token = app_state
         .auth_service
         .jwt_provider
         .generate_token(&user.id)
         .await?;
+    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
 
     Ok(RegisterResponse {
         user: user.into(),
         token: jwt_token,
-        refresh_token: "refresh_token_placeholder".to_string(), // TODO: Implement refresh token
-        expires_in: 86400,                                      // 24 hours in seconds
+        refresh_token,
     })
 }
 
@@ -148,19 +144,23 @@ async fn logout(_claims: Claims) -> Result<LogoutResponse> {
 #[axum::debug_handler]
 async fn refresh(
     State(app_state): State<Arc<AppState>>,
-    Json(_payload): Json<RefreshTokenRequest>,
+    Json(payload): Json<RefreshTokenRequest>,
 ) -> Result<RefreshTokenResponse> {
-    // TODO: Implement proper refresh token validation
-    let new_token = app_state
+    let (new_refresh_token, user_id) = app_state
+        .auth_service
+        .rotate_refresh_token(&payload.refresh_token)
+        .await?;
+
+    let new_jwt = app_state
         .auth_service
         .jwt_provider
-        .generate_token(&Uuid::new_v4()) // TODO: Extract user_id from refresh token
+        .generate_token(&user_id)
         .await?;
 
     Ok(RefreshTokenResponse {
-        token: new_token,
-        refresh_token: "new_refresh_token_placeholder".to_string(), // TODO: Generate new refresh token
-        expires_in: 86400,                                          // 24 hours in seconds
+        token: new_jwt,
+        refresh_token: new_refresh_token,
+        expires_in: 86400,
     })
 }
 

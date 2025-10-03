@@ -34,6 +34,8 @@ validator = { version = "0.20.0", features = ["derive"] }
 futures = "0.3"
 tower-http = { version = "0.6.6", features = ["cors"] }
 bcrypt = "0.17.1"
+rand = "0.8"
+base64 = "0.22"
 
 [workspace]
 members = ["."]
