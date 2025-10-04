@@ -1,18 +1,20 @@
-use axum::{
-    extract::State, routing::{get, post},
-    Json,
-    Router,
-};
-use std::sync::Arc;
-use validator::Validate;
-
 use crate::{
+    adapters::inbound::http::middleware::auth::auth_middleware,
     domain::auth::{Authenticator, Claims},
     domain::entities::commands::{CreateUserCommand, LoginUserCommand},
     dtos::auth::*,
     infrastructure::state::AppState,
     shared::{Error, Result},
 };
+use axum::middleware::from_fn_with_state;
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+use std::sync::Arc;
+use tracing::info;
+use validator::Validate;
 
 // Conversion implementations
 impl From<LoginRequest> for LoginUserCommand {
@@ -119,6 +121,7 @@ async fn register(
     post,
     path = "/v1/auth/logout",
     tag = "auth",
+    security(("bearer" = [])),
     responses(
         (status = 200, description = "Logout successful", body = LogoutResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -168,6 +171,7 @@ async fn refresh(
     get,
     path = "/v1/auth/me",
     tag = "auth",
+    security(("bearer_auth" = [])),
     responses(
         (status = 200, description = "User data retrieved", body = UserResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -183,15 +187,24 @@ async fn me(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<Us
         .ok_or(Error::Application(
             crate::application::error::ApplicationError::InvalidCredentials,
         ))?;
+
+    info!("user id: {}", claims.sub);
+
     Ok(user.into())
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
-    Router::new()
+pub fn auth_routes(state: Arc<AppState>) -> Router {
+    let public = Router::new()
         .route("/register", post(register))
-        .route("/login", post(login))
+        .route("/login", post(login));
+
+    let protected = Router::new()
         .route("/logout", post(logout))
-        .route("/refresh", post(refresh))
         .route("/me", get(me))
+        .route("/refresh", post(refresh))
+        .layer(from_fn_with_state(state.clone(), auth_middleware));
+
+    Router::new()
+        .nest("/auth", Router::new().merge(public).merge(protected))
         .with_state(state)
 }

@@ -1,16 +1,16 @@
-use crate::Result;
 use crate::domain::entities::*;
-use crate::shared::Date;
+use crate::Result;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
+use std::ops::Add;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: Uuid,
-    pub exp: Date,
-    pub iat: Date,
+    pub exp: i64,
+    pub iat: i64,
 }
 
 #[async_trait]
@@ -36,10 +36,13 @@ pub trait TokenProvider: Send + Sync {
 impl Claims {
     pub fn new(user_id: Uuid, token_expiration_duration: Duration) -> Self {
         let now = Utc::now();
+        let exp = now.add(token_expiration_duration).timestamp();
+        let iat = now.timestamp();
+
         Self {
             sub: user_id,
-            exp: now + token_expiration_duration,
-            iat: now,
+            exp,
+            iat,
         }
     }
 }

@@ -186,12 +186,16 @@ pub async fn delete_table(
     }))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
+pub fn table_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_tables))
-        .route("/", post(create_table))
-        .route("/{id}", get(get_table_details))
-        .route("/{id}", put(update_table))
-        .route("/{id}", delete(delete_table))
+        .nest(
+            "/tables",
+            Router::new()
+                .route("/", get(get_tables))
+                .route("/", post(create_table))
+                .route("/{id}", get(get_table_details))
+                .route("/{id}", put(update_table))
+                .route("/{id}", delete(delete_table)),
+        )
         .with_state(state)
 }

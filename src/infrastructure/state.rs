@@ -1,9 +1,4 @@
-use axum::extract::FromRef;
-
-use crate::adapters::outbound::postgres::repositories::{
-    PostgresSessionRepository, PostgresTableRepository, PostgresTableRequestRepository,
-    PostgresUserRepository, PostgresRefreshTokenRepository,
-};
+use crate::adapters::outbound::postgres::repositories::*;
 use crate::adapters::outbound::{BcryptPasswordProvider, JwtTokenProvider};
 use crate::application::auth_service::AuthService;
 use crate::application::password_service::PasswordService;
@@ -13,6 +8,7 @@ use crate::application::table_request_service::TableRequestService;
 use crate::application::{table_service::TableService, user_service::UserService};
 use crate::infrastructure::config::AppConfig;
 use crate::{Db, Result};
+use axum::extract::FromRef;
 use std::sync::Arc;
 use tracing::info;
 
@@ -73,6 +69,12 @@ impl FromRef<AppState> for AuthService {
 impl FromRef<AppState> for PasswordService {
     fn from_ref(input: &AppState) -> Self {
         input.password_service.clone()
+    }
+}
+
+impl FromRef<Arc<AppState>> for AppState {
+    fn from_ref(input: &Arc<AppState>) -> Self {
+        input.as_ref().clone()
     }
 }
 
