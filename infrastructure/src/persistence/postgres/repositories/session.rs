@@ -1,9 +1,9 @@
-use shared::Result;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::SessionModel;
 use crate::persistence::postgres::models::session::ESessionStatus;
 use domain::entities::*;
 use domain::repositories::SessionRepository;
+use shared::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 

@@ -26,9 +26,10 @@ impl UserService {
     pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
         let users = self.user_repository.find_by_id(id).await?;
         users.into_iter().next().ok_or_else(|| {
-            Error::Domain(shared::error::DomainError::EntityNotFound(
-                format!("User not found: {}", id)
-            ))
+            Error::Domain(shared::error::DomainError::EntityNotFound(format!(
+                "User not found: {}",
+                id
+            )))
         })
     }
 

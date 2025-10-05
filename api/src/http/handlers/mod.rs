@@ -1,16 +1,13 @@
-use crate::{
-    http::{
-        handlers::{
-            auth::auth_routes, health::health_check, search::search_routes,
-            session::session_routes, table::table_routes, table_request::table_request_routes,
-            user::user_routes,
-        },
-        middleware::{cors, tracing},
-        open_api::ApiDoc,
+use crate::http::{
+    handlers::{
+        auth::auth_routes, health::health_check, search::search_routes, session::session_routes,
+        table::table_routes, table_request::table_request_routes, user::user_routes,
     },
+    middleware::{cors, tracing},
+    open_api::ApiDoc,
 };
-use infrastructure::state::AppState;
 use axum::{Router, routing::get};
+use infrastructure::state::AppState;
 use std::sync::Arc;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;

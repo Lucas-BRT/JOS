@@ -1,5 +1,5 @@
-use shared::Result;
 pub use crate::entities::*;
+use shared::Result;
 use uuid::Uuid;
 
 #[async_trait::async_trait]

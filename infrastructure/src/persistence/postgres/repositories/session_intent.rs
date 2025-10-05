@@ -1,4 +1,3 @@
-use shared::Result; use shared::error::Error;
 use crate::persistence::postgres::{
     constraint_mapper,
     models::{SessionIntentModel, session_intent::EIntentStatus},
@@ -10,6 +9,8 @@ use domain::{
     },
     repositories::SessionIntentRepository,
 };
+use shared::Result;
+use shared::error::Error;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -68,9 +69,9 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
 
             return match session_intent {
                 Some(session_intent) => Ok(session_intent),
-                None => Err(Error::Domain(
-                    shared::error::DomainError::EntityNotFound("Session intent not found".to_string()),
-                )),
+                None => Err(Error::Domain(shared::error::DomainError::EntityNotFound(
+                    "Session intent not found".to_string(),
+                ))),
             };
         }
 

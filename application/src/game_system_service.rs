@@ -1,6 +1,6 @@
-use shared::Result;
 use domain::entities::*;
 use domain::repositories::GameSystemRepository;
+use shared::Result;
 use std::sync::Arc;
 
 #[derive(Clone)]

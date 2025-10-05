@@ -1,10 +1,11 @@
+use base64::Engine;
+use chrono::Utc;
 use domain::auth::*;
 use domain::entities::*;
 use domain::repositories::{RefreshTokenRepository, UserRepository};
-use shared::Result; use shared::error::Error;
-use base64::Engine;
-use chrono::Utc;
 use rand::RngCore;
+use shared::Result;
+use shared::error::Error;
 use std::sync::Arc;
 use uuid::{NoContext, Uuid};
 
@@ -59,7 +60,11 @@ impl AuthService {
 
         let record = match existing {
             Some(r) => r,
-            None => return Err(Error::Application(shared::error::ApplicationError::InvalidCredentials)),
+            None => {
+                return Err(Error::Application(
+                    shared::error::ApplicationError::InvalidCredentials,
+                ));
+            }
         };
 
         if record.expires_at < Utc::now() {
@@ -68,7 +73,9 @@ impl AuthService {
                 .refresh_token_repository
                 .delete_by_token(old_token)
                 .await;
-            return Err(Error::Application(shared::error::ApplicationError::InvalidCredentials));
+            return Err(Error::Application(
+                shared::error::ApplicationError::InvalidCredentials,
+            ));
         }
 
         // rotate: delete old and issue new for same user
@@ -85,9 +92,11 @@ impl Authenticator for AuthService {
     async fn authenticate(&self, payload: &mut LoginUserCommand) -> Result<String> {
         let user = match self.user_repository.find_by_email(&payload.email).await? {
             Some(user) => user,
-            None => return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
-                format!("User not found: {}", payload.email)
-            ))),
+            None => {
+                return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
+                    format!("User not found: {}", payload.email),
+                )));
+            }
         };
 
         if !self
@@ -95,7 +104,9 @@ impl Authenticator for AuthService {
             .verify_hash(payload.password.clone(), user.password.clone())
             .await?
         {
-            return Err(Error::Application(shared::error::ApplicationError::InvalidCredentials));
+            return Err(Error::Application(
+                shared::error::ApplicationError::InvalidCredentials,
+            ));
         }
 
         let jwt_token = self.jwt_provider.generate_token(&user.id).await?;
@@ -133,7 +144,7 @@ impl Authenticator for AuthService {
             }
             None => {
                 return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
-                    format!("User not found: {}", payload.user_id)
+                    format!("User not found: {}", payload.user_id),
                 )));
             }
         }

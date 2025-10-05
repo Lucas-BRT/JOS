@@ -1,8 +1,8 @@
-use shared::Result;
 use crate::persistence::postgres::models::SessionCheckinModel;
 use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
 use domain::repositories::SessionCheckinRepository;
+use shared::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 

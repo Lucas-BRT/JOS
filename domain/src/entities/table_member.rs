@@ -1,5 +1,5 @@
-use shared::prelude::Date;
 use serde::{Deserialize, Serialize};
+use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

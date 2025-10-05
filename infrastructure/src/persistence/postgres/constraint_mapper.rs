@@ -80,8 +80,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "tables_game_system_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Game system not found: {}", message);
-                let id = extract_field_from_error("game_system_id")
-                    .unwrap_or_else(|| "unknown".into());
+                let id =
+                    extract_field_from_error("game_system_id").unwrap_or_else(|| "unknown".into());
                 RepositoryError::GameSystemNotFound(id)
             } else {
                 tracing::warn!("Foreign key violation for game_system_id: {}", message);
@@ -94,8 +94,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "sessions_table_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Table not found: {}", message);
-                let id =
-                    extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
+                let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
                 RepositoryError::RpgTableNotFound(id)
             } else {
                 tracing::warn!("Foreign key violation for table_id: {}", message);
@@ -164,8 +163,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "table_requests_table_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table request: {}", message);
-                let id =
-                    extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
+                let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
                 RepositoryError::RpgTableNotFound(id)
             } else {
                 tracing::warn!(
@@ -181,8 +179,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "table_members_table_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table member: {}", message);
-                let id =
-                    extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
+                let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
                 RepositoryError::RpgTableNotFound(id)
             } else {
                 tracing::warn!(

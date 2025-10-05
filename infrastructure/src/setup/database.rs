@@ -1,6 +1,7 @@
 use crate::persistence::Db;
-use shared::Result; use shared::error::Error;
 use crate::persistence::postgres::create_postgres_pool;
+use shared::Result;
+use shared::error::Error;
 use shared::error::SetupError;
 use tracing::*;
 

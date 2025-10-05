@@ -39,7 +39,9 @@ impl BcryptPasswordProvider {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(Error::Validation(shared::error::ValidationError::ValidationFailed(errors.to_string())))
+            Err(Error::Validation(
+                shared::error::ValidationError::ValidationFailed(errors.to_string()),
+            ))
         }
     }
 }
@@ -91,10 +93,7 @@ mod tests {
     async fn test_generate_hash() {
         let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
-        let hash = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.into()).await.unwrap();
         assert!(hash.starts_with("$2b$"));
     }
 
@@ -102,10 +101,7 @@ mod tests {
     async fn test_verify_hash() {
         let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
-        let hash = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.into()).await.unwrap();
         let result = password_repo.verify_hash(password.into(), hash).await;
 
         assert!(result.is_ok());
@@ -116,10 +112,7 @@ mod tests {
     async fn test_verify_hash_with_wrong_password() {
         let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
-        let hash = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.into()).await.unwrap();
         let result = password_repo
             .verify_hash("WrongPass123".into(), hash)
             .await
@@ -164,14 +157,8 @@ mod tests {
         let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
 
-        let hash1 = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
-        let hash2 = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
+        let hash1 = password_repo.generate_hash(password.into()).await.unwrap();
+        let hash2 = password_repo.generate_hash(password.into()).await.unwrap();
 
         assert_ne!(
             hash1, hash2,
@@ -183,10 +170,7 @@ mod tests {
     async fn test_concurrent_verify_operations() {
         let password_repo = BcryptPasswordProvider;
         let password = "SecurePass123!";
-        let hash = password_repo
-            .generate_hash(password.into())
-            .await
-            .unwrap();
+        let hash = password_repo.generate_hash(password.into()).await.unwrap();
 
         let handles: Vec<_> = (0..5)
             .map(|_| {

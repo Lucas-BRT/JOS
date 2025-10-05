@@ -1,8 +1,8 @@
-use shared::Result;
 use crate::entities::{
     CreateTableMemberCommand, DeleteTableMemberCommand, UpdateTableMemberCommand,
 };
 use crate::entities::{GetTableMemberCommand, TableMember};
+use shared::Result;
 use uuid::Uuid;
 
 #[async_trait::async_trait]

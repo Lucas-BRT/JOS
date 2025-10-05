@@ -1,8 +1,8 @@
-use shared::Result;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::GameSystemModel;
 use domain::entities::*;
 use domain::repositories::GameSystemRepository;
+use shared::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 

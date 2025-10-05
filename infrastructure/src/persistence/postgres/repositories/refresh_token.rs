@@ -1,8 +1,8 @@
-use shared::Result;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::RefreshTokenRow;
 use domain::entities::RefreshToken;
 use domain::repositories::RefreshTokenRepository;
+use shared::Result;
 use sqlx::PgPool;
 
 #[derive(Clone)]

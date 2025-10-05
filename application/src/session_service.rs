@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::SessionRepository;
-use shared::Result; use shared::error::Error;
+use shared::Result;
+use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -29,9 +30,10 @@ impl SessionService {
         };
         let sessions = self.session_repository.read(command).await?;
         sessions.into_iter().next().ok_or_else(|| {
-            Error::Domain(shared::error::DomainError::EntityNotFound(
-                format!("Session not found: {}", id)
-            ))
+            Error::Domain(shared::error::DomainError::EntityNotFound(format!(
+                "Session not found: {}",
+                id
+            )))
         })
     }
 

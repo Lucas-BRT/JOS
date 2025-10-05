@@ -2,9 +2,10 @@ use axum::Router;
 use tokio::net::TcpListener;
 use tracing::info;
 
-use shared::Result; use shared::error::Error;
-use shared::error::SetupError;
 use crate::state::AppState;
+use shared::Result;
+use shared::error::Error;
+use shared::error::SetupError;
 
 pub fn setup_server(app_state: AppState) -> Router {
     Router::new().with_state(app_state)

@@ -1,9 +1,5 @@
 mod utils;
 
-use jos::shared::error::Error;
-use jos::infrastructure::persistence::postgres::repositories::{
-    PostgresSessionIntentRepository, PostgresSessionRepository, PostgresTableRepository,
-};
 use jos::domain::entities::commands::{
     CreateSessionCommand, CreateSessionIntentCommand, CreateTableCommand,
     DeleteSessionIntentCommand, GetSessionIntentCommand, UpdateSessionIntentCommand,
@@ -11,6 +7,10 @@ use jos::domain::entities::commands::{
 use jos::domain::entities::session_intent::IntentStatus;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::{SessionIntentRepository, SessionRepository, TableRepository};
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresSessionIntentRepository, PostgresSessionRepository, PostgresTableRepository,
+};
+use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
 

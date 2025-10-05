@@ -1,8 +1,8 @@
-use shared::Result;
 use crate::entities::{
     CreateSessionCheckinCommand, DeleteSessionCheckinCommand, UpdateSessionCheckinCommand,
 };
 use crate::entities::{GetSessionCheckinCommand, SessionCheckin};
+use shared::Result;
 use uuid::Uuid;
 
 #[async_trait::async_trait]

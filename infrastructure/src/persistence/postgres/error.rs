@@ -47,8 +47,12 @@ pub enum RepositoryError {
 impl From<RepositoryError> for Error {
     fn from(err: RepositoryError) -> Self {
         match err {
-            RepositoryError::DatabaseError(sqlx_err) => Error::Persistence(PersistenceError::DatabaseError(sqlx_err.to_string())),
-            RepositoryError::IoError(msg) => Error::Persistence(PersistenceError::ConnectionError(msg)),
+            RepositoryError::DatabaseError(sqlx_err) => {
+                Error::Persistence(PersistenceError::DatabaseError(sqlx_err.to_string()))
+            }
+            RepositoryError::IoError(msg) => {
+                Error::Persistence(PersistenceError::ConnectionError(msg))
+            }
             _ => Error::Persistence(PersistenceError::DatabaseError(err.to_string())),
         }
     }

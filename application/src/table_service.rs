@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::TableRepository;
-use shared::Result; use shared::error::Error;
+use shared::Result;
+use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -22,7 +23,9 @@ impl TableService {
         let table = self.find_by_id(&command.id).await?;
 
         if table.gm_id != command.gm_id {
-            return Err(Error::Application(shared::error::ApplicationError::InvalidCredentials));
+            return Err(Error::Application(
+                shared::error::ApplicationError::InvalidCredentials,
+            ));
         }
 
         self.table_repository.delete(command).await
@@ -35,9 +38,10 @@ impl TableService {
         };
         let tables = self.table_repository.read(command).await?;
         tables.into_iter().next().ok_or_else(|| {
-            Error::Domain(shared::error::DomainError::EntityNotFound(
-                format!("Table not found: {}", table_id)
-            ))
+            Error::Domain(shared::error::DomainError::EntityNotFound(format!(
+                "Table not found: {}",
+                table_id
+            )))
         })
     }
 

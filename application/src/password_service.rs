@@ -1,5 +1,5 @@
-use shared::Result;
 use domain::auth::PasswordProvider;
+use shared::Result;
 use std::sync::Arc;
 
 #[derive(Clone)]

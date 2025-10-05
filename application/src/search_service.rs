@@ -1,6 +1,6 @@
-use shared::Result;
 use domain::repositories::*;
 use domain::search::*;
+use shared::Result;
 use std::sync::Arc;
 
 #[derive(Clone)]

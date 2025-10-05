@@ -1,9 +1,9 @@
 use crate::constants::*;
-use shared::error::SetupError;
 use crate::setup::environment::Environment;
 use chrono::Duration;
 use shared::Result;
 use shared::error::Error;
+use shared::error::SetupError;
 use std::{net::SocketAddr, str::FromStr};
 use tracing::{info, warn};
 

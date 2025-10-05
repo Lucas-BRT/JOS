@@ -1,5 +1,3 @@
-use domain::auth::Claims;
-use infrastructure::state::AppState;
 use axum::{
     extract::{FromRequestParts, Request, State},
     http::{StatusCode, request::Parts},
@@ -10,6 +8,8 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
+use domain::auth::Claims;
+use infrastructure::state::AppState;
 use std::sync::Arc;
 
 // Wrapper to implement FromRequestParts locally

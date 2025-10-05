@@ -1,7 +1,8 @@
-use domain::auth::{Claims, TokenProvider};
-use shared::Result; use shared::error::Error;
 use chrono::Duration;
+use domain::auth::{Claims, TokenProvider};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use shared::Result;
+use shared::error::Error;
 use uuid::Uuid;
 
 #[derive(Clone)]

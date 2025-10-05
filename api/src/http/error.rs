@@ -35,7 +35,9 @@ impl IntoResponse for ApiError {
             Error::Application(_) => (StatusCode::BAD_REQUEST, "Application error"),
             Error::Domain(_) => (StatusCode::BAD_REQUEST, "Domain error"),
             Error::Setup(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error"),
-            Error::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error"),
+            Error::InternalServerError => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+            }
             Error::Validation(_) => (StatusCode::BAD_REQUEST, "Validation error"),
         };
 

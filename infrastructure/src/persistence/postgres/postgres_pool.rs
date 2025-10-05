@@ -1,5 +1,6 @@
 use crate::persistence::Db;
-use shared::Result; use shared::error::Error;
+use shared::Result;
+use shared::error::Error;
 use shared::error::SetupError;
 
 pub async fn create_postgres_pool(database_url: &str) -> Result<Db> {

@@ -1,6 +1,6 @@
-use shared::Result;
 use domain::entities::*;
 use domain::repositories::SessionCheckinRepository;
+use shared::Result;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -31,9 +31,10 @@ impl SessionCheckinService {
         };
         let session_checkins = self.session_checkin_repository.read(command).await?;
         session_checkins.into_iter().next().ok_or_else(|| {
-            shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(
-                format!("Session checkin not found: {}", id)
-            ))
+            shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(format!(
+                "Session checkin not found: {}",
+                id
+            )))
         })
     }
 
