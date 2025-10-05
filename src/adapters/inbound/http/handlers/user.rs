@@ -7,6 +7,7 @@ use std::sync::Arc;
 use validator::Validate;
 
 use crate::{
+    adapters::inbound::middleware::auth::auth_middleware,
     domain::auth::Claims,
     dtos::*,
     infrastructure::state::AppState,
@@ -107,10 +108,18 @@ pub async fn delete_account(
     }))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
+pub fn user_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/profile", put(update_profile))
-        .route("/password", put(change_password))
-        .route("/account", delete(delete_account))
+        .nest(
+            "/user",
+            Router::new()
+                .route("/profile", put(update_profile))
+                .route("/password", put(change_password))
+                .route("/account", delete(delete_account))
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                )),
+        )
         .with_state(state)
 }

@@ -1,5 +1,5 @@
+use crate::shared::Date;
 use axum::response::IntoResponse;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -17,14 +17,10 @@ pub struct LoginRequest {
 pub struct RegisterRequest {
     #[validate(length(min = 3, max = 50))]
     pub username: String,
-    #[validate(length(min = 1, max = 100))]
-    pub display_name: String,
     #[validate(email)]
     pub email: String,
     #[validate(length(min = 6))]
     pub password: String,
-    #[validate(length(min = 6))]
-    pub confirm_password: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -36,8 +32,7 @@ pub struct RefreshTokenRequest {
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
-    pub display_name: String,
-    pub joined_at: DateTime<Utc>,
+    pub joined_at: Date,
     pub email: String,
 }
 
@@ -54,7 +49,6 @@ pub struct RegisterResponse {
     pub user: UserResponse,
     pub token: String,
     pub refresh_token: String,
-    pub expires_in: i64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -107,7 +101,6 @@ impl From<crate::domain::entities::User> for UserResponse {
         UserResponse {
             id: user.id,
             username: username.clone(),
-            display_name: username, // TODO: Add display_name field to User entity
             joined_at: user.created_at,
             email: user.email,
         }

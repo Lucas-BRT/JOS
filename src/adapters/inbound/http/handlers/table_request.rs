@@ -169,12 +169,16 @@ pub async fn cancel_request(
     }))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
+pub fn table_request_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/sent", get(get_sent_requests))
-        .route("/received", get(get_received_requests))
-        .route("/{id}/accept", post(accept_request))
-        .route("/{id}/reject", post(reject_request))
-        .route("/{id}", delete(cancel_request))
+        .nest(
+            "/requests",
+            Router::new()
+                .route("/sent", get(get_sent_requests))
+                .route("/received", get(get_received_requests))
+                .route("/{id}/accept", post(accept_request))
+                .route("/{id}/reject", post(reject_request))
+                .route("/{id}", delete(cancel_request)),
+        )
         .with_state(state)
 }

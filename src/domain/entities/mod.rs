@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod game_system;
+pub mod refresh_token;
 pub mod session;
 pub mod session_checkin;
 pub mod session_intent;
@@ -11,6 +12,7 @@ pub mod user;
 
 pub use commands::*;
 pub use game_system::GameSystem;
+pub use refresh_token::RefreshToken;
 pub use session::{Session, SessionStatus};
 pub use session_checkin::SessionCheckin;
 pub use session_intent::{IntentStatus, SessionIntent};

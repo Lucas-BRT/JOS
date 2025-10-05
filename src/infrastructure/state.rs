@@ -1,9 +1,4 @@
-use axum::extract::FromRef;
-
-use crate::adapters::outbound::postgres::repositories::{
-    PostgresSessionRepository, PostgresTableRepository, PostgresTableRequestRepository,
-    PostgresUserRepository,
-};
+use crate::adapters::outbound::postgres::repositories::*;
 use crate::adapters::outbound::{BcryptPasswordProvider, JwtTokenProvider};
 use crate::application::auth_service::AuthService;
 use crate::application::password_service::PasswordService;
@@ -13,6 +8,7 @@ use crate::application::table_request_service::TableRequestService;
 use crate::application::{table_service::TableService, user_service::UserService};
 use crate::infrastructure::config::AppConfig;
 use crate::{Db, Result};
+use axum::extract::FromRef;
 use std::sync::Arc;
 use tracing::info;
 
@@ -76,6 +72,12 @@ impl FromRef<AppState> for PasswordService {
     }
 }
 
+impl FromRef<Arc<AppState>> for AppState {
+    fn from_ref(input: &Arc<AppState>) -> Self {
+        input.as_ref().clone()
+    }
+}
+
 pub async fn setup_app_state(database: &Db, config: &AppConfig) -> Result<AppState> {
     let app_state = setup_services(database, config).await?;
 
@@ -121,10 +123,12 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         config.jwt_secret.clone(),
         config.jwt_expiration_duration,
     ));
+    let refresh_token_repo = Arc::new(PostgresRefreshTokenRepository::new(database.clone()));
     let auth_service = AuthService::new(
         user_repo.clone(),
         password_repo.clone(),
         jwt_provider.clone(),
+        refresh_token_repo.clone(),
     );
     info!("✅ Auth service initialized");
 

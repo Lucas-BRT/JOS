@@ -21,8 +21,8 @@ impl Modify for BearerAuth {
     paths(
         crate::adapters::inbound::http::handlers::auth::login,
         crate::adapters::inbound::http::handlers::auth::register,
-        crate::adapters::inbound::http::handlers::auth::logout,
         crate::adapters::inbound::http::handlers::auth::refresh,
+        crate::adapters::inbound::http::handlers::auth::logout,
         crate::adapters::inbound::http::handlers::auth::me,
         crate::adapters::inbound::http::handlers::user::update_profile,
         crate::adapters::inbound::http::handlers::user::change_password,
@@ -32,14 +32,14 @@ impl Modify for BearerAuth {
         crate::adapters::inbound::http::handlers::table::get_table_details,
         crate::adapters::inbound::http::handlers::table::update_table,
         crate::adapters::inbound::http::handlers::table::delete_table,
-        crate::adapters::inbound::http::handlers::session::get_sessions,
         crate::adapters::inbound::http::handlers::session::create_session,
+        crate::adapters::inbound::http::handlers::session::get_sessions,
         crate::adapters::inbound::http::handlers::session::get_session_details,
         crate::adapters::inbound::http::handlers::session::update_session,
         crate::adapters::inbound::http::handlers::session::delete_session,
+        crate::adapters::inbound::http::handlers::table_request::create_table_request,
         crate::adapters::inbound::http::handlers::table_request::get_sent_requests,
         crate::adapters::inbound::http::handlers::table_request::get_received_requests,
-        crate::adapters::inbound::http::handlers::table_request::create_table_request,
         crate::adapters::inbound::http::handlers::table_request::accept_request,
         crate::adapters::inbound::http::handlers::table_request::reject_request,
         crate::adapters::inbound::http::handlers::table_request::cancel_request,
@@ -82,6 +82,7 @@ impl Modify for BearerAuth {
             crate::dtos::common::ErrorResponse
         )
     ),
+    security(("bearer_auth" = [])),
     modifiers(&BearerAuth),
     tags(
         (name = "auth", description = "Authentication endpoints"),

@@ -1,4 +1,5 @@
 pub mod game_system_repository;
+pub mod refresh_token_repository;
 pub mod session_checkin_repository;
 pub mod session_intent_repository;
 pub mod session_repository;
@@ -8,6 +9,7 @@ pub mod table_request_repository;
 pub mod user_repository;
 
 pub use game_system_repository::GameSystemRepository;
+pub use refresh_token_repository::RefreshTokenRepository;
 pub use session_checkin_repository::SessionCheckinRepository;
 pub use session_intent_repository::SessionIntentRepository;
 pub use session_repository::SessionRepository;

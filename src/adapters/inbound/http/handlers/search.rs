@@ -84,8 +84,8 @@ pub async fn search(
     Ok(Json(results))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
+pub fn search_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(search))
-        .with_state(state.clone())
+        .nest("/search", Router::new().route("/", get(search)))
+        .with_state(state)
 }

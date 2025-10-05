@@ -1,4 +1,5 @@
 pub mod game_system;
+pub mod refresh_token;
 pub mod session;
 pub mod session_checkin;
 pub mod session_intent;
@@ -8,6 +9,7 @@ pub mod table_request;
 pub mod user;
 
 pub use game_system::*;
+pub use refresh_token::*;
 pub use session::*;
 pub use session_checkin::*;
 pub use session_intent::*;

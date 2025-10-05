@@ -1,4 +1,5 @@
 pub mod game_system;
+pub mod refresh_token;
 pub mod session;
 pub mod session_checkin;
 pub mod session_intent;
@@ -8,6 +9,7 @@ pub mod table_request;
 pub mod user;
 
 pub use game_system::GameSystemModel;
+pub use refresh_token::RefreshTokenRow;
 pub use session::SessionModel;
 pub use session_checkin::SessionCheckinModel;
 pub use session_intent::SessionIntentModel;

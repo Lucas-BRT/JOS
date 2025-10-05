@@ -198,12 +198,16 @@ pub async fn delete_session(
     }))
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
+pub fn session_routes(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_sessions))
-        .route("/", post(create_session))
-        .route("/{id}", get(get_session_details))
-        .route("/{id}", put(update_session))
-        .route("/{id}", delete(delete_session))
+        .nest(
+            "/sessions",
+            Router::new()
+                .route("/", get(get_sessions))
+                .route("/", post(create_session))
+                .route("/{id}", get(get_session_details))
+                .route("/{id}", put(update_session))
+                .route("/{id}", delete(delete_session)),
+        )
         .with_state(state)
 }

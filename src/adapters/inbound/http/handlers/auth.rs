@@ -1,19 +1,20 @@
-use axum::{
-    Json, Router,
-    extract::State,
-    routing::{get, post},
-};
-use std::sync::Arc;
-use uuid::Uuid;
-use validator::Validate;
-
 use crate::{
+    adapters::inbound::http::middleware::auth::auth_middleware,
     domain::auth::{Authenticator, Claims},
     domain::entities::commands::{CreateUserCommand, LoginUserCommand},
     dtos::auth::*,
     infrastructure::state::AppState,
     shared::{Error, Result},
 };
+use axum::middleware::from_fn_with_state;
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+use std::sync::Arc;
+use tracing::info;
+use validator::Validate;
 
 // Conversion implementations
 impl From<LoginRequest> for LoginUserCommand {
@@ -71,11 +72,13 @@ async fn login(
             crate::application::error::ApplicationError::InvalidCredentials,
         ))?;
 
+    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
+
     Ok(LoginResponse {
         user: user.into(),
         token: jwt_token,
-        refresh_token: "refresh_token_placeholder".to_string(), // TODO: Implement refresh token
-        expires_in: 86400,                                      // 24 hours in seconds
+        refresh_token,
+        expires_in: 86400,
     })
 }
 
@@ -99,23 +102,18 @@ async fn register(
         return Err(Error::Validation(sanitization_error));
     }
 
-    // Validate password confirmation
-    if payload.password != payload.confirm_password {
-        return Err(Error::Validation(validator::ValidationErrors::new()));
-    }
-
     let user = app_state.auth_service.register(&mut payload.into()).await?;
     let jwt_token = app_state
         .auth_service
         .jwt_provider
         .generate_token(&user.id)
         .await?;
+    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
 
     Ok(RegisterResponse {
         user: user.into(),
         token: jwt_token,
-        refresh_token: "refresh_token_placeholder".to_string(), // TODO: Implement refresh token
-        expires_in: 86400,                                      // 24 hours in seconds
+        refresh_token,
     })
 }
 
@@ -123,6 +121,7 @@ async fn register(
     post,
     path = "/v1/auth/logout",
     tag = "auth",
+    security(("bearer" = [])),
     responses(
         (status = 200, description = "Logout successful", body = LogoutResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -148,19 +147,23 @@ async fn logout(_claims: Claims) -> Result<LogoutResponse> {
 #[axum::debug_handler]
 async fn refresh(
     State(app_state): State<Arc<AppState>>,
-    Json(_payload): Json<RefreshTokenRequest>,
+    Json(payload): Json<RefreshTokenRequest>,
 ) -> Result<RefreshTokenResponse> {
-    // TODO: Implement proper refresh token validation
-    let new_token = app_state
+    let (new_refresh_token, user_id) = app_state
+        .auth_service
+        .rotate_refresh_token(&payload.refresh_token)
+        .await?;
+
+    let new_jwt = app_state
         .auth_service
         .jwt_provider
-        .generate_token(&Uuid::new_v4()) // TODO: Extract user_id from refresh token
+        .generate_token(&user_id)
         .await?;
 
     Ok(RefreshTokenResponse {
-        token: new_token,
-        refresh_token: "new_refresh_token_placeholder".to_string(), // TODO: Generate new refresh token
-        expires_in: 86400,                                          // 24 hours in seconds
+        token: new_jwt,
+        refresh_token: new_refresh_token,
+        expires_in: 86400,
     })
 }
 
@@ -168,6 +171,7 @@ async fn refresh(
     get,
     path = "/v1/auth/me",
     tag = "auth",
+    security(("bearer_auth" = [])),
     responses(
         (status = 200, description = "User data retrieved", body = UserResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -183,15 +187,24 @@ async fn me(State(app_state): State<Arc<AppState>>, claims: Claims) -> Result<Us
         .ok_or(Error::Application(
             crate::application::error::ApplicationError::InvalidCredentials,
         ))?;
+
+    info!("user id: {}", claims.sub);
+
     Ok(user.into())
 }
 
-pub fn routes(state: Arc<AppState>) -> Router {
-    Router::new()
+pub fn auth_routes(state: Arc<AppState>) -> Router {
+    let public = Router::new()
         .route("/register", post(register))
-        .route("/login", post(login))
+        .route("/login", post(login));
+
+    let protected = Router::new()
         .route("/logout", post(logout))
-        .route("/refresh", post(refresh))
         .route("/me", get(me))
+        .route("/refresh", post(refresh))
+        .layer(from_fn_with_state(state.clone(), auth_middleware));
+
+    Router::new()
+        .nest("/auth", Router::new().merge(public).merge(protected))
         .with_state(state)
 }

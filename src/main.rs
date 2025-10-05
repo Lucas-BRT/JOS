@@ -4,6 +4,7 @@ use jos::infrastructure::{
     setup::{database::setup_database, launch_server, logging::init_logging},
     state::setup_app_state,
 };
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
@@ -17,7 +18,7 @@ async fn main() {
         .await
         .expect("failed to setup app state");
 
-    let app_state_arc = std::sync::Arc::new(app_state);
+    let app_state_arc = Arc::new(app_state);
     let server = create_router(app_state_arc.clone());
 
     launch_server(server, &app_state_arc)
