@@ -40,9 +40,6 @@ jobs:
           components: rustfmt, clippy
           targets: x86_64-unknown-linux-musl
 
-      - name: Install MUSL Cross-Compilation Toolchain
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
