@@ -1,8 +1,8 @@
+use crate::Result;
 use crate::adapters::outbound::postgres::constraint_mapper;
 use crate::adapters::outbound::postgres::models::RefreshTokenRow;
 use crate::domain::entities::RefreshToken;
 use crate::domain::repositories::RefreshTokenRepository;
-use crate::Result;
 use sqlx::PgPool;
 
 #[derive(Clone)]

@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use uuid::Uuid;
 
-use crate::{Result};
+use crate::Result;
 use crate::domain::entities::RefreshToken;
 
 #[async_trait]

@@ -1,5 +1,5 @@
-use crate::domain::entities::*;
 use crate::Result;
+use crate::domain::entities::*;
 use async_trait::async_trait;
 use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};

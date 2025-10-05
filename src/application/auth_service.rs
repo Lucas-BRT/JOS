@@ -4,9 +4,9 @@ use crate::domain::entities::*;
 use crate::domain::error::*;
 use crate::domain::repositories::{RefreshTokenRepository, UserRepository};
 use crate::{Error, Result};
+use base64::Engine;
 use chrono::Utc;
 use rand::RngCore;
-use base64::Engine;
 use std::sync::Arc;
 use uuid::{NoContext, Uuid};
 
