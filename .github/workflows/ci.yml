@@ -12,10 +12,10 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     services:
       postgres:
-        image: postgres:16
+        image: postgres:18
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -40,9 +40,6 @@ jobs:
           components: rustfmt, clippy
           targets: x86_64-unknown-linux-musl
 
-      - name: Install MUSL Cross-Compilation Toolchain
-        run: sudo apt-get update && sudo apt-get install -y musl-tools
-
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
@@ -62,16 +59,16 @@ jobs:
       - name: Build static release binary
         run: |
           cargo sqlx prepare
-          SQLX_OFFLINE=true cargo build --release --target=x86_64-unknown-linux-musl
+          SQLX_OFFLINE=true cargo build --release
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}
-          path: target/x86_64-unknown-linux-musl/release/${{ env.BINARY_NAME }}
+          path: target/release/${{ env.BINARY_NAME }}
 
-  build-and-push:
-    runs-on: ubuntu-latest
+  push:
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push'
     needs: build
     permissions:
@@ -110,9 +107,9 @@ jobs:
           cache-to: type=gha,scope=${{ github.workflow }},mode=max
 
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push'
-    needs: build-and-push
+    needs: push
     steps:
       - name: Trigger Dokploy Webhook
         run: curl -X POST ${{ secrets.DOKPLOY_WEBHOOK_URL }}
