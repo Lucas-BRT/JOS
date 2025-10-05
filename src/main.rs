@@ -1,4 +1,4 @@
-use jos::adapters::inbound::http::handlers::create_router;
+use jos::api::http::handlers::create_router;
 use jos::infrastructure::{
     config::AppConfig,
     setup::{database::setup_database, launch_server, logging::init_logging},

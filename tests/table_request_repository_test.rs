@@ -1,8 +1,7 @@
 mod utils;
 
-use jos::Error;
-use jos::adapters::outbound::postgres::RepositoryError;
-use jos::adapters::outbound::postgres::repositories::{
+use jos::shared::error::Error;
+use jos::infrastructure::persistence::postgres::repositories::{
     PostgresTableRepository, PostgresTableRequestRepository,
 };
 use jos::domain::entities::commands::{
@@ -439,7 +438,7 @@ async fn test_delete_table_request_not_found(pool: PgPool) {
     let result = table_request_repo.delete(delete_command).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::NotFound)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }

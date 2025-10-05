@@ -1,5 +1,5 @@
 use jos::{
-    adapters::outbound::postgres::repositories::{
+    infrastructure::persistence::postgres::repositories::{
         PostgresGameSystemRepository, PostgresSessionIntentRepository, PostgresSessionRepository,
         PostgresTableRepository, PostgresUserRepository,
     },
