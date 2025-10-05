@@ -1,0 +1,23 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared = { path = "../shared" }
+domain = { path = "../domain" }
+application = { path = "../application" }
+infrastructure = { path = "../infrastructure" }
+axum = { version = "0.8.4", features = ["macros", "multipart"] }
+jsonwebtoken = "9.3.1"
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+axum-extra = { version = "0.10.3", features = ["typed-header"] }
+validator = { version = "0.20.0", features = ["derive"] }
+tower-http = { version = "0.6.6", features = ["cors"] }
+futures = "0.3"
+tracing = "0.1.41"
+serde_json = "1.0.140"
+chrono = { version = "0.4.42", features = ["serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
+uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }

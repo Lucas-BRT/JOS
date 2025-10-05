@@ -1,0 +1,13 @@
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared = { path = "../shared" }
+uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }
+serde = { version = "1.0.219", features = ["derive"] }
+chrono = { version = "0.4.42", features = ["serde"] }
+async-trait = "0.1.88"
+thiserror = "2.0.17"
+validator = { version = "0.20.0", features = ["derive"] }

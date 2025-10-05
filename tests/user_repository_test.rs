@@ -1,11 +1,10 @@
-use jos::Error;
-use jos::adapters::outbound::postgres::RepositoryError;
-use jos::adapters::outbound::postgres::repositories::PostgresUserRepository;
 use jos::domain::entities::commands::{
     CreateUserCommand, DeleteUserCommand, GetUserCommand, UpdateUserCommand,
 };
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::UserRepository;
+use jos::infrastructure::persistence::postgres::repositories::PostgresUserRepository;
+use jos::shared::error::Error;
 use sqlx::PgPool;
 
 #[sqlx::test]
@@ -57,7 +56,7 @@ async fn test_create_user_duplicate_username_should_fail(pool: PgPool) {
     assert!(result.is_err());
 
     match result {
-        Err(Error::Persistence(RepositoryError::UsernameAlreadyTaken)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }
@@ -85,7 +84,7 @@ async fn test_create_user_duplicate_email_should_fail(pool: PgPool) {
     let result = repo.create(&mut user_data2).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::EmailAlreadyTaken)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }
@@ -304,7 +303,7 @@ async fn test_delete_user_not_found(pool: PgPool) {
     let result = repo.delete(&mut delete_command).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::NotFound)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }

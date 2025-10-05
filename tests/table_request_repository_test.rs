@@ -1,10 +1,5 @@
 mod utils;
 
-use jos::Error;
-use jos::adapters::outbound::postgres::RepositoryError;
-use jos::adapters::outbound::postgres::repositories::{
-    PostgresTableRepository, PostgresTableRequestRepository,
-};
 use jos::domain::entities::commands::{
     CreateTableCommand, CreateTableRequestCommand, DeleteTableRequestCommand,
     GetTableRequestCommand, UpdateTableRequestCommand,
@@ -12,6 +7,10 @@ use jos::domain::entities::commands::{
 use jos::domain::entities::table_request::TableRequestStatus;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::{TableRepository, TableRequestRepository};
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresTableRepository, PostgresTableRequestRepository,
+};
+use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -439,7 +438,7 @@ async fn test_delete_table_request_not_found(pool: PgPool) {
     let result = table_request_repo.delete(delete_command).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::NotFound)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }

@@ -4,16 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-async-trait = "0.1.88"
-axum = { version = "0.8.4", features = ["macros", "multipart"] }
-chrono = { version = "0.4.41", features = ["serde"] }
-dotenvy = "0.15.7"
-jsonwebtoken = "9.3.1"
-utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-axum-extra = { version = "0.10.3", features = ["typed-header"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = { version = "1.0.140" }
+shared = { path = "./shared" }
+domain = { path = "./domain" }
+application = { path = "./application" }
+infrastructure = { path = "./infrastructure" }
+api = { path = "./api" }
+tokio = { version = "1.44.2", features = ["full"] }
+
+[dev-dependencies]
 sqlx = { version = "0.8.5", features = [
     "runtime-tokio",
     "tls-rustls",
@@ -22,24 +20,11 @@ sqlx = { version = "0.8.5", features = [
     "chrono",
     "migrate",
 ] }
-thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["full"] }
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = [
-    "fmt",
-    "env-filter",
-    "json",
-] }
-uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }
-validator = { version = "0.20.0", features = ["derive"] }
 futures = "0.3"
-tower-http = { version = "0.6.6", features = ["cors"] }
-bcrypt = "0.17.1"
-rand = "0.8"
-base64 = "0.22"
+uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }
 
 [workspace]
-members = ["."]
+members = ["api", "application", "domain", "infrastructure", "shared"]
 
 [profile.release]
 opt-level = 3

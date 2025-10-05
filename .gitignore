@@ -1,4 +1,4 @@
 /target
 .env
 public/
-.idea
+/.idea

@@ -1,8 +1,4 @@
 use jos::{
-    adapters::outbound::postgres::repositories::{
-        PostgresGameSystemRepository, PostgresSessionIntentRepository, PostgresSessionRepository,
-        PostgresTableRepository, PostgresUserRepository,
-    },
     domain::{
         entities::{
             commands::{
@@ -19,6 +15,10 @@ use jos::{
             GameSystemRepository, SessionIntentRepository, SessionRepository, TableRepository,
             UserRepository,
         },
+    },
+    infrastructure::persistence::postgres::repositories::{
+        PostgresGameSystemRepository, PostgresSessionIntentRepository, PostgresSessionRepository,
+        PostgresTableRepository, PostgresUserRepository,
     },
 };
 use sqlx::PgPool;

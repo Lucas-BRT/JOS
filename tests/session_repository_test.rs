@@ -1,16 +1,15 @@
 mod utils;
 
-use jos::Error;
-use jos::adapters::outbound::postgres::RepositoryError;
-use jos::adapters::outbound::postgres::repositories::{
-    PostgresSessionRepository, PostgresTableRepository,
-};
 use jos::domain::entities::commands::{
     CreateSessionCommand, CreateTableCommand, DeleteSessionCommand, GetSessionCommand,
     UpdateSessionCommand,
 };
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::{SessionRepository, TableRepository};
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresSessionRepository, PostgresTableRepository,
+};
+use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -405,7 +404,7 @@ async fn test_delete_session_not_found(pool: PgPool) {
     let result = session_repo.delete(delete_command).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::NotFound)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }

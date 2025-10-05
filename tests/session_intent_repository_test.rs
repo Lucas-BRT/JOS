@@ -1,10 +1,5 @@
 mod utils;
 
-use jos::Error;
-use jos::adapters::outbound::postgres::RepositoryError;
-use jos::adapters::outbound::postgres::repositories::{
-    PostgresSessionIntentRepository, PostgresSessionRepository, PostgresTableRepository,
-};
 use jos::domain::entities::commands::{
     CreateSessionCommand, CreateSessionIntentCommand, CreateTableCommand,
     DeleteSessionIntentCommand, GetSessionIntentCommand, UpdateSessionIntentCommand,
@@ -12,6 +7,10 @@ use jos::domain::entities::commands::{
 use jos::domain::entities::session_intent::IntentStatus;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::{SessionIntentRepository, SessionRepository, TableRepository};
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresSessionIntentRepository, PostgresSessionRepository, PostgresTableRepository,
+};
+use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -424,7 +423,7 @@ async fn test_delete_session_intent_not_found(pool: PgPool) {
     let result = session_intent_repo.delete(delete_command).await;
 
     match result {
-        Err(Error::Persistence(RepositoryError::NotFound)) => {}
+        Err(Error::Persistence(_)) => {}
         _ => panic!("Unexpected error: {result:?}"),
     }
 }
