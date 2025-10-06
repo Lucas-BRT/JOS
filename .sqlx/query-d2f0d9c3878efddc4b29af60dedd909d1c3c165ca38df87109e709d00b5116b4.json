@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                UPDATE table_requests\n                SET\n                    message = COALESCE($2, message),\n                    updated_at = NOW()\n                WHERE id = $1\n                RETURNING\n                    id,\n                    user_id,\n                    table_id,\n                    message,\n                    status as \"status: ETableRequestStatus\",\n                    created_at,\n                    updated_at\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "table_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "message",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "status: ETableRequestStatus",
+        "type_info": {
+          "Custom": {
+            "name": "request_status",
+            "kind": {
+              "Enum": [
+                "pending",
+                "approved",
+                "rejected"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "d2f0d9c3878efddc4b29af60dedd909d1c3c165ca38df87109e709d00b5116b4"
+}

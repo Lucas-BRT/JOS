@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                name,\n                description,\n                table_id,\n                scheduled_for,\n                status as \"status: ESessionStatus\",\n                created_at,\n                updated_at\n            FROM sessions\n            WHERE table_id = $1\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "table_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "scheduled_for",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "status: ESessionStatus",
+        "type_info": {
+          "Custom": {
+            "name": "session_status",
+            "kind": {
+              "Enum": [
+                "scheduled",
+                "in_progress",
+                "completed",
+                "cancelled"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "9b55874c868d2f9c84787813bab06d403a129c4131af05bdf6b7e2f17c703326"
+}

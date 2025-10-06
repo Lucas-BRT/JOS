@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                session_intent_id,\n                attendance,\n                notes,\n                created_at,\n                updated_at\n            FROM session_checkins\n            WHERE ($1::uuid IS NULL OR id = $1)\n              AND ($2::uuid IS NULL OR session_intent_id = $2)\n              AND ($3::bool IS NULL OR attendance = $3)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "session_intent_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "attendance",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "c595a803bc6069360383bf2e7e13c5e50bb06b3b673c16b1c3782a31540d3f70"
+}
