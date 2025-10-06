@@ -4,6 +4,7 @@ RUN apk add --no-cache ca-certificates tzdata
 
 WORKDIR /app
 
+RUN ls -la
 COPY target/release/jos .
 
 RUN chmod +x ./jos
