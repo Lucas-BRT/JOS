@@ -82,6 +82,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ${{ env.BINARY_NAME }}
+          path: .
 
       - name: Make binary executable
         run: chmod +x ./${{ env.BINARY_NAME }}

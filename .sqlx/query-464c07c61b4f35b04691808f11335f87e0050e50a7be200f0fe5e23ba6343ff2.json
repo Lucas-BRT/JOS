@@ -1,0 +1,68 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n                id,\n                gm_id,\n                title,\n                description,\n                slots,\n                game_system_id,\n                created_at,\n                updated_at\n            FROM tables\n            WHERE ($1::uuid IS NULL OR id = $1)\n              AND ($2::uuid IS NULL OR gm_id = $2)\n              AND ($3::text IS NULL OR title = $3)\n              AND ($4::uuid IS NULL OR game_system_id = $4)\n              AND ($5::int4 IS NULL OR slots = $5)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "gm_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "slots",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "game_system_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "464c07c61b4f35b04691808f11335f87e0050e50a7be200f0fe5e23ba6343ff2"
+}

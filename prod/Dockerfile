@@ -1,10 +1,12 @@
-FROM alpine:3.22
+FROM ubuntu:22.04
 
-RUN apk add --no-cache ca-certificates tzdata
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY target/release/jos .
+COPY jos .
 
 RUN chmod +x ./jos
 
