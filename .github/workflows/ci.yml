@@ -55,7 +55,7 @@ jobs:
       - name: Run Tests
         run: cargo test
 
-      - name: Build static release binary
+      - name: Build release binary
         run: |
           cargo sqlx prepare
           SQLX_OFFLINE=true cargo build --release
