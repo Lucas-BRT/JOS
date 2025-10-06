@@ -34,11 +34,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Rust toolchain com MUSL
+      - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-          targets: x86_64-unknown-linux-musl
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
