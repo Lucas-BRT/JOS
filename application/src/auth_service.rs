@@ -5,7 +5,7 @@ use domain::entities::*;
 use domain::repositories::{RefreshTokenRepository, UserRepository};
 use rand::RngCore;
 use shared::Result;
-use shared::error::Error;
+use shared::error::{DomainError, Error};
 use std::sync::Arc;
 use uuid::{NoContext, Uuid};
 
@@ -93,7 +93,7 @@ impl Authenticator for AuthService {
         let user = match self.user_repository.find_by_email(&payload.email).await? {
             Some(user) => user,
             None => {
-                return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
+                return Err(Error::Domain(DomainError::EntityNotFound(
                     format!("User not found: {}", payload.email),
                 )));
             }

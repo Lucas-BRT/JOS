@@ -4,6 +4,7 @@ use axum::middleware::from_fn_with_state;
 use axum::{
     Json, Router,
     extract::State,
+    http::StatusCode,
     routing::{get, post},
 };
 use domain::auth::Authenticator;
@@ -12,7 +13,6 @@ use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
 use std::sync::Arc;
-use tracing::info;
 use validator::Validate;
 
 // Conversion implementations
@@ -50,7 +50,7 @@ impl From<RegisterRequest> for CreateUserCommand {
 async fn login(
     State(app_state): State<Arc<AppState>>,
     Json(login_payload): Json<LoginRequest>,
-) -> Result<LoginResponse> {
+) -> Result<(StatusCode, Json<LoginResponse>)> {
     if let Err(sanitization_error) = login_payload.validate() {
         return Err(Error::Validation(
             shared::error::ValidationError::ValidationFailed(sanitization_error.to_string()),
@@ -75,12 +75,17 @@ async fn login(
 
     let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
 
-    Ok(LoginResponse {
-        user: user.into(),
-        token: jwt_token,
-        refresh_token,
-        expires_in: 86400,
-    })
+    let expires_in = app_state.config.jwt_expiration_duration.num_seconds();
+
+    Ok((
+        StatusCode::OK,
+        Json(LoginResponse {
+            user: user.into(),
+            token: jwt_token,
+            refresh_token,
+            expires_in,
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -98,7 +103,7 @@ async fn login(
 async fn register(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<RegisterRequest>,
-) -> Result<RegisterResponse> {
+) -> Result<(StatusCode, Json<RegisterResponse>)> {
     if let Err(sanitization_error) = payload.validate() {
         return Err(Error::Validation(
             shared::error::ValidationError::ValidationFailed(sanitization_error.to_string()),
@@ -113,11 +118,14 @@ async fn register(
         .await?;
     let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
 
-    Ok(RegisterResponse {
-        user: user.into(),
-        token: jwt_token,
-        refresh_token,
-    })
+    Ok((
+        StatusCode::CREATED,
+        Json(RegisterResponse {
+            user: user.into(),
+            token: jwt_token,
+            refresh_token,
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -166,7 +174,7 @@ async fn refresh(
     Ok(RefreshTokenResponse {
         token: new_jwt,
         refresh_token: new_refresh_token,
-        expires_in: 86400,
+        expires_in: app_state.config.jwt_expiration_duration.num_seconds(),
     })
 }
 
@@ -193,8 +201,6 @@ async fn me(
         .ok_or(Error::Application(
             shared::error::ApplicationError::InvalidCredentials,
         ))?;
-
-    info!("user id: {}", claims.0.sub);
 
     Ok(user.into())
 }

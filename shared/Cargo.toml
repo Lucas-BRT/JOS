@@ -11,3 +11,4 @@ serde_json = { version = "1.0.140" }
 async-trait = "0.1.88"
 uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }
 axum = { version = "0.8.4", features = ["macros", "multipart"] }
+log = "0.4.27"

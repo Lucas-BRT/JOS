@@ -24,6 +24,7 @@ use jos::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
+#[allow(dead_code)]
 pub async fn create_user(pool: &PgPool) -> User {
     let repo = PostgresUserRepository::new(pool.clone());
 
@@ -39,6 +40,7 @@ pub async fn create_user(pool: &PgPool) -> User {
     repo.create(&mut user_data).await.unwrap()
 }
 
+#[allow(dead_code)]
 pub async fn create_game_system(pool: &PgPool) -> GameSystem {
     let repo = PostgresGameSystemRepository::new(pool.clone());
     let game_system_name = format!("Test Game System {}", Uuid::new_v4());

@@ -73,8 +73,8 @@ impl UserRepository for PostgresUserRepository {
         let updated_user = sqlx::query_as!(
             UserModel,
             r#"
-            UPDATE users 
-            SET 
+            UPDATE users
+            SET
                 email = COALESCE($2, email),
                 password = COALESCE($3, password),
                 updated_at = NOW()

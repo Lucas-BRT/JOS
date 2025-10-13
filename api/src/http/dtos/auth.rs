@@ -5,7 +5,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
 pub struct LoginRequest {
     #[validate(email)]
     pub email: String,

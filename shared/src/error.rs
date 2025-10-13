@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde_json::json;
+use log::error;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,14 +25,14 @@ pub enum Error {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            Error::Persistence(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error"),
-            Error::Application(_) => (StatusCode::BAD_REQUEST, "Application error"),
-            Error::Domain(_) => (StatusCode::BAD_REQUEST, "Domain error"),
-            Error::Setup(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error"),
+            Error::Persistence(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
+            Error::Application(error) => (StatusCode::BAD_REQUEST, error.to_string()),
+            Error::Domain(error) => (StatusCode::BAD_REQUEST, error.to_string()),
+            Error::Setup(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
             Error::InternalServerError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
             }
-            Error::Validation(_) => (StatusCode::BAD_REQUEST, "Validation error"),
+            Error::Validation(error) => (StatusCode::BAD_REQUEST, error.to_string() ),
         };
 
         let body = Json(json!({
