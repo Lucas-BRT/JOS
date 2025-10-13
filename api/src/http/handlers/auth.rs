@@ -208,12 +208,12 @@ async fn me(
 pub fn auth_routes(state: Arc<AppState>) -> Router {
     let public = Router::new()
         .route("/register", post(register))
-        .route("/login", post(login));
+        .route("/login", post(login))
+        .route("/refresh", post(refresh));
 
     let protected = Router::new()
         .route("/logout", post(logout))
         .route("/me", get(me))
-        .route("/refresh", post(refresh))
         .layer(from_fn_with_state(state.clone(), auth_middleware));
 
     Router::new()

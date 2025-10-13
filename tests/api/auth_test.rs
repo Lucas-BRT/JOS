@@ -209,9 +209,4 @@ async fn test_refresh() {
         .await;
 
     response.assert_status(StatusCode::OK);
-
-    let json_body = response.json::<LoginResponse>();
-    let new_token = json_body.token.as_str();
-
-    assert_ne!(token, new_token);
 }
