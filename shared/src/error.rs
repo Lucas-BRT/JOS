@@ -3,43 +3,39 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use serde_json::json;
 use log::error;
+use serde_json::json;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Persistence error: {0}")]
-    Persistence(#[from] PersistenceError),
+    Persistence(PersistenceError),
     #[error("Application error: {0}")]
-    Application(#[from] ApplicationError),
+    Application(ApplicationError),
     #[error("Domain error: {0}")]
-    Domain(#[from] DomainError),
+    Domain(DomainError),
     #[error("Setup error: {0}")]
-    Setup(#[from] SetupError),
+    Setup(SetupError),
     #[error("Internal server error")]
     InternalServerError,
     #[error("Validation error: {0}")]
-    Validation(#[from] ValidationError),
+    Validation(ValidationError),
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            Error::Persistence(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
-            Error::Application(error) => (StatusCode::BAD_REQUEST, error.to_string()),
-            Error::Domain(error) => (StatusCode::BAD_REQUEST, error.to_string()),
-            Error::Setup(error) => (StatusCode::INTERNAL_SERVER_ERROR, error.to_string()),
-            Error::InternalServerError => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-            }
-            Error::Validation(error) => (StatusCode::BAD_REQUEST, error.to_string() ),
-        };
-
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
+        match self {
+            Error::Persistence(error) => error.into_response(),
+            Error::Application(error) => error.into_response(),
+            Error::Domain(error) => error.into_response(),
+            Error::Setup(error) => error.into_response(),
+            Error::InternalServerError => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "Internal server error".to_string(),
+            )
+                .into_response(),
+            Error::Validation(error) => error.into_response(),
+        }
     }
 }
 
@@ -53,6 +49,28 @@ pub enum PersistenceError {
     MigrationError(String),
 }
 
+impl IntoResponse for PersistenceError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            PersistenceError::DatabaseError(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+            }
+            PersistenceError::ConnectionError(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+            }
+            PersistenceError::MigrationError(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error.to_string())
+            }
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ApplicationError {
     #[error("Invalid credentials")]
@@ -63,6 +81,24 @@ pub enum ApplicationError {
     ServiceUnavailable(String),
 }
 
+impl IntoResponse for ApplicationError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            ApplicationError::InvalidCredentials => {
+                (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
+            }
+            ApplicationError::InvalidInput(error) => (StatusCode::BAD_REQUEST, error),
+            ApplicationError::ServiceUnavailable(error) => (StatusCode::SERVICE_UNAVAILABLE, error),
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum DomainError {
     #[error("Business rule violation: {0}")]
@@ -71,6 +107,22 @@ pub enum DomainError {
     EntityNotFound(String),
     #[error("Invalid state: {0}")]
     InvalidState(String),
+}
+
+impl IntoResponse for DomainError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            DomainError::BusinessRuleViolation(error) => (StatusCode::BAD_REQUEST, error),
+            DomainError::EntityNotFound(error) => (StatusCode::NOT_FOUND, error),
+            DomainError::InvalidState(error) => (StatusCode::UNPROCESSABLE_ENTITY, error),
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -97,6 +149,41 @@ pub enum SetupError {
     EnvironmentValidationFailed(String),
 }
 
+impl IntoResponse for SetupError {
+    fn into_response(self) -> Response {
+        let (status, error_message) = match self {
+            SetupError::FailedToGetEnvironmentVariable(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+            SetupError::FailedToBindAddress(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
+            SetupError::FailedToLaunchServer(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
+            SetupError::FailedToParsePort(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
+            SetupError::FailedToEstablishDatabaseConnection(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+            SetupError::FailedToRunDBMigrations(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+            SetupError::DatabaseHealthCheckFailed(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+            SetupError::FailedToSetupServerAddress(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+            SetupError::InvalidConfiguration(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
+            SetupError::EnvironmentValidationFailed(error) => {
+                (StatusCode::INTERNAL_SERVER_ERROR, error)
+            }
+        };
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ValidationError {
     #[error("Validation failed: {0}")]
@@ -105,4 +192,17 @@ pub enum ValidationError {
     InvalidFormat(String),
     #[error("Required field missing: {0}")]
     RequiredFieldMissing(String),
+}
+
+impl IntoResponse for ValidationError {
+    fn into_response(self) -> Response {
+        let status = StatusCode::BAD_REQUEST;
+        let error_message = self.to_string();
+
+        let body = Json(json!({
+            "error": error_message,
+        }));
+
+        (status, body).into_response()
+    }
 }

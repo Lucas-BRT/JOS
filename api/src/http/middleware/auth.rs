@@ -11,7 +11,6 @@ use axum_extra::{
 use domain::auth::Claims;
 use infrastructure::state::AppState;
 use std::sync::Arc;
-use tracing::info;
 
 // Wrapper to implement FromRequestParts locally
 pub struct ClaimsExtractor(pub Claims);
@@ -23,7 +22,6 @@ where
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        info!("orangotango");
         parts
             .extensions
             .get::<Claims>()
@@ -35,19 +33,21 @@ where
 
 pub async fn auth_middleware(
     State(app_state): State<Arc<AppState>>,
-    TypedHeader(auth_header): TypedHeader<Authorization<Bearer>>,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    info!("orangotango");
-    let token = auth_header.token();
+    let token = match auth_header {
+        Some(TypedHeader(auth)) => auth.token().to_owned(),
+        None => return Err(StatusCode::UNAUTHORIZED),
+    };
 
     let token_data = app_state
         .auth_service
         .jwt_provider
-        .decode_token(token)
+        .decode_token(&token)
         .await
-        .or(Err(StatusCode::UNAUTHORIZED))?;
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     let now = chrono::Utc::now().timestamp();
 
