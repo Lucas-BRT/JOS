@@ -11,7 +11,7 @@ use domain::auth::Authenticator;
 use domain::entities::commands::{CreateUserCommand, LoginUserCommand};
 use infrastructure::state::AppState;
 use shared::Result;
-use shared::error::Error;
+use shared::error::{ApplicationError, Error};
 use std::sync::Arc;
 use validator::Validate;
 
@@ -59,19 +59,18 @@ async fn login(
 
     let email = login_payload.email.clone();
     let mut login_command = login_payload.into();
-    let jwt_token = app_state
-        .auth_service
-        .authenticate(&mut login_command)
-        .await?;
 
     let user = app_state
         .auth_service
         .user_repository
         .find_by_email(&email)
         .await?
-        .ok_or(Error::Application(
-            shared::error::ApplicationError::InvalidCredentials,
-        ))?;
+        .ok_or(Error::Application(ApplicationError::InvalidCredentials))?;
+
+    let jwt_token = app_state
+        .auth_service
+        .authenticate(&mut login_command)
+        .await?;
 
     let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
 
@@ -139,7 +138,12 @@ async fn register(
     )
 )]
 #[axum::debug_handler]
-async fn logout(_claims: ClaimsExtractor) -> Result<LogoutResponse> {
+async fn logout(
+    State(app_state): State<Arc<AppState>>,
+    claims: ClaimsExtractor,
+) -> Result<LogoutResponse> {
+    app_state.auth_service.logout(&claims.0.sub).await?;
+
     Ok(LogoutResponse {
         message: "Logout successful".to_string(),
     })
@@ -198,9 +202,7 @@ async fn me(
         .user_repository
         .find_by_id(&claims.0.sub)
         .await?
-        .ok_or(Error::Application(
-            shared::error::ApplicationError::InvalidCredentials,
-        ))?;
+        .ok_or(Error::Application(ApplicationError::InvalidCredentials))?;
 
     Ok(user.into())
 }
@@ -208,12 +210,12 @@ async fn me(
 pub fn auth_routes(state: Arc<AppState>) -> Router {
     let public = Router::new()
         .route("/register", post(register))
-        .route("/login", post(login));
+        .route("/login", post(login))
+        .route("/refresh", post(refresh));
 
     let protected = Router::new()
         .route("/logout", post(logout))
         .route("/me", get(me))
-        .route("/refresh", post(refresh))
         .layer(from_fn_with_state(state.clone(), auth_middleware));
 
     Router::new()

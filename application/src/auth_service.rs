@@ -3,9 +3,11 @@ use chrono::Utc;
 use domain::auth::*;
 use domain::entities::*;
 use domain::repositories::{RefreshTokenRepository, UserRepository};
+use log::warn;
 use rand::RngCore;
 use shared::Result;
-use shared::error::{DomainError, Error};
+use shared::error::ApplicationError;
+use shared::error::Error;
 use std::sync::Arc;
 use uuid::{NoContext, Uuid};
 
@@ -33,8 +35,9 @@ impl AuthService {
     }
 
     pub async fn issue_refresh_token(&self, user_id: &Uuid) -> Result<String> {
-        // single-token-per-user policy: remove old tokens
-        let _ = self.refresh_token_repository.delete_by_user(user_id).await;
+        self.refresh_token_repository
+            .delete_by_user(user_id)
+            .await?;
 
         let mut bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
@@ -61,6 +64,7 @@ impl AuthService {
         let record = match existing {
             Some(r) => r,
             None => {
+                warn!("Invalid refresh token");
                 return Err(Error::Application(
                     shared::error::ApplicationError::InvalidCredentials,
                 ));
@@ -69,19 +73,18 @@ impl AuthService {
 
         if record.expires_at < Utc::now() {
             // delete expired token
-            let _ = self
-                .refresh_token_repository
+            self.refresh_token_repository
                 .delete_by_token(old_token)
-                .await;
-            return Err(Error::Application(
-                shared::error::ApplicationError::InvalidCredentials,
-            ));
+                .await?;
+
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
         }
 
         // rotate: delete old and issue new for same user
         self.refresh_token_repository
             .delete_by_token(old_token)
             .await?;
+
         let new_token = self.issue_refresh_token(&record.user_id).await?;
         Ok((new_token, record.user_id))
     }
@@ -93,9 +96,9 @@ impl Authenticator for AuthService {
         let user = match self.user_repository.find_by_email(&payload.email).await? {
             Some(user) => user,
             None => {
-                return Err(Error::Domain(DomainError::EntityNotFound(
-                    format!("User not found: {}", payload.email),
-                )));
+                return Err(Error::Application(
+                    shared::error::ApplicationError::InvalidCredentials,
+                ));
             }
         };
 
@@ -148,5 +151,12 @@ impl Authenticator for AuthService {
                 )));
             }
         }
+    }
+
+    async fn logout(&self, user_id: &Uuid) -> Result<()> {
+        Ok(self
+            .refresh_token_repository
+            .delete_by_user(user_id)
+            .await?)
     }
 }
