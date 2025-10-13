@@ -16,6 +16,18 @@ pub struct AppConfig {
     pub environment: Environment,
 }
 
+impl Default for AppConfig {
+    fn default() -> Self {
+        Self {
+            addr: SocketAddr::from_str("127.0.0.1:8080").unwrap(),
+            database_url: "".to_string(),
+            jwt_secret: "secret".to_string(),
+            jwt_expiration_duration: Duration::days(1),
+            environment: Environment::Development,
+        }
+    }
+}
+
 impl AppConfig {
     pub fn from_env() -> Result<Self> {
         match dotenvy::dotenv() {

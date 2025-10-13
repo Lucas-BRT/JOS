@@ -16,5 +16,4 @@ pub fn cors_layer() -> CorsLayer {
             axum::http::header::CONTENT_TYPE,
             axum::http::header::ACCEPT,
         ])
-        .allow_credentials(false)
 }

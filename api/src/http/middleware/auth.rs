@@ -11,6 +11,7 @@ use axum_extra::{
 use domain::auth::Claims;
 use infrastructure::state::AppState;
 use std::sync::Arc;
+use tracing::info;
 
 // Wrapper to implement FromRequestParts locally
 pub struct ClaimsExtractor(pub Claims);
@@ -22,6 +23,7 @@ where
     type Rejection = StatusCode;
 
     async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        info!("orangotango");
         parts
             .extensions
             .get::<Claims>()
@@ -37,6 +39,7 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Result<Response, StatusCode> {
+    info!("orangotango");
     let token = auth_header.token();
 
     let token_data = app_state
