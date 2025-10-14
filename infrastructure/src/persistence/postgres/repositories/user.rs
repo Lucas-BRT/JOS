@@ -51,14 +51,20 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn update(&self, data: &mut UpdateUserCommand) -> Result<User> {
+        let has_username_update = matches!(data.username, Update::Change(_));
         let has_email_update = matches!(data.email, Update::Change(_));
         let has_password_update = matches!(data.password, Update::Change(_));
 
-        if !has_email_update && !has_password_update {
+        if !has_username_update && !has_email_update && !has_password_update {
             return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
                 "User not found".to_string(),
             )));
         }
+
+        let username_value = match &data.username {
+            Update::Change(username) => Some(username.as_str()),
+            Update::Keep => None,
+        };
 
         let email_value = match &data.email {
             Update::Change(email) => Some(email.as_str()),
@@ -75,13 +81,15 @@ impl UserRepository for PostgresUserRepository {
             r#"
             UPDATE users
             SET
-                email = COALESCE($2, email),
-                password = COALESCE($3, password),
+                username = COALESCE($2, username),
+                email = COALESCE($3, email),
+                password = COALESCE($4, password),
                 updated_at = NOW()
             WHERE id = $1
             RETURNING *
             "#,
             data.user_id,
+            username_value,
             email_value,
             password_value
         )

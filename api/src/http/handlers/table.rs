@@ -45,7 +45,6 @@ pub async fn create_table(
         game_master: GameMasterInfo {
             id: claims.0.sub,
             username: "placeholder".to_string(),
-            display_name: "placeholder".to_string(),
         },
         description: payload.description,
         player_slots: payload.max_players,
@@ -103,7 +102,6 @@ pub async fn get_table_details(
         game_master: GameMasterInfo {
             id: Uuid::new_v4(),
             username: "placeholder".to_string(),
-            display_name: "placeholder".to_string(),
         },
         description: "Placeholder description".to_string(),
         player_slots: 4,
@@ -151,7 +149,6 @@ pub async fn update_table(
         game_master: GameMasterInfo {
             id: claims.0.sub,
             username: "placeholder".to_string(),
-            display_name: "placeholder".to_string(),
         },
         description: payload
             .description

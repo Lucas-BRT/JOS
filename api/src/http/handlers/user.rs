@@ -1,16 +1,16 @@
+use crate::http::middleware::auth::ClaimsExtractor;
+use crate::{http::dtos::*, http::middleware::auth::auth_middleware};
 use axum::{
     Json, Router,
     extract::State,
     routing::{delete, put},
 };
+use domain::entities::UpdateUserCommand;
+use infrastructure::state::AppState;
+use shared::error::Error;
+use shared::{Result, error::ValidationError};
 use std::sync::Arc;
 use validator::Validate;
-
-use crate::http::middleware::auth::ClaimsExtractor;
-use crate::{http::dtos::*, http::middleware::auth::auth_middleware};
-use infrastructure::state::AppState;
-use shared::Result;
-use shared::error::Error;
 
 #[utoipa::path(
     put,
@@ -27,23 +27,28 @@ use shared::error::Error;
 #[axum::debug_handler]
 pub async fn update_profile(
     claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    State(app_state): State<Arc<AppState>>,
     Json(payload): Json<UpdateProfileRequest>,
 ) -> Result<Json<UpdateProfileResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(ValidationError::ValidationFailed(
+            validation_error.to_string(),
+        )));
     }
 
-    // TODO: Implement profile update logic
-    // For now, return a placeholder response
+    let mut command = UpdateUserCommand {
+        user_id: claims.0.sub,
+        username: payload.username.clone().into(),
+        email: payload.email.clone().into(),
+        password: payload.password.clone().into(),
+    };
+    let updated_user = app_state.user_service.update(&mut command).await?;
+
     Ok(Json(UpdateProfileResponse {
         id: claims.0.sub,
-        username: payload.username.unwrap_or("updated_user".to_string()),
-        display_name: payload.display_name.unwrap_or("Updated User".to_string()),
-        email: payload.email.unwrap_or("updated@example.com".to_string()),
-        joined_at: chrono::Utc::now(),
+        username: updated_user.username,
+        email: updated_user.email,
+        joined_at: updated_user.created_at,
     }))
 }
 

@@ -6,3 +6,12 @@ pub enum Update<T> {
     Keep,
     Change(T),
 }
+
+impl<T> From<Option<T>> for Update<T> {
+    fn from(value: Option<T>) -> Self {
+        match value {
+            Some(value) => Update::Change(value),
+            None => Update::Keep,
+        }
+    }
+}
