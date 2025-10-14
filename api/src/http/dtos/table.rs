@@ -36,14 +36,12 @@ pub struct UpdateTableRequest {
 pub struct GameMasterInfo {
     pub id: Uuid,
     pub username: String,
-    pub display_name: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct PlayerInfo {
     pub id: Uuid,
     pub username: String,
-    pub display_name: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

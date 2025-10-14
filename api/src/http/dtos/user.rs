@@ -1,5 +1,6 @@
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
+use domain::entities::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -9,10 +10,10 @@ use validator::Validate;
 pub struct UpdateProfileRequest {
     #[validate(length(min = 3, max = 50))]
     pub username: Option<String>,
-    #[validate(length(min = 1, max = 100))]
-    pub display_name: Option<String>,
     #[validate(email)]
     pub email: Option<String>,
+    #[validate(length(min = 6))]
+    pub password: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
@@ -35,9 +36,19 @@ pub struct DeleteAccountRequest {
 pub struct UpdateProfileResponse {
     pub id: Uuid,
     pub username: String,
-    pub display_name: String,
     pub email: String,
     pub joined_at: DateTime<Utc>,
+}
+
+impl From<User> for UpdateProfileResponse {
+    fn from(value: User) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+            email: value.email,
+            joined_at: value.created_at,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

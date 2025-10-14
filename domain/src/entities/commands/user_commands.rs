@@ -11,6 +11,7 @@ pub struct CreateUserCommand {
 #[derive(Debug, Default, Clone)]
 pub struct UpdateUserCommand {
     pub user_id: Uuid,
+    pub username: Update<String>,
     pub email: Update<String>,
     pub password: Update<String>,
 }
