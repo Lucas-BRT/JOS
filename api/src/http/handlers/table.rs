@@ -1,14 +1,10 @@
-use axum::{
-    Json, Router,
-    extract::{Path, Query, State},
-    routing::{delete, get, post, put},
-};
+use axum::{extract::{Path, Query, State}, http::StatusCode, routing::{delete, get, post, put}, Json, Router};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::http::dtos::*;
-use crate::http::middleware::auth::ClaimsExtractor;
+use crate::http::middleware::auth::{auth_middleware, ClaimsExtractor};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
@@ -29,7 +25,7 @@ pub async fn create_table(
     claims: ClaimsExtractor,
     State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequest>,
-) -> Result<Json<TableDetails>> {
+) -> Result<(StatusCode, Json<TableDetails>)> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(
             shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
@@ -38,20 +34,23 @@ pub async fn create_table(
 
     // TODO: Implement table creation logic
     // For now, return a placeholder response
-    Ok(Json(TableDetails {
-        id: Uuid::new_v4(),
-        title: payload.title,
-        game_system: payload.system,
-        game_master: GameMasterInfo {
-            id: claims.0.sub,
-            username: "placeholder".to_string(),
-        },
-        description: payload.description,
-        player_slots: payload.max_players,
-        players: vec![],
-        status: "active".to_string(),
-        sessions: vec![],
-    }))
+    Ok((
+        StatusCode::CREATED,
+        Json(TableDetails {
+            id: Uuid::new_v4(),
+            title: payload.title,
+            game_system: payload.system,
+            game_master: GameMasterInfo {
+                id: claims.0.sub,
+                username: "placeholder".to_string(),
+            },
+            description: payload.description,
+            player_slots: payload.max_players,
+            players: vec![],
+            status: "active".to_string(),
+            sessions: vec![],
+        }),
+    ))
 }
 
 #[utoipa::path(
@@ -195,7 +194,11 @@ pub fn table_routes(state: Arc<AppState>) -> Router {
                 .route("/", post(create_table))
                 .route("/{id}", get(get_table_details))
                 .route("/{id}", put(update_table))
-                .route("/{id}", delete(delete_table)),
+                .route("/{id}", delete(delete_table))
+                .layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    auth_middleware,
+                )),
         )
         .with_state(state)
 }
