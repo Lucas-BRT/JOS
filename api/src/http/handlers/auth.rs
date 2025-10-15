@@ -260,8 +260,8 @@ pub async fn update_profile(
 )]
 #[axum::debug_handler]
 pub async fn change_password(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<ChangePasswordResponse>> {
     if let Err(validation_error) = payload.validate() {
@@ -279,7 +279,14 @@ pub async fn change_password(
         ));
     }
 
-    // TODO: Implement password change logic
+    let mut command = UpdatePasswordCommand {
+        user_id: claims.0.sub,
+        current_password: payload.current_password,
+        new_password: payload.new_password,
+    };
+
+    app_state.auth_service.update_password(&mut command).await?;
+
     Ok(Json(ChangePasswordResponse {
         message: "Password changed successfully".to_string(),
     }))

@@ -19,6 +19,7 @@ pub struct UpdateUserCommand {
 #[derive(Debug, Default, Clone)]
 pub struct UpdatePasswordCommand {
     pub user_id: Uuid,
+    pub current_password: String,
     pub new_password: String,
 }
 

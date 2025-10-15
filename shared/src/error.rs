@@ -75,6 +75,8 @@ impl IntoResponse for PersistenceError {
 pub enum ApplicationError {
     #[error("Invalid credentials")]
     InvalidCredentials,
+    #[error("Incorrect password")]
+    IncorrectPassword,
     #[error("Invalid input: {0}")]
     InvalidInput(String),
     #[error("Service unavailable: {0}")]
@@ -86,6 +88,9 @@ impl IntoResponse for ApplicationError {
         let (status, error_message) = match self {
             ApplicationError::InvalidCredentials => {
                 (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
+            }
+            ApplicationError::IncorrectPassword => {
+                (StatusCode::FORBIDDEN, "Incorrect password".to_string())
             }
             ApplicationError::InvalidInput(error) => (StatusCode::BAD_REQUEST, error),
             ApplicationError::ServiceUnavailable(error) => (StatusCode::SERVICE_UNAVAILABLE, error),

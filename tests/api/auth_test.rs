@@ -185,3 +185,79 @@ async fn test_update_profile_succeeds() {
     assert_eq!(user_json.username, new_username);
     assert_eq!(user_json.email, new_email);
 }
+
+#[tokio::test]
+async fn test_change_password_succeeds() {
+    let (server, _pool, _mock_server) = setup_test_environment().await;
+    let new_password = "NewPassword456!";
+
+    // Register and get token
+    let (token, email, current_password) = register_user_and_get_token(&server).await;
+
+    // Change password
+    let response = server
+        .put("/v1/auth/password")
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .json(&json!({
+            "current_password": current_password,
+            "new_password": new_password,
+            "confirm_password": new_password
+        }))
+        .await;
+
+    response.assert_status(StatusCode::OK);
+
+    // Try to login with the new password
+    let login_response = server
+        .post("/v1/auth/login")
+        .json(&json!({
+            "email": email,
+            "password": new_password
+        }))
+        .await;
+
+    login_response.assert_status(StatusCode::OK);
+}
+
+#[tokio::test]
+async fn test_change_password_wrong_current_password() {
+    let (server, _pool, _mock_server) = setup_test_environment().await;
+    let new_password = "NewPassword456!";
+
+    // Register and get token
+    let (token, _, _) = register_user_and_get_token(&server).await;
+
+    // Attempt to change password with wrong current_password
+    let response = server
+        .put("/v1/auth/password")
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .json(&json!({
+            "current_password": "WrongPassword!",
+            "new_password": new_password,
+            "confirm_password": new_password
+        }))
+        .await;
+
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[tokio::test]
+async fn test_change_password_mismatched_new_password() {
+    let (server, _pool, _mock_server) = setup_test_environment().await;
+
+    // Register and get token
+    let (token, _, current_password) = register_user_and_get_token(&server).await;
+
+    // Attempt to change password with mismatched new_password and confirm_password
+    let response = server
+        .put("/v1/auth/password")
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .json(&json!({
+            "current_password": current_password,
+            "new_password": "NewPassword456!",
+            "confirm_password": "MismatchedPassword!"
+        }))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}

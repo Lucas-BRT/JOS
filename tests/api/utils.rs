@@ -1,4 +1,5 @@
 use api::http::dtos::LoginResponse;
+use axum::http::StatusCode;
 use axum_test::TestServer;
 use jos::api::http::handlers::create_router;
 use jos::infrastructure::{
@@ -90,4 +91,32 @@ pub async fn register_and_login_with_refresh(server: &TestServer) -> (String, St
 
     let login_json = login_response.json::<LoginResponse>();
     (login_json.token, login_json.refresh_token)
+}
+
+pub async fn register_user_and_get_token(server: &TestServer) -> (String, String, String) {
+    let username = Uuid::new_v4().to_string();
+    let email = format!("{}@example.com", username);
+    let password = "Password123!";
+
+    let register_response = server
+        .post("/v1/auth/register")
+        .json(&json!({
+            "username": username,
+            "email": email.clone(),
+            "password": password
+        }))
+        .await;
+    register_response.assert_status(StatusCode::CREATED);
+
+    let login_response = server
+        .post("/v1/auth/login")
+        .json(&json!({
+            "email": email.clone(),
+            "password": password
+        }))
+        .await;
+    login_response.assert_status_ok();
+
+    let login_json = login_response.json::<LoginResponse>();
+    (login_json.token, email, password.to_string())
 }
