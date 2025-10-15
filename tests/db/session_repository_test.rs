@@ -1,4 +1,4 @@
-#[path = "../utils/mod.rs"]
+#[path = "./utils/mod.rs"]
 mod utils;
 
 use jos::domain::entities::commands::{
