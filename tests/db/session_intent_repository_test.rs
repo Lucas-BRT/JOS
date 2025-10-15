@@ -10,35 +10,12 @@ use uuid::Uuid;
 
 #[sqlx::test]
 async fn test_create_session_intent_success(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
-
     let intent_data = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
 
@@ -46,8 +23,8 @@ async fn test_create_session_intent_success(pool: PgPool) {
 
     match result {
         Ok(intent) => {
-            assert_eq!(intent.user_id, user.id);
-            assert_eq!(intent.session_id, session.id);
+            assert_eq!(intent.user_id, setup.user.id);
+            assert_eq!(intent.session_id, setup.session.id);
             assert_eq!(intent.intent_status, IntentStatus::Confirmed);
             assert!(intent.id != Uuid::nil());
         }
@@ -59,35 +36,12 @@ async fn test_create_session_intent_success(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_id(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
-
     let intent_data = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
 
@@ -101,8 +55,8 @@ async fn test_find_by_id(pool: PgPool) {
     assert_eq!(found_intents.len(), 1);
     let found_intent = &found_intents[0];
     assert_eq!(found_intent.id, created_intent.id);
-    assert_eq!(found_intent.user_id, user.id);
-    assert_eq!(found_intent.session_id, session.id);
+    assert_eq!(found_intent.user_id, setup.user.id);
+    assert_eq!(found_intent.session_id, setup.session.id);
     assert_eq!(found_intent.intent_status, IntentStatus::Confirmed);
 }
 
@@ -124,34 +78,12 @@ async fn test_find_by_id_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_user_id(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_repo = PostgresSessionRepository::new(pool.clone());
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data1 = CreateSessionCommand {
-        table_id: table.id,
-        name: "Session 1".to_string(),
-        description: "First session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session1 = session_repo.create(session_data1).await.unwrap();
-
     let session_data2 = CreateSessionCommand {
-        table_id: table.id,
+        table_id: setup.table.id,
         name: "Session 2".to_string(),
         description: "Second session".to_string(),
         scheduled_for: None,
@@ -160,12 +92,12 @@ async fn test_find_by_user_id(pool: PgPool) {
     let session2 = session_repo.create(session_data2).await.unwrap();
 
     let intent_data1 = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session1.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
     let intent_data2 = CreateSessionIntentCommand {
-        player_id: user.id,
+        player_id: setup.user.id,
         session_id: session2.id,
         status: IntentStatus::Tentative,
     };
@@ -174,7 +106,7 @@ async fn test_find_by_user_id(pool: PgPool) {
     session_intent_repo.create(intent_data2).await.unwrap();
 
     let get_command = GetSessionIntentCommand {
-        user_id: Some(user.id),
+        user_id: Some(setup.user.id),
         ..Default::default()
     };
     let found_intents = session_intent_repo.read(get_command).await.unwrap();
@@ -187,41 +119,19 @@ async fn test_find_by_user_id(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_session_id(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user1 = utils::create_user(&pool).await;
     let user2 = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
 
     let intent_data1 = CreateSessionIntentCommand {
-        player_id: user1.id,
-        session_id: session.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
     let intent_data2 = CreateSessionIntentCommand {
         player_id: user2.id,
-        session_id: session.id,
+        session_id: setup.session.id,
         status: IntentStatus::Tentative,
     };
 
@@ -229,48 +139,27 @@ async fn test_find_by_session_id(pool: PgPool) {
     session_intent_repo.create(intent_data2).await.unwrap();
 
     let get_command = GetSessionIntentCommand {
-        session_id: Some(session.id),
+        session_id: Some(setup.session.id),
         ..Default::default()
     };
     let found_intents = session_intent_repo.read(get_command).await.unwrap();
     assert_eq!(found_intents.len(), 2);
 
     let player_ids: Vec<Uuid> = found_intents.iter().map(|i| i.user_id).collect();
-    assert!(player_ids.contains(&user1.id));
+    assert!(player_ids.contains(&setup.user.id));
     assert!(player_ids.contains(&user2.id));
 }
 
 #[sqlx::test]
 async fn test_get_all_session_intents(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_repo = PostgresSessionRepository::new(pool.clone());
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user1 = utils::create_user(&pool).await;
     let user2 = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data1 = CreateSessionCommand {
-        table_id: table.id,
-        name: "Session 1".to_string(),
-        description: "First session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session1 = session_repo.create(session_data1).await.unwrap();
 
     let session_data2 = CreateSessionCommand {
-        table_id: table.id,
+        table_id: setup.table.id,
         name: "Session 2".to_string(),
         description: "Second session".to_string(),
         scheduled_for: None,
@@ -279,8 +168,8 @@ async fn test_get_all_session_intents(pool: PgPool) {
     let session2 = session_repo.create(session_data2).await.unwrap();
 
     let intent_data1 = CreateSessionIntentCommand {
-        player_id: user1.id,
-        session_id: session1.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
     let intent_data2 = CreateSessionIntentCommand {
@@ -303,35 +192,12 @@ async fn test_get_all_session_intents(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_session_intent_status(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
-
     let intent_data = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Tentative,
     };
 
@@ -357,35 +223,12 @@ async fn test_update_session_intent_status(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_delete_session_intent(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
-
     let intent_data = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session.id,
+        player_id: setup.user.id,
+        session_id: setup.session.id,
         status: IntentStatus::Confirmed,
     };
 
@@ -404,8 +247,8 @@ async fn test_delete_session_intent(pool: PgPool) {
         .expect("Failed to delete session intent");
 
     assert_eq!(deleted_intent.id, created_intent.id);
-    assert_eq!(deleted_intent.user_id, user.id);
-    assert_eq!(deleted_intent.session_id, session.id);
+    assert_eq!(deleted_intent.user_id, setup.user.id);
+    assert_eq!(deleted_intent.session_id, setup.session.id);
 }
 
 #[sqlx::test]
@@ -424,39 +267,18 @@ async fn test_delete_session_intent_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_session_intent_operations(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
-    let session_repo = PostgresSessionRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
-
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 10,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
-    let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: "Test Session".to_string(),
-        description: "A test session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session = session_repo.create(session_data).await.unwrap();
 
     let handles: Vec<_> = (0..5)
         .map(|_| {
             let pool = pool.clone();
+            let session_id = setup.session.id;
             tokio::spawn(async move {
                 let user = utils::create_user(&pool).await;
                 let intent_data = CreateSessionIntentCommand {
                     player_id: user.id,
-                    session_id: session.id,
+                    session_id,
                     status: IntentStatus::Tentative,
                 };
                 let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());

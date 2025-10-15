@@ -11,6 +11,30 @@ use jos::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
+pub struct TestSetup {
+    pub gm: User,
+    pub user: User,
+    pub game_system: GameSystem,
+    pub table: Table,
+    pub session: Session,
+}
+
+pub async fn setup_test_environment(pool: &PgPool) -> TestSetup {
+    let gm = create_user(pool).await;
+    let user = create_user(pool).await;
+    let game_system = create_game_system(pool).await;
+    let table = create_table(pool, gm.clone(), game_system.clone()).await;
+    let session = create_session(pool, table.clone()).await;
+
+    TestSetup {
+        gm,
+        user,
+        game_system,
+        table,
+        session,
+    }
+}
+
 pub async fn create_user(pool: &PgPool) -> User {
     let repo = PostgresUserRepository::new(pool.clone());
 

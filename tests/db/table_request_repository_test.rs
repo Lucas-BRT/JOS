@@ -10,26 +10,13 @@ use uuid::Uuid;
 
 #[sqlx::test]
 async fn test_create_table_request_success(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
-
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
 
     let message = Some("I would like to join this table".to_string());
     let request_data = CreateTableRequestCommand {
-        user_id: user.id,
-        table_id: table.id,
+        user_id: setup.user.id,
+        table_id: setup.table.id,
         message: message.clone(),
     };
 
@@ -37,8 +24,8 @@ async fn test_create_table_request_success(pool: PgPool) {
 
     match result {
         Ok(table_request) => {
-            assert_eq!(table_request.user_id, user.id);
-            assert_eq!(table_request.table_id, table.id);
+            assert_eq!(table_request.user_id, setup.user.id);
+            assert_eq!(table_request.table_id, setup.table.id);
             assert_eq!(table_request.message, message);
             assert_eq!(table_request.status, TableRequestStatus::Pending);
             assert!(table_request.id != Uuid::nil());
@@ -51,25 +38,12 @@ async fn test_create_table_request_success(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_create_table_request_without_message(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
     let request_data = CreateTableRequestCommand {
-        user_id: user.id,
-        table_id: table.id,
+        user_id: setup.user.id,
+        table_id: setup.table.id,
         message: None,
     };
 
@@ -77,8 +51,8 @@ async fn test_create_table_request_without_message(pool: PgPool) {
 
     match result {
         Ok(table_request) => {
-            assert_eq!(table_request.user_id, user.id);
-            assert_eq!(table_request.table_id, table.id);
+            assert_eq!(table_request.user_id, setup.user.id);
+            assert_eq!(table_request.table_id, setup.table.id);
             assert_eq!(table_request.message, None);
             assert_eq!(table_request.status, TableRequestStatus::Pending);
             assert!(table_request.id != Uuid::nil());
@@ -91,25 +65,12 @@ async fn test_create_table_request_without_message(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_id(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
-
     let request_data = CreateTableRequestCommand {
-        user_id: user.id,
-        table_id: table.id,
+        user_id: setup.user.id,
+        table_id: setup.table.id,
         message: Some("I would like to join this table".to_string()),
     };
 
@@ -123,8 +84,8 @@ async fn test_find_by_id(pool: PgPool) {
     assert_eq!(found_requests.len(), 1);
     let found_request = &found_requests[0];
     assert_eq!(found_request.id, created_request.id);
-    assert_eq!(found_request.user_id, user.id);
-    assert_eq!(found_request.table_id, table.id);
+    assert_eq!(found_request.user_id, setup.user.id);
+    assert_eq!(found_request.table_id, setup.table.id);
     assert_eq!(found_request.status, TableRequestStatus::Pending);
 }
 
@@ -146,38 +107,26 @@ async fn test_find_by_id_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_user_id(pool: PgPool) {
+    let setup = utils::setup_test_environment(&pool).await;
     let table_repo = PostgresTableRepository::new(pool.clone());
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
 
-    let user = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data1 = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Table 1".to_string(),
-        description: "First table".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table1 = table_repo.create(table_data1).await.unwrap();
-
     let table_data2 = CreateTableCommand {
-        gm_id: gm.id,
+        gm_id: setup.gm.id,
         title: "Table 2".to_string(),
         description: "Second table".to_string(),
         slots: 3,
-        game_system_id: game_system.id,
+        game_system_id: setup.game_system.id,
     };
     let table2 = table_repo.create(table_data2).await.unwrap();
 
     let request_data1 = CreateTableRequestCommand {
-        user_id: user.id,
-        table_id: table1.id,
+        user_id: setup.user.id,
+        table_id: setup.table.id,
         message: Some("Request for table 1".to_string()),
     };
     let request_data2 = CreateTableRequestCommand {
-        user_id: user.id,
+        user_id: setup.user.id,
         table_id: table2.id,
         message: Some("Request for table 2".to_string()),
     };
@@ -186,44 +135,32 @@ async fn test_find_by_user_id(pool: PgPool) {
     table_request_repo.create(request_data2).await.unwrap();
 
     let get_command = GetTableRequestCommand {
-        user_id: Some(user.id),
+        user_id: Some(setup.user.id),
         ..Default::default()
     };
     let found_requests = table_request_repo.read(get_command).await.unwrap();
     assert_eq!(found_requests.len(), 2);
 
     let table_ids: Vec<Uuid> = found_requests.iter().map(|r| r.table_id).collect();
-    assert!(table_ids.contains(&table1.id));
+    assert!(table_ids.contains(&setup.table.id));
     assert!(table_ids.contains(&table2.id));
 }
 
 #[sqlx::test]
 async fn test_find_by_table_id(pool: PgPool) {
-    let table_repo = PostgresTableRepository::new(pool.clone());
+    let setup = utils::setup_test_environment(&pool).await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
 
-    let user1 = utils::create_user(&pool).await;
     let user2 = utils::create_user(&pool).await;
-    let gm = utils::create_user(&pool).await;
-    let game_system = utils::create_game_system(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
-        slots: 5,
-        game_system_id: game_system.id,
-    };
-    let table = table_repo.create(table_data).await.unwrap();
 
     let request_data1 = CreateTableRequestCommand {
-        user_id: user1.id,
-        table_id: table.id,
+        user_id: setup.user.id,
+        table_id: setup.table.id,
         message: Some("Request from user 1".to_string()),
     };
     let request_data2 = CreateTableRequestCommand {
         user_id: user2.id,
-        table_id: table.id,
+        table_id: setup.table.id,
         message: Some("Request from user 2".to_string()),
     };
 
@@ -231,14 +168,14 @@ async fn test_find_by_table_id(pool: PgPool) {
     table_request_repo.create(request_data2).await.unwrap();
 
     let get_command = GetTableRequestCommand {
-        table_id: Some(table.id),
+        table_id: Some(setup.table.id),
         ..Default::default()
     };
     let found_requests = table_request_repo.read(get_command).await.unwrap();
     assert_eq!(found_requests.len(), 2);
 
     let user_ids: Vec<Uuid> = found_requests.iter().map(|r| r.user_id).collect();
-    assert!(user_ids.contains(&user1.id));
+    assert!(user_ids.contains(&setup.user.id));
     assert!(user_ids.contains(&user2.id));
 }
 

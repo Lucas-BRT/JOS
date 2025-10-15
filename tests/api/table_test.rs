@@ -44,7 +44,7 @@ async fn test_get_tables_succeeds() {
     let description = "A table for awesome people.";
     let max_players = 5;
 
-    server
+    let create_response = server
         .post("/v1/tables")
         .add_header("Authorization", &format!("Bearer {}", token))
         .json(&json!({
@@ -55,6 +55,7 @@ async fn test_get_tables_succeeds() {
             "visibility": "public",
         }))
         .await;
+    create_response.assert_status(StatusCode::CREATED);
 
     let response = server
         .get("/v1/tables")
