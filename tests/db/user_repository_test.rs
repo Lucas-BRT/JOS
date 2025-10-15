@@ -1,5 +1,4 @@
-#[path = "./utils/mod.rs"]
-mod utils;
+
 
 use jos::domain::entities::commands::{
     CreateUserCommand, DeleteUserCommand, GetUserCommand, UpdateUserCommand,

@@ -1,3 +1,6 @@
+#[path = "db/utils/mod.rs"]
+mod utils;
+
 #[path = "db/session_intent_repository_test.rs"]
 mod session_intent_repository_test;
 

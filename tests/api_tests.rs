@@ -1,3 +1,6 @@
+#[path = "api/utils/mod.rs"]
+mod utils;
+
 #[path = "api/auth_test.rs"]
 mod auth_test;
 

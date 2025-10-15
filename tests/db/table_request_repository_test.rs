@@ -1,5 +1,4 @@
-#[path = "./utils/mod.rs"]
-mod utils;
+use super::utils;
 
 use jos::domain::entities::commands::{
     CreateTableCommand, CreateTableRequestCommand, DeleteTableRequestCommand,

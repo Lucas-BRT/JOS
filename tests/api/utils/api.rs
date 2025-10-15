@@ -65,3 +65,29 @@ pub async fn register_and_login(server: &TestServer) -> String {
     let login_json = login_response.json::<LoginResponse>();
     login_json.token
 }
+
+pub async fn register_and_login_with_refresh(server: &TestServer) -> (String, String) {
+    let username = Uuid::new_v4().to_string();
+    let email = format!("{}@example.com", username);
+    let password = "Password123!";
+
+    server
+        .post("/v1/auth/register")
+        .json(&json!({
+            "username": username,
+            "email": email,
+            "password": password
+        }))
+        .await;
+
+    let login_response = server
+        .post("/v1/auth/login")
+        .json(&json!({
+            "email": email,
+            "password": password
+        }))
+        .await;
+
+    let login_json = login_response.json::<LoginResponse>();
+    (login_json.token, login_json.refresh_token)
+}

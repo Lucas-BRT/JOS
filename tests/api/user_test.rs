@@ -1,12 +1,8 @@
-#[path = "./utils/mod.rs"]
-mod utils;
-
+use super::utils::api::{setup_test_environment, register_and_login};
 use api::http::dtos::UserResponse;
 use axum::http::StatusCode;
-
 use serde_json::json;
 use uuid::Uuid;
-use utils::api::{setup_test_environment, register_and_login};
 
 #[tokio::test]
 async fn test_update_profile_succeeds() {

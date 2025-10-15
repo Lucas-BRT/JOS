@@ -1,12 +1,7 @@
-#[path = "./utils/mod.rs"]
-mod utils;
-
+use super::utils::api::{register_and_login, setup_test_environment};
 use api::http::dtos::TableDetails;
 use axum::http::StatusCode;
-
 use serde_json::json;
-
-use utils::api::{register_and_login, setup_test_environment};
 
 #[tokio::test]
 async fn test_create_table_succeeds() {
