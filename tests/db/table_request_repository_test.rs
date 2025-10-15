@@ -1,15 +1,9 @@
 use super::utils;
-
-use jos::domain::entities::commands::{
-    CreateTableCommand, CreateTableRequestCommand, DeleteTableRequestCommand,
-    GetTableRequestCommand, UpdateTableRequestCommand,
-};
+use jos::domain::entities::commands::*;
 use jos::domain::entities::table_request::TableRequestStatus;
 use jos::domain::entities::update::Update;
-use jos::domain::repositories::{TableRepository, TableRequestRepository};
-use jos::infrastructure::persistence::postgres::repositories::{
-    PostgresTableRepository, PostgresTableRequestRepository,
-};
+use jos::domain::repositories::*;
+use jos::infrastructure::persistence::postgres::repositories::*;
 use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;

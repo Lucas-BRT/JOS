@@ -1,8 +1,4 @@
-
-
-use jos::domain::entities::commands::{
-    CreateUserCommand, DeleteUserCommand, GetUserCommand, UpdateUserCommand,
-};
+use jos::domain::entities::commands::*;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::UserRepository;
 use jos::infrastructure::persistence::postgres::repositories::PostgresUserRepository;

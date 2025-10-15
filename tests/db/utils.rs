@@ -1,8 +1,16 @@
-use jos::{domain::{entities::{commands::{CreateGameSystemCommand, CreateSessionCommand, CreateSessionIntentCommand, CreateTableCommand, CreateUserCommand}, game_system::GameSystem, session::Session, session_intent::{IntentStatus, SessionIntent}, table::Table, user::User}, repositories::{GameSystemRepository, SessionIntentRepository, SessionRepository, TableRepository, UserRepository}}, infrastructure::persistence::postgres::repositories::{PostgresGameSystemRepository, PostgresSessionIntentRepository, PostgresSessionRepository, PostgresTableRepository, PostgresUserRepository}};
+use jos::{
+    domain::{
+        entities::{
+            commands::*, game_system::GameSystem, session::Session, session_intent::*,
+            table::Table, user::User,
+        },
+        repositories::*,
+    },
+    infrastructure::persistence::postgres::repositories::*,
+};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-#[allow(dead_code)]
 pub async fn create_user(pool: &PgPool) -> User {
     let repo = PostgresUserRepository::new(pool.clone());
 
@@ -18,7 +26,6 @@ pub async fn create_user(pool: &PgPool) -> User {
     repo.create(&mut user_data).await.unwrap()
 }
 
-#[allow(dead_code)]
 pub async fn create_game_system(pool: &PgPool) -> GameSystem {
     let repo = PostgresGameSystemRepository::new(pool.clone());
     let game_system_name = format!("Test Game System {}", Uuid::new_v4());
@@ -29,7 +36,6 @@ pub async fn create_game_system(pool: &PgPool) -> GameSystem {
     repo.create(&mut game_system_command).await.unwrap()
 }
 
-#[allow(unused)]
 pub async fn create_table(pool: &PgPool, gm: User, game_system: GameSystem) -> Table {
     let repo = PostgresTableRepository::new(pool.clone());
 
@@ -46,7 +52,6 @@ pub async fn create_table(pool: &PgPool, gm: User, game_system: GameSystem) -> T
     repo.create(table_data).await.unwrap()
 }
 
-#[allow(unused)]
 pub async fn create_session(pool: &PgPool, table: Table) -> Session {
     let repo = PostgresSessionRepository::new(pool.clone());
 
@@ -63,7 +68,6 @@ pub async fn create_session(pool: &PgPool, table: Table) -> Session {
     repo.create(session_data).await.unwrap()
 }
 
-#[allow(unused)]
 pub async fn create_session_intent(
     pool: &PgPool,
     user: User,

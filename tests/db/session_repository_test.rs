@@ -1,14 +1,8 @@
 use super::utils;
-
-use jos::domain::entities::commands::{
-    CreateSessionCommand, CreateTableCommand, DeleteSessionCommand, GetSessionCommand,
-    UpdateSessionCommand,
-};
+use jos::domain::entities::commands::*;
 use jos::domain::entities::update::Update;
-use jos::domain::repositories::{SessionRepository, TableRepository};
-use jos::infrastructure::persistence::postgres::repositories::{
-    PostgresSessionRepository, PostgresTableRepository,
-};
+use jos::domain::repositories::*;
+use jos::infrastructure::persistence::postgres::repositories::*;
 use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;

@@ -1,4 +1,4 @@
-use super::utils::api::{register_and_login, setup_test_environment};
+use super::utils::{register_and_login, setup_test_environment};
 use api::http::dtos::TableDetails;
 use axum::http::StatusCode;
 use serde_json::json;

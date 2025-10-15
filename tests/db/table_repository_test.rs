@@ -1,8 +1,5 @@
 use super::utils;
-
-use jos::domain::entities::commands::{
-    CreateTableCommand, DeleteTableCommand, GetTableCommand, UpdateTableCommand,
-};
+use jos::domain::entities::commands::*;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::TableRepository;
 use jos::infrastructure::persistence::postgres::repositories::PostgresTableRepository;
