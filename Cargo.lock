@@ -1266,6 +1266,7 @@ version = "0.1.0"
 dependencies = [
  "api",
  "application",
+ "async-trait",
  "axum",
  "axum-test",
  "domain",
@@ -1275,6 +1276,7 @@ dependencies = [
  "serde_json",
  "shared",
  "sqlx",
+ "test-context",
  "tokio",
  "uuid",
  "wiremock",
@@ -2109,6 +2111,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "uuid",
+ "validator",
 ]
 
 [[package]]
@@ -2452,6 +2455,27 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "728a70f3dbaf5bab7f0c4b1ac8d7ae5ea60a4b5549c8a5914361c99147a709d2"
 dependencies = [
  "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "test-context"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7b6965c21232186af0092233c18030fe607cfc3960dbabb209325272458eeea"
+dependencies = [
+ "async-trait",
+ "futures",
+ "test-context-macros",
+]
+
+[[package]]
+name = "test-context-macros"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d506c7664333e246f564949bee4ed39062aa0f11918e6f5a95f553cdad65c274"
+dependencies = [
  "quote",
  "syn",
 ]

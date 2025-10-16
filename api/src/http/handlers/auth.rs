@@ -9,7 +9,6 @@ use domain::entities::commands::*;
 use infrastructure::state::AppState;
 use shared::Error;
 use shared::error::ApplicationError;
-use shared::error::ValidationError;
 use shared::*;
 use std::sync::Arc;
 use validator::Validate;
@@ -50,10 +49,8 @@ async fn login(
     State(app_state): State<Arc<AppState>>,
     Json(login_payload): Json<LoginRequest>,
 ) -> Result<(StatusCode, Json<LoginResponse>)> {
-    if let Err(sanitization_error) = login_payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(sanitization_error.to_string()),
-        ));
+    if let Err(validation_error) = login_payload.validate() {
+        return Err(Error::Validation(validation_error));
     }
 
     let email = login_payload.email.clone();
@@ -102,10 +99,8 @@ async fn register(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<(StatusCode, Json<RegisterResponse>)> {
-    if let Err(sanitization_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(sanitization_error.to_string()),
-        ));
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
     }
 
     let user = app_state.auth_service.register(&mut payload.into()).await?;
@@ -225,9 +220,7 @@ pub async fn update_profile(
     Json(payload): Json<UpdateProfileRequest>,
 ) -> Result<Json<UpdateProfileResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(ValidationError::ValidationFailed(
-            validation_error.to_string(),
-        )));
+        return Err(Error::Validation(validation_error));
     }
 
     let mut command = UpdateUserCommand {
@@ -265,18 +258,15 @@ pub async fn change_password(
     Json(payload): Json<ChangePasswordRequest>,
 ) -> Result<Json<ChangePasswordResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
-    // Validate password confirmation
     if payload.new_password != payload.confirm_password {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(
-                "Password confirmation does not match".to_string(),
-            ),
-        ));
+        let mut errors = validator::ValidationErrors::new();
+        let mut error = validator::ValidationError::new("password_mismatch");
+        error.message = Some("Password confirmation does not match".into());
+        errors.add("confirm_password", error);
+        return Err(Error::Validation(errors));
     }
 
     let mut command = UpdatePasswordCommand {
@@ -311,9 +301,7 @@ pub async fn delete_account(
     Json(payload): Json<DeleteAccountRequest>,
 ) -> Result<Json<DeleteAccountResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement account deletion logic

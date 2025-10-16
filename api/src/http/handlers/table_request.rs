@@ -75,9 +75,7 @@ pub async fn create_table_request(
     Json(payload): Json<CreateTableRequestRequest>,
 ) -> Result<Json<TableRequestResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement table request creation logic

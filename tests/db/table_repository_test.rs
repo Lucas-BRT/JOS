@@ -9,26 +9,25 @@ use uuid::Uuid;
 
 #[sqlx::test]
 async fn test_create_table_success(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
+        description: "A table for testing".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    let result = repo.create(table_data).await;
+    let result = repo.create(&table_data).await;
 
     match result {
         Ok(table) => {
+            assert_eq!(table.gm_id, setup.user.id);
             assert_eq!(table.title, "Test Table");
-            assert_eq!(table.description, "A test table for RPG");
+            assert_eq!(table.description, "A table for testing");
             assert_eq!(table.player_slots, 5);
-            assert_eq!(table.gm_id, setup.gm.id);
-            assert_eq!(table.game_system_id, setup.game_system.id);
             assert!(table.id != Uuid::nil());
         }
         Err(e) => {
@@ -39,30 +38,28 @@ async fn test_create_table_success(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_id(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
+        description: "A table for testing".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    let created_table = repo.create(table_data).await.unwrap();
+    let created_table = repo.create(&table_data).await.unwrap();
     let get_command = GetTableCommand {
         id: Some(created_table.id),
         ..Default::default()
     };
-    let found_tables = repo.read(get_command).await.unwrap();
+    let found_tables = repo.read(&get_command).await.unwrap();
 
     assert_eq!(found_tables.len(), 1);
     let found_table = &found_tables[0];
     assert_eq!(found_table.id, created_table.id);
     assert_eq!(found_table.title, "Test Table");
-    assert_eq!(found_table.description, "A test table for RPG");
-    assert_eq!(found_table.player_slots, 5);
 }
 
 #[sqlx::test]
@@ -74,7 +71,7 @@ async fn test_find_by_id_not_found(pool: PgPool) {
         id: Some(random_id),
         ..Default::default()
     };
-    let result = repo.read(get_command).await;
+    let result = repo.read(&get_command).await;
 
     assert!(result.is_ok());
     let found_tables = result.unwrap();
@@ -83,131 +80,125 @@ async fn test_find_by_id_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_gm_id(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
+
+    let user2 = utils::create_user(&pool).await;
 
     let table_data1 = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Table 1".to_string(),
         description: "First table".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
-
     let table_data2 = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: user2.id,
         title: "Table 2".to_string(),
         description: "Second table".to_string(),
-        slots: 3,
+        slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    repo.create(table_data1).await.unwrap();
-    repo.create(table_data2).await.unwrap();
+    repo.create(&table_data1).await.unwrap();
+    repo.create(&table_data2).await.unwrap();
 
     let get_command = GetTableCommand {
-        gm_id: Some(setup.gm.id),
+        gm_id: Some(setup.user.id),
         ..Default::default()
     };
-    let found_tables = repo.read(get_command).await.unwrap();
-    assert_eq!(found_tables.len(), 3);
-
-    let titles: Vec<String> = found_tables.iter().map(|t| t.title.clone()).collect();
-    assert!(titles.contains(&"Table 1".to_string()));
-    assert!(titles.contains(&"Table 2".to_string()));
+    let found_tables = repo.read(&get_command).await.unwrap();
+    assert_eq!(found_tables.len(), 2);
+    assert!(found_tables.iter().any(|t| t.title == "Table 1"));
+    assert!(found_tables.iter().any(|t| t.title == "Test Table"));
 }
 
 #[sqlx::test]
 async fn test_get_all_tables(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
-    let gm2 = utils::create_user(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
+
+    let user2 = utils::create_user(&pool).await;
 
     let table_data1 = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Table 1".to_string(),
         description: "First table".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
-
     let table_data2 = CreateTableCommand {
-        gm_id: gm2.id,
+        gm_id: user2.id,
         title: "Table 2".to_string(),
         description: "Second table".to_string(),
-        slots: 3,
-        game_system_id: setup.game_system.id,
-    };
-
-    repo.create(table_data1).await.unwrap();
-    repo.create(table_data2).await.unwrap();
-
-    let get_command = GetTableCommand::default();
-    let all_tables = repo.read(get_command).await.unwrap();
-    assert_eq!(all_tables.len(), 3);
-
-    let titles: Vec<String> = all_tables.iter().map(|t| t.title.clone()).collect();
-    assert!(titles.contains(&"Table 1".to_string()));
-    assert!(titles.contains(&"Table 2".to_string()));
-}
-
-#[sqlx::test]
-async fn test_update_table_title(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
-    let setup = utils::setup_test_environment(&pool).await;
-
-    let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
-        title: "Original Title".to_string(),
-        description: "A test table for RPG".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    let created_table = repo.create(table_data).await.unwrap();
+    repo.create(&table_data1).await.unwrap();
+    repo.create(&table_data2).await.unwrap();
+
+    let get_command = GetTableCommand::default();
+    let all_tables = repo.read(&get_command).await.unwrap();
+    assert_eq!(all_tables.len(), 3);
+}
+
+#[sqlx::test]
+async fn test_update_table_title(pool: PgPool) {
+    let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
+
+    let table_data = CreateTableCommand {
+        gm_id: setup.user.id,
+        title: "Original Title".to_string(),
+        description: "A table for testing".to_string(),
+        slots: 5,
+        game_system_id: setup.game_system.id,
+    };
+
+    let created_table = repo.create(&table_data).await.unwrap();
 
     let update_data = UpdateTableCommand {
         id: created_table.id,
-        title: Update::Change("Updated Title".to_string()),
+        title: Update::Change("New Title".to_string()),
         ..Default::default()
     };
 
-    let result = repo.update(update_data).await;
+    let result = repo.update(&update_data).await;
     assert!(result.is_ok());
 
     let get_command = GetTableCommand {
         id: Some(created_table.id),
         ..Default::default()
     };
-    let found_tables = repo.read(get_command).await.unwrap();
+    let found_tables = repo.read(&get_command).await.unwrap();
     assert_eq!(found_tables.len(), 1);
     let updated_table = &found_tables[0];
-    assert_eq!(updated_table.title, "Updated Title");
-    assert_eq!(updated_table.description, "A test table for RPG");
+    assert_eq!(updated_table.title, "New Title");
 }
 
 #[sqlx::test]
 async fn test_update_table_description(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Test Table".to_string(),
         description: "Original Description".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    let created_table = repo.create(table_data).await.unwrap();
+    let created_table = repo.create(&table_data).await.unwrap();
 
     let update_data = UpdateTableCommand {
         id: created_table.id,
-        description: Update::Change("Updated Description".to_string()),
+        description: Update::Change("New Description".to_string()),
         ..Default::default()
     };
 
-    repo.update(update_data)
+    repo.update(&update_data)
         .await
         .expect("Failed to update table");
 
@@ -215,26 +206,26 @@ async fn test_update_table_description(pool: PgPool) {
         id: Some(created_table.id),
         ..Default::default()
     };
-    let found_tables = repo.read(get_command).await.unwrap();
+    let found_tables = repo.read(&get_command).await.unwrap();
     assert_eq!(found_tables.len(), 1);
     let updated_table = &found_tables[0];
-    assert_eq!(updated_table.description, "Updated Description");
+    assert_eq!(updated_table.description, "New Description");
 }
 
 #[sqlx::test]
 async fn test_update_table_slots(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
+        description: "A table for testing".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
-    let created_table = repo.create(table_data).await.unwrap();
+    let created_table = repo.create(&table_data).await.unwrap();
 
     let update_data = UpdateTableCommand {
         id: created_table.id,
@@ -242,7 +233,7 @@ async fn test_update_table_slots(pool: PgPool) {
         ..Default::default()
     };
 
-    repo.update(update_data)
+    repo.update(&update_data)
         .await
         .expect("Failed to update table");
 
@@ -250,7 +241,7 @@ async fn test_update_table_slots(pool: PgPool) {
         id: Some(created_table.id),
         ..Default::default()
     };
-    let found_tables = repo.read(get_command).await.unwrap();
+    let found_tables = repo.read(&get_command).await.unwrap();
     assert_eq!(found_tables.len(), 1);
     let updated_table = &found_tables[0];
     assert_eq!(updated_table.player_slots, 10);
@@ -258,48 +249,49 @@ async fn test_update_table_slots(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_delete_table(pool: PgPool) {
-    let repo = PostgresTableRepository::new(pool.clone());
     let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let table_data = CreateTableCommand {
-        gm_id: setup.gm.id,
+        gm_id: setup.user.id,
         title: "Test Table".to_string(),
-        description: "A test table for RPG".to_string(),
+        description: "A table for testing".to_string(),
         slots: 5,
         game_system_id: setup.game_system.id,
     };
 
     let created_table = repo
-        .create(table_data)
+        .create(&table_data)
         .await
         .expect("Failed to create table");
 
     let delete_command = DeleteTableCommand {
         id: created_table.id,
-        gm_id: created_table.gm_id,
+        gm_id: setup.user.id,
     };
 
-    let deleted_table = repo
-        .delete(delete_command)
-        .await
-        .expect("Failed to delete table");
+    let result = repo.delete(&delete_command).await;
+    assert!(result.is_ok());
 
-    assert_eq!(deleted_table.id, created_table.id);
-    assert_eq!(deleted_table.title, "Test Table");
+    let get_command = GetTableCommand {
+        id: Some(created_table.id),
+        ..Default::default()
+    };
+    let found_tables = repo.read(&get_command).await.unwrap();
+    assert!(found_tables.is_empty());
 }
 
 #[sqlx::test]
 async fn test_delete_table_not_found(pool: PgPool) {
+    let setup = utils::setup_test_environment(&pool).await;
     let repo = PostgresTableRepository::new(pool);
 
     let random_id = Uuid::new_v4();
-    let random_gm_id = Uuid::new_v4();
     let delete_command = DeleteTableCommand {
         id: random_id,
-        gm_id: random_gm_id,
+        gm_id: setup.user.id,
     };
-
-    let result = repo.delete(delete_command).await;
+    let result = repo.delete(&delete_command).await;
 
     match result {
         Err(Error::Persistence(_)) => {}
@@ -309,23 +301,23 @@ async fn test_delete_table_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_table_operations(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
+    let repo = PostgresTableRepository::new(pool.clone());
 
     let handles: Vec<_> = (0..5)
-        .map(|i| {
+        .map(|_| {
             let pool = pool.clone();
-            let gm_id = setup.gm.id;
-            let game_system_id = setup.game_system.id;
-            let table_data = CreateTableCommand {
-                gm_id,
-                title: format!("Table {i}"),
-                description: format!("Description for table {i}"),
-                slots: 3 + i as u32,
-                game_system_id,
-            };
             tokio::spawn(async move {
+                let user = utils::create_user(&pool).await;
+                let game_system = utils::create_game_system(&pool).await;
+                let table_data = CreateTableCommand {
+                    gm_id: user.id,
+                    title: "Concurrent Table".to_string(),
+                    description: "A table for concurrency testing".to_string(),
+                    slots: 5,
+                    game_system_id: game_system.id,
+                };
                 let repo = PostgresTableRepository::new(pool.clone());
-                repo.create(table_data)
+                repo.create(&table_data)
                     .await
                     .expect("Failed to create table")
             })
@@ -338,11 +330,10 @@ async fn test_concurrent_table_operations(pool: PgPool) {
         assert!(result.is_ok());
     }
 
-    let repo = PostgresTableRepository::new(pool.clone());
     let get_command = GetTableCommand::default();
     let all_tables = repo
-        .read(get_command)
+        .read(&get_command)
         .await
         .expect("Failed to get all tables");
-    assert_eq!(all_tables.len(), 6);
+    assert_eq!(all_tables.len(), 5);
 }

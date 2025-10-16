@@ -1,7 +1,7 @@
 use domain::entities::*;
 use domain::repositories::TableRepository;
 use shared::Result;
-use shared::error::Error;
+use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -15,17 +15,15 @@ impl TableService {
         Self { table_repository }
     }
 
-    pub async fn create(&self, command: CreateTableCommand) -> Result<Table> {
+    pub async fn create(&self, command: &CreateTableCommand) -> Result<Table> {
         self.table_repository.create(command).await
     }
 
-    pub async fn delete(&self, command: DeleteTableCommand) -> Result<Table> {
+    pub async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
         let table = self.find_by_id(&command.id).await?;
 
         if table.gm_id != command.gm_id {
-            return Err(Error::Application(
-                shared::error::ApplicationError::InvalidCredentials,
-            ));
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
         }
 
         self.table_repository.delete(command).await
@@ -36,20 +34,25 @@ impl TableService {
             id: Some(*table_id),
             ..Default::default()
         };
-        let tables = self.table_repository.read(command).await?;
+
+        let tables = self.table_repository.read(&command).await?;
         tables.into_iter().next().ok_or_else(|| {
-            Error::Domain(shared::error::DomainError::EntityNotFound(format!(
+            Error::Domain(DomainError::EntityNotFound(format!(
                 "Table not found: {}",
                 table_id
             )))
         })
     }
 
-    pub async fn get(&self, command: GetTableCommand) -> Result<Vec<Table>> {
+    pub async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
         self.table_repository.read(command).await
     }
 
-    pub async fn update(&self, command: UpdateTableCommand) -> Result<Table> {
+    pub async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
         self.table_repository.update(command).await
+    }
+
+    pub async fn create_table(&self, command: &CreateTableCommand) -> Result<Table> {
+        self.table_repository.create(command).await
     }
 }

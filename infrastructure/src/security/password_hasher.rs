@@ -39,9 +39,7 @@ impl BcryptPasswordProvider {
         if errors.is_empty() {
             Ok(())
         } else {
-            Err(Error::Validation(
-                shared::error::ValidationError::ValidationFailed(errors.to_string()),
-            ))
+            Err(Error::Validation(errors))
         }
     }
 }

@@ -49,10 +49,8 @@ pub async fn create_session(
     State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateSessionRequest>,
 ) -> Result<Json<SessionDetails>> {
-    if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement session creation logic
@@ -138,9 +136,7 @@ pub async fn update_session(
     Json(payload): Json<UpdateSessionRequest>,
 ) -> Result<Json<SessionDetails>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement session update logic

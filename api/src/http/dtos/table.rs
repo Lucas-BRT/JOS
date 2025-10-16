@@ -1,5 +1,6 @@
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
+use domain::entities::Table;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -76,6 +77,17 @@ pub struct TableDetails {
     pub players: Vec<PlayerInfo>,
     pub status: String,
     pub sessions: Vec<SessionInfo>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct CreateTableResponse {
+    pub id: Uuid,
+}
+
+impl From<Table> for CreateTableResponse {
+    fn from(value: Table) -> Self {
+        Self { id: value.id }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

@@ -1,33 +1,24 @@
-use jos::{
-    domain::{
-        entities::{
-            commands::*, game_system::GameSystem, session::Session, session_intent::*,
-            table::Table, user::User,
-        },
-        repositories::*,
-    },
-    infrastructure::persistence::postgres::repositories::*,
-};
+use jos::domain::entities::*;
+use jos::domain::repositories::*;
+use jos::infrastructure::persistence::postgres::repositories::*;
 use sqlx::PgPool;
-use uuid::Uuid;
 
-pub struct TestSetup {
-    pub gm: User,
+pub struct TestEnvironment {
+    pub db_pool: PgPool,
     pub user: User,
     pub game_system: GameSystem,
     pub table: Table,
     pub session: Session,
 }
 
-pub async fn setup_test_environment(pool: &PgPool) -> TestSetup {
-    let gm = create_user(pool).await;
+pub async fn setup_test_environment(pool: &PgPool) -> TestEnvironment {
     let user = create_user(pool).await;
     let game_system = create_game_system(pool).await;
-    let table = create_table(pool, gm.clone(), game_system.clone()).await;
-    let session = create_session(pool, table.clone()).await;
+    let table = create_table(pool, user.id, game_system.id).await;
+    let session = create_session(pool, table.id).await;
 
-    TestSetup {
-        gm,
+    TestEnvironment {
+        db_pool: pool.clone(),
         user,
         game_system,
         table,
@@ -37,74 +28,58 @@ pub async fn setup_test_environment(pool: &PgPool) -> TestSetup {
 
 pub async fn create_user(pool: &PgPool) -> User {
     let repo = PostgresUserRepository::new(pool.clone());
-
-    let username = format!("testuser{}", Uuid::new_v4());
-    let email = format!("testuser{}@example.com", Uuid::new_v4());
-
+    let unique_id = uuid::Uuid::new_v4().to_string();
     let mut user_data = CreateUserCommand {
-        username: username.clone(),
-        email: email.clone(),
+        username: format!("testuser-{}", unique_id),
+        email: format!("test-{}@example.com", unique_id),
         password: "password123".to_string(),
     };
-
     repo.create(&mut user_data).await.unwrap()
 }
 
 pub async fn create_game_system(pool: &PgPool) -> GameSystem {
     let repo = PostgresGameSystemRepository::new(pool.clone());
-    let game_system_name = format!("Test Game System {}", Uuid::new_v4());
+    let unique_id = uuid::Uuid::new_v4().to_string();
     let mut game_system_command = CreateGameSystemCommand {
-        name: game_system_name,
+        name: format!("D&D 5e - {}", unique_id),
     };
-
     repo.create(&mut game_system_command).await.unwrap()
 }
 
-pub async fn create_table(pool: &PgPool, gm: User, game_system: GameSystem) -> Table {
+pub async fn create_table(pool: &PgPool, user_id: uuid::Uuid, game_system_id: uuid::Uuid) -> Table {
     let repo = PostgresTableRepository::new(pool.clone());
-
-    let table_name = format!("Test Table {}", Uuid::new_v4());
-
     let table_data = CreateTableCommand {
-        gm_id: gm.id,
-        title: table_name,
-        description: "Test Table Description".to_string(),
+        gm_id: user_id,
+        title: "Test Table".to_string(),
+        description: "A table for testing".to_string(),
         slots: 5,
-        game_system_id: game_system.id,
+        game_system_id,
     };
-
-    repo.create(table_data).await.unwrap()
+    repo.create(&table_data).await.unwrap()
 }
 
-pub async fn create_session(pool: &PgPool, table: Table) -> Session {
+pub async fn create_session(pool: &PgPool, table_id: uuid::Uuid) -> Session {
     let repo = PostgresSessionRepository::new(pool.clone());
-
-    let session_name = format!("Test Session {}", Uuid::new_v4());
-
     let session_data = CreateSessionCommand {
-        table_id: table.id,
-        name: session_name,
-        description: "Test Session Description".to_string(),
+        table_id,
+        name: "Test Session".to_string(),
+        description: "A session for testing".to_string(),
         scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
+        status: SessionStatus::Scheduled,
     };
-
     repo.create(session_data).await.unwrap()
 }
 
 pub async fn create_session_intent(
     pool: &PgPool,
-    user: User,
-    session: Session,
-    status: IntentStatus,
+    user_id: uuid::Uuid,
+    session_id: uuid::Uuid,
 ) -> SessionIntent {
     let repo = PostgresSessionIntentRepository::new(pool.clone());
-
     let session_intent_data = CreateSessionIntentCommand {
-        player_id: user.id,
-        session_id: session.id,
-        status,
+        player_id: user_id,
+        session_id,
+        status: jos::domain::entities::session_intent::IntentStatus::Confirmed,
     };
-
     repo.create(session_intent_data).await.unwrap()
 }

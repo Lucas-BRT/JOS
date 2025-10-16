@@ -1,13 +1,20 @@
-use axum::{extract::{Path, Query, State}, http::StatusCode, routing::{delete, get, post, put}, Json, Router};
+use axum::{
+    Json, Router,
+    extract::{Path, Query, State},
+    http::StatusCode,
+    routing::{delete, get, post, put},
+};
+
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::http::dtos::*;
-use crate::http::middleware::auth::{auth_middleware, ClaimsExtractor};
+use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
+use domain::entities::commands::table_commands::CreateTableCommand;
 
 #[utoipa::path(
     post,
@@ -23,34 +30,28 @@ use shared::error::Error;
 #[axum::debug_handler]
 pub async fn create_table(
     claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    State(app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequest>,
-) -> Result<(StatusCode, Json<TableDetails>)> {
+) -> Result<(StatusCode, Json<CreateTableResponse>)> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
-    // TODO: Implement table creation logic
-    // For now, return a placeholder response
-    Ok((
-        StatusCode::CREATED,
-        Json(TableDetails {
-            id: Uuid::new_v4(),
-            title: payload.title,
-            game_system: payload.system,
-            game_master: GameMasterInfo {
-                id: claims.0.sub,
-                username: "placeholder".to_string(),
-            },
-            description: payload.description,
-            player_slots: payload.max_players,
-            players: vec![],
-            status: "active".to_string(),
-            sessions: vec![],
-        }),
-    ))
+    let mut command = CreateTableCommand {
+        title: payload.title,
+        description: payload.description,
+        slots: payload.max_players as u32, // DTO uses i32, command uses u32
+        game_system_id: Uuid::new_v4(), // Placeholder for payload.system
+        gm_id: claims.0.sub,
+    };
+
+    let table = app_state.table_service.create_table(&mut command).await?;
+
+    let response = CreateTableResponse {
+        id: table.id,
+    };
+
+    Ok((StatusCode::CREATED, Json(response)))
 }
 
 #[utoipa::path(
@@ -134,9 +135,7 @@ pub async fn update_table(
     Json(payload): Json<UpdateTableRequest>,
 ) -> Result<Json<TableDetails>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement table update logic

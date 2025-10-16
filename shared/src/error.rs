@@ -5,6 +5,7 @@ use axum::{
 };
 use log::error;
 use serde_json::json;
+use validator::ValidationErrors;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -19,7 +20,7 @@ pub enum Error {
     #[error("Internal server error")]
     InternalServerError,
     #[error("Validation error: {0}")]
-    Validation(ValidationError),
+    Validation(#[from] ValidationErrors),
 }
 
 impl IntoResponse for Error {
@@ -34,7 +35,9 @@ impl IntoResponse for Error {
                 "Internal server error".to_string(),
             )
                 .into_response(),
-            Error::Validation(error) => error.into_response(),
+            Error::Validation(error) => {
+                (StatusCode::BAD_REQUEST, error.to_string()).into_response()
+            }
         }
     }
 }
@@ -180,29 +183,6 @@ impl IntoResponse for SetupError {
                 (StatusCode::INTERNAL_SERVER_ERROR, error)
             }
         };
-
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum ValidationError {
-    #[error("Validation failed: {0}")]
-    ValidationFailed(String),
-    #[error("Invalid format: {0}")]
-    InvalidFormat(String),
-    #[error("Required field missing: {0}")]
-    RequiredFieldMissing(String),
-}
-
-impl IntoResponse for ValidationError {
-    fn into_response(self) -> Response {
-        let status = StatusCode::BAD_REQUEST;
-        let error_message = self.to_string();
 
         let body = Json(json!({
             "error": error_message,
