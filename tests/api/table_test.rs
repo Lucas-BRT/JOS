@@ -1,6 +1,5 @@
-use crate::utils::{register_and_login, TestEnvironmentBuilder};
-use api::http::dtos::table::{CreateTableRequest, TableDetails, UpdateTableRequest};
-use domain::entities::Table;
+use crate::utils::{TestEnvironmentBuilder, register_and_login};
+use api::http::dtos::table::*;
 use axum::http::StatusCode;
 use sqlx::PgPool;
 
@@ -46,6 +45,7 @@ async fn test_get_tables_succeeds(pool: PgPool) {
         .await;
 
     let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
     let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
 
     let response = env
@@ -55,9 +55,15 @@ async fn test_get_tables_succeeds(pool: PgPool) {
         .await;
 
     response.assert_status_ok();
-    // The endpoint returns Vec<Table>, not Vec<TableDetails>
-    let tables_json = response.json::<Vec<Table>>();
+
+    let tables_json = response.json::<Vec<TableListItem>>();
     assert_eq!(tables_json.len(), 1);
+
+    let table_item = &tables_json[0];
+    assert_eq!(table_item.id, table.id);
+    assert_eq!(table_item.title, table.title);
+    assert_eq!(table_item.game_master.id, gm.id);
+    assert_eq!(table_item.player_slots, table.player_slots as i32);
 }
 
 #[sqlx::test]

@@ -148,8 +148,20 @@ async fn test_get_all_session_intents(pool: PgPool) {
     let player2 = env.seeded.users.get(OTHER_PLAYER_ID).unwrap();
     let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
-    repo.create(CreateSessionIntentCommand { player_id: player1.id, session_id: session.id, status: IntentStatus::Confirmed }).await.unwrap();
-    repo.create(CreateSessionIntentCommand { player_id: player2.id, session_id: session.id, status: IntentStatus::Tentative }).await.unwrap();
+    repo.create(CreateSessionIntentCommand {
+        player_id: player1.id,
+        session_id: session.id,
+        status: IntentStatus::Confirmed,
+    })
+    .await
+    .unwrap();
+    repo.create(CreateSessionIntentCommand {
+        player_id: player2.id,
+        session_id: session.id,
+        status: IntentStatus::Tentative,
+    })
+    .await
+    .unwrap();
 
     let all_intents = repo.read(GetSessionIntentCommand::default()).await.unwrap();
     assert_eq!(all_intents.len(), 2);
@@ -217,7 +229,9 @@ async fn test_delete_session_intent(pool: PgPool) {
         .unwrap();
 
     let deleted_intent = repo
-        .delete(DeleteSessionIntentCommand { id: created_intent.id })
+        .delete(DeleteSessionIntentCommand {
+            id: created_intent.id,
+        })
         .await
         .unwrap();
 
@@ -249,7 +263,12 @@ async fn test_delete_session_intent_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_session_intent_operations(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).with_session(SESSION_ID, TABLE_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
     let session = env.seeded.sessions.get(SESSION_ID).unwrap();
     let user_repo = PostgresUserRepository::new(pool.clone());
     let repo = PostgresSessionIntentRepository::new(pool.clone());
@@ -260,15 +279,18 @@ async fn test_concurrent_session_intent_operations(pool: PgPool) {
             let repo = repo.clone();
             let session_id = session.id;
             tokio::spawn(async move {
-                let mut cmd = CreateUserCommand { username: format!("player-{}", i), email: format!("player-{}@test.com", i), password: "password".to_string() };
+                let mut cmd = CreateUserCommand {
+                    username: format!("player-{}", i),
+                    email: format!("player-{}@test.com", i),
+                    password: "password".to_string(),
+                };
                 let user = user_repo.create(&mut cmd).await.unwrap();
                 let intent_data = CreateSessionIntentCommand {
                     player_id: user.id,
                     session_id,
                     status: IntentStatus::Tentative,
                 };
-                repo
-                    .create(intent_data)
+                repo.create(intent_data)
                     .await
                     .expect("Failed to create session intent")
             })

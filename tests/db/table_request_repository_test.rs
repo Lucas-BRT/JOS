@@ -47,7 +47,12 @@ async fn test_create_table_request_success(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_create_table_request_without_message(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_user(PLAYER_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
     let player = env.seeded.users.get(PLAYER_ID).unwrap();
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
@@ -140,16 +145,39 @@ async fn test_find_by_user_id(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_get_all_table_requests(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_user(PLAYER_ID).with_user("player2").with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_user("player2")
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
     let player1 = env.seeded.users.get(PLAYER_ID).unwrap();
     let player2 = env.seeded.users.get("player2").unwrap();
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
 
-    table_request_repo.create(CreateTableRequestCommand { user_id: player1.id, table_id: table.id, message: None }).await.unwrap();
-    table_request_repo.create(CreateTableRequestCommand { user_id: player2.id, table_id: table.id, message: None }).await.unwrap();
+    table_request_repo
+        .create(CreateTableRequestCommand {
+            user_id: player1.id,
+            table_id: table.id,
+            message: None,
+        })
+        .await
+        .unwrap();
+    table_request_repo
+        .create(CreateTableRequestCommand {
+            user_id: player2.id,
+            table_id: table.id,
+            message: None,
+        })
+        .await
+        .unwrap();
 
-    let all_requests = table_request_repo.read(GetTableRequestCommand::default()).await.unwrap();
+    let all_requests = table_request_repo
+        .read(GetTableRequestCommand::default())
+        .await
+        .unwrap();
     assert_eq!(all_requests.len(), 2);
 }
 
@@ -196,16 +224,41 @@ async fn test_update_table_request_status(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_table_request_message(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_user(PLAYER_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let table_request_repo = PostgresTableRequestRepository::new(pool.clone());
     let player = env.seeded.users.get(PLAYER_ID).unwrap();
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
 
-    let created_request = table_request_repo.create(CreateTableRequestCommand { user_id: player.id, table_id: table.id, message: Some("Original".to_string()) }).await.unwrap();
+    let created_request = table_request_repo
+        .create(CreateTableRequestCommand {
+            user_id: player.id,
+            table_id: table.id,
+            message: Some("Original".to_string()),
+        })
+        .await
+        .unwrap();
 
-    table_request_repo.update(UpdateTableRequestCommand { id: created_request.id, message: Update::Change(Some("New".to_string())), ..Default::default() }).await.unwrap();
+    table_request_repo
+        .update(UpdateTableRequestCommand {
+            id: created_request.id,
+            message: Update::Change(Some("New".to_string())),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
 
-    let found_requests = table_request_repo.read(GetTableRequestCommand { id: Some(created_request.id), ..Default::default() }).await.unwrap();
+    let found_requests = table_request_repo
+        .read(GetTableRequestCommand {
+            id: Some(created_request.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
     assert_eq!(found_requests[0].message, Some("New".to_string()));
 }
 
@@ -231,7 +284,9 @@ async fn test_delete_table_request(pool: PgPool) {
         .unwrap();
 
     let deleted_request = table_request_repo
-        .delete(DeleteTableRequestCommand { id: created_request.id })
+        .delete(DeleteTableRequestCommand {
+            id: created_request.id,
+        })
         .await
         .unwrap();
 
@@ -263,7 +318,11 @@ async fn test_delete_table_request_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_table_request_operations(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
     let user_repo = PostgresUserRepository::new(pool.clone());
     let repo = PostgresTableRequestRepository::new(pool.clone());
@@ -274,15 +333,18 @@ async fn test_concurrent_table_request_operations(pool: PgPool) {
             let repo = repo.clone();
             let table_id = table.id;
             tokio::spawn(async move {
-                let mut cmd = CreateUserCommand { username: format!("player-{}", i), email: format!("player-{}@test.com", i), password: "password".to_string() };
+                let mut cmd = CreateUserCommand {
+                    username: format!("player-{}", i),
+                    email: format!("player-{}@test.com", i),
+                    password: "password".to_string(),
+                };
                 let user = user_repo.create(&mut cmd).await.unwrap();
                 let request_data = CreateTableRequestCommand {
                     user_id: user.id,
                     table_id,
                     message: Some("Concurrent request".to_string()),
                 };
-                repo
-                    .create(request_data)
+                repo.create(request_data)
                     .await
                     .expect("Failed to create table request")
             })

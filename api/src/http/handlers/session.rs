@@ -49,7 +49,7 @@ pub async fn create_session(
     State(_app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateSessionRequest>,
 ) -> Result<Json<SessionDetails>> {
-if let Err(validation_error) = payload.validate() {
+    if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 

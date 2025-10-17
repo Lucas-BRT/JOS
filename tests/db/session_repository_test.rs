@@ -139,8 +139,26 @@ async fn test_get_all_sessions(pool: PgPool) {
     let table1 = env.seeded.tables.get(TABLE_ID).unwrap();
     let table2 = env.seeded.tables.get("table2").unwrap();
 
-    session_repo.create(CreateSessionCommand { table_id: table1.id, name: "Session 1".to_string(), description: "".to_string(), scheduled_for: None, status: SessionStatus::Scheduled }).await.unwrap();
-    session_repo.create(CreateSessionCommand { table_id: table2.id, name: "Session 2".to_string(), description: "".to_string(), scheduled_for: None, status: SessionStatus::Scheduled }).await.unwrap();
+    session_repo
+        .create(CreateSessionCommand {
+            table_id: table1.id,
+            name: "Session 1".to_string(),
+            description: "".to_string(),
+            scheduled_for: None,
+            status: SessionStatus::Scheduled,
+        })
+        .await
+        .unwrap();
+    session_repo
+        .create(CreateSessionCommand {
+            table_id: table2.id,
+            name: "Session 2".to_string(),
+            description: "".to_string(),
+            scheduled_for: None,
+            status: SessionStatus::Scheduled,
+        })
+        .await
+        .unwrap();
 
     let get_command = GetSessionCommand::default();
     let all_sessions = session_repo.read(get_command).await.unwrap();
@@ -188,11 +206,24 @@ async fn test_update_session_name(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_session_description(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let session_repo = PostgresSessionRepository::new(pool.clone());
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
 
-    let created_session = session_repo.create(CreateSessionCommand { table_id: table.id, name: "Test Session".to_string(), description: "Original Description".to_string(), scheduled_for: None, status: SessionStatus::Scheduled }).await.unwrap();
+    let created_session = session_repo
+        .create(CreateSessionCommand {
+            table_id: table.id,
+            name: "Test Session".to_string(),
+            description: "Original Description".to_string(),
+            scheduled_for: None,
+            status: SessionStatus::Scheduled,
+        })
+        .await
+        .unwrap();
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
@@ -202,17 +233,36 @@ async fn test_update_session_description(pool: PgPool) {
 
     session_repo.update(update_data).await.unwrap();
 
-    let found_sessions = session_repo.read(GetSessionCommand { id: Some(created_session.id), ..Default::default() }).await.unwrap();
+    let found_sessions = session_repo
+        .read(GetSessionCommand {
+            id: Some(created_session.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
     assert_eq!(found_sessions[0].description, "New Description");
 }
 
 #[sqlx::test]
 async fn test_update_session_status(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let session_repo = PostgresSessionRepository::new(pool.clone());
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
 
-    let created_session = session_repo.create(CreateSessionCommand { table_id: table.id, name: "Test Session".to_string(), description: "".to_string(), scheduled_for: None, status: SessionStatus::Scheduled }).await.unwrap();
+    let created_session = session_repo
+        .create(CreateSessionCommand {
+            table_id: table.id,
+            name: "Test Session".to_string(),
+            description: "".to_string(),
+            scheduled_for: None,
+            status: SessionStatus::Scheduled,
+        })
+        .await
+        .unwrap();
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
@@ -222,7 +272,13 @@ async fn test_update_session_status(pool: PgPool) {
 
     session_repo.update(update_data).await.unwrap();
 
-    let found_sessions = session_repo.read(GetSessionCommand { id: Some(created_session.id), ..Default::default() }).await.unwrap();
+    let found_sessions = session_repo
+        .read(GetSessionCommand {
+            id: Some(created_session.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
     assert_eq!(found_sessions[0].status, SessionStatus::Completed);
 }
 
@@ -279,7 +335,11 @@ async fn test_delete_session_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_session_operations(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .build()
+        .await;
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
 
     let handles: Vec<_> = (0..5)

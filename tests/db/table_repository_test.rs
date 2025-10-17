@@ -2,7 +2,9 @@ use crate::utils::TestEnvironmentBuilder;
 use jos::domain::entities::commands::*;
 use jos::domain::entities::update::Update;
 use jos::domain::repositories::{TableRepository, UserRepository};
-use jos::infrastructure::persistence::postgres::repositories::{PostgresTableRepository, PostgresUserRepository};
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresTableRepository, PostgresUserRepository,
+};
 use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -152,7 +154,11 @@ async fn test_update_table_title(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_update_table_description(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table("table1", GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table("table1", GM_ID)
+        .build()
+        .await;
     let repo = PostgresTableRepository::new(pool.clone());
     let table1 = env.seeded.tables.get("table1").unwrap();
 
@@ -162,16 +168,25 @@ async fn test_update_table_description(pool: PgPool) {
         ..Default::default()
     };
 
-    repo.update(&update_data).await.expect("Failed to update table");
+    repo.update(&update_data)
+        .await
+        .expect("Failed to update table");
 
-    let get_command = GetTableCommand { id: Some(table1.id), ..Default::default() };
+    let get_command = GetTableCommand {
+        id: Some(table1.id),
+        ..Default::default()
+    };
     let found_tables = repo.read(&get_command).await.unwrap();
     assert_eq!(found_tables[0].description, "New Description");
 }
 
 #[sqlx::test]
 async fn test_update_table_slots(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table("table1", GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_table("table1", GM_ID)
+        .build()
+        .await;
     let repo = PostgresTableRepository::new(pool.clone());
     let table1 = env.seeded.tables.get("table1").unwrap();
 
@@ -181,9 +196,14 @@ async fn test_update_table_slots(pool: PgPool) {
         ..Default::default()
     };
 
-    repo.update(&update_data).await.expect("Failed to update table");
+    repo.update(&update_data)
+        .await
+        .expect("Failed to update table");
 
-    let get_command = GetTableCommand { id: Some(table1.id), ..Default::default() };
+    let get_command = GetTableCommand {
+        id: Some(table1.id),
+        ..Default::default()
+    };
     let found_tables = repo.read(&get_command).await.unwrap();
     assert_eq!(found_tables[0].player_slots, 10);
 }
@@ -217,7 +237,10 @@ async fn test_delete_table(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_delete_table_not_found(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .build()
+        .await;
     let repo = PostgresTableRepository::new(pool.clone());
     let gm = env.seeded.users.get(GM_ID).unwrap();
 
@@ -247,7 +270,11 @@ async fn test_concurrent_table_operations(pool: PgPool) {
             let repo = repo.clone();
             let game_system_id = game_system.id;
             tokio::spawn(async move {
-                let mut cmd = CreateUserCommand { username: format!("user-{}", i), email: format!("user-{}@test.com", i), password: "password".to_string() };
+                let mut cmd = CreateUserCommand {
+                    username: format!("user-{}", i),
+                    email: format!("user-{}@test.com", i),
+                    password: "password".to_string(),
+                };
                 let user = user_repo.create(&mut cmd).await.unwrap();
                 let table_data = CreateTableCommand {
                     gm_id: user.id,

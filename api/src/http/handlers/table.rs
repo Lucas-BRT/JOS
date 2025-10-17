@@ -2,8 +2,9 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::http::StatusCode;
 use axum::{extract::*, routing::*};
+use chrono::Utc;
+use domain::entities::commands::session_commands::*;
 use domain::entities::commands::table_commands::*;
-use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{ApplicationError, Error};
@@ -61,8 +62,8 @@ pub async fn get_tables(
     _claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
     Query(search): Query<SearchTablesQuery>,
-) -> Result<(StatusCode, Json<Vec<Table>>)> {
-    let result = match search.search {
+) -> Result<(StatusCode, Json<Vec<TableListItem>>)> {
+    let tables = match search.search {
         Some(search_term) if !search_term.is_empty() => {
             // TODO: Implement search with filters
             app_state.table_service.get_all().await?
@@ -70,7 +71,47 @@ pub async fn get_tables(
         _ => app_state.table_service.get_all().await?,
     };
 
-    Ok((StatusCode::OK, Json(result)))
+    let mut response_items = Vec::new();
+
+    for table in tables {
+        let gm = app_state.user_service.find_by_id(&table.gm_id).await?;
+
+        // TODO: This is a placeholder. We need a GameSystemService to get the real name.
+        let game_system_name = "D&D 5e".to_string();
+
+        // TODO: This is a placeholder. We need a TableMemberService to get the real count.
+        let occupied_slots = 0;
+
+        let sessions = app_state
+            .session_service
+            .get(GetSessionCommand {
+                table_id: Some(table.id),
+                ..Default::default()
+            })
+            .await?;
+
+        let next_session = sessions
+            .iter()
+            .filter_map(|s| s.scheduled_for)
+            .filter(|scheduled_at| *scheduled_at > Utc::now())
+            .min();
+
+        response_items.push(TableListItem {
+            id: table.id,
+            title: table.title,
+            description: table.description,
+            game_system: game_system_name,
+            game_master: GameMasterInfo {
+                id: gm.id,
+                username: gm.username,
+            },
+            player_slots: table.player_slots as i32,
+            occupied_slots,
+            next_session,
+        });
+    }
+
+    Ok((StatusCode::OK, Json(response_items)))
 }
 
 #[utoipa::path(
