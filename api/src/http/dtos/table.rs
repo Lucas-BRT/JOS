@@ -10,13 +10,11 @@ use validator::Validate;
 pub struct CreateTableRequest {
     #[validate(length(min = 1, max = 100))]
     pub title: String,
-    #[validate(length(min = 1, max = 50))]
-    pub system: String,
+    pub system_id: Uuid,
     #[validate(length(max = 1000))]
     pub description: String,
     #[validate(range(min = 1, max = 20))]
     pub max_players: i32,
-    pub visibility: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]

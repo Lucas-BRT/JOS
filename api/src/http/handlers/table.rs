@@ -1,20 +1,14 @@
-use axum::{
-    Json, Router,
-    extract::{Path, Query, State},
-    http::StatusCode,
-    routing::{delete, get, post, put},
-};
-
-use std::sync::Arc;
-use uuid::Uuid;
-use validator::Validate;
-
 use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
+use axum::http::StatusCode;
+use axum::{extract::*, routing::*};
+use domain::entities::commands::table_commands::CreateTableCommand;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
-use domain::entities::commands::table_commands::CreateTableCommand;
+use std::sync::Arc;
+use uuid::Uuid;
+use validator::Validate;
 
 #[utoipa::path(
     post,
@@ -40,16 +34,14 @@ pub async fn create_table(
     let mut command = CreateTableCommand {
         title: payload.title,
         description: payload.description,
-        slots: payload.max_players as u32, // DTO uses i32, command uses u32
-        game_system_id: Uuid::new_v4(), // Placeholder for payload.system
+        slots: payload.max_players as u32,
+        game_system_id: payload.system_id,
         gm_id: claims.0.sub,
     };
 
     let table = app_state.table_service.create_table(&mut command).await?;
 
-    let response = CreateTableResponse {
-        id: table.id,
-    };
+    let response = CreateTableResponse { id: table.id };
 
     Ok((StatusCode::CREATED, Json(response)))
 }

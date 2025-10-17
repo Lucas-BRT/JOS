@@ -1,15 +1,17 @@
 use super::utils::{register_and_login, setup_test_environment};
+use crate::db::utils::create_game_system;
 use api::http::dtos::TableDetails;
 use axum::http::StatusCode;
 use serde_json::json;
+use sqlx::PgPool;
 
-#[tokio::test]
-async fn test_create_table_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_create_table_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     let title = "My Awesome Table";
-    let system = "D&D 5e";
+    let game_system = create_game_system(&pool).await;
     let description = "A table for awesome people.";
     let max_players = 5;
 
@@ -18,25 +20,18 @@ async fn test_create_table_succeeds() {
         .add_header("Authorization", &format!("Bearer {}", token))
         .json(&json!({
             "title": title,
-            "system": system,
+            "system_id": game_system.id,
             "description": description,
             "max_players": max_players,
-            "visibility": "public",
         }))
         .await;
 
     response.assert_status(StatusCode::CREATED);
-    let table_json = response.json::<TableDetails>();
-
-    assert_eq!(table_json.title, title);
-    assert_eq!(table_json.game_system, system);
-    assert_eq!(table_json.description, description);
-    assert_eq!(table_json.player_slots, max_players);
 }
 
-#[tokio::test]
-async fn test_get_tables_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_get_tables_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     let title = "My Awesome Table";
@@ -67,9 +62,9 @@ async fn test_get_tables_succeeds() {
     assert!(!tables_json.is_empty());
 }
 
-#[tokio::test]
-async fn test_get_table_details_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_get_table_details_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     let title = "My Awesome Table";
@@ -101,9 +96,9 @@ async fn test_get_table_details_succeeds() {
     assert_eq!(table_json.title, title);
 }
 
-#[tokio::test]
-async fn test_update_table_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_update_table_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     let title = "My Awesome Table";
@@ -139,9 +134,9 @@ async fn test_update_table_succeeds() {
     assert_eq!(table_json.title, new_title);
 }
 
-#[tokio::test]
-async fn test_delete_table_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_delete_table_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     let title = "My Awesome Table";

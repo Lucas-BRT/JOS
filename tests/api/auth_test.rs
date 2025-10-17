@@ -2,17 +2,18 @@ use super::utils::*;
 use api::http::dtos::UserResponse;
 use axum::http::StatusCode;
 use serde_json::json;
+use sqlx::PgPool;
 use uuid::Uuid;
 
-#[tokio::test]
-async fn test_register_and_login() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_register_and_login(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     register_and_login(&server).await;
 }
 
-#[tokio::test]
-async fn test_me() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_me(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     // Test me
@@ -29,9 +30,9 @@ async fn test_me() {
     assert!(!user.username.is_empty());
 }
 
-#[tokio::test]
-async fn test_logout() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_logout(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     // Test logout
@@ -43,26 +44,26 @@ async fn test_logout() {
     response.assert_status(StatusCode::OK);
 }
 
-#[tokio::test]
-async fn test_refresh() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
-    let (token, refresh_token) = register_and_login_with_refresh(&server).await;
+#[sqlx::test]
+async fn test_refresh(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let token = register_and_login_with_refresh(&server).await;
 
     // Test refresh
     let response = server
         .post("/v1/auth/refresh")
-        .add_header("Authorization", &format!("Bearer {}", token))
+        .add_header("Authorization", &format!("Bearer {}", token.jwt))
         .json(&json!({
-            "refresh_token": refresh_token
+            "refresh_token": token.refresh
         }))
         .await;
 
     response.assert_status(StatusCode::OK);
 }
 
-#[tokio::test]
-async fn test_login_wrong_password() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_login_wrong_password(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
 
     let username = Uuid::new_v4().to_string();
     let email = format!("{}@example.com", username);
@@ -91,9 +92,9 @@ async fn test_login_wrong_password() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn test_login_non_existent_user() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_login_non_existent_user(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
 
     // Attempt login with a non-existent email
     let response = server
@@ -107,9 +108,9 @@ async fn test_login_non_existent_user() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn test_me_no_token() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_me_no_token(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
 
     // Attempt to access /me without a token
     let response = server.get("/v1/auth/me").await;
@@ -117,9 +118,9 @@ async fn test_me_no_token() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn test_me_invalid_token() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_me_invalid_token(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
 
     // Attempt to access /me with an invalid token
     let response = server
@@ -130,15 +131,15 @@ async fn test_me_invalid_token() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn test_refresh_after_logout() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
-    let (token, refresh_token) = register_and_login_with_refresh(&server).await;
+#[sqlx::test]
+async fn test_refresh_after_logout(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let token = register_and_login_with_refresh(&server).await;
 
     // Logout
     server
         .post("/v1/auth/logout")
-        .add_header("Authorization", &format!("Bearer {}", token))
+        .add_header("Authorization", &format!("Bearer {}", token.jwt))
         .await
         .assert_status(StatusCode::OK);
 
@@ -146,16 +147,16 @@ async fn test_refresh_after_logout() {
     let response = server
         .post("/v1/auth/refresh")
         .json(&json!({
-            "refresh_token": refresh_token
+            "refresh_token": token.refresh
         }))
         .await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-#[tokio::test]
-async fn test_update_profile_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_update_profile_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let token = register_and_login(&server).await;
 
     // 2. Update Profile
@@ -186,9 +187,9 @@ async fn test_update_profile_succeeds() {
     assert_eq!(user_json.email, new_email);
 }
 
-#[tokio::test]
-async fn test_change_password_succeeds() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_change_password_succeeds(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let new_password = "NewPassword456!";
 
     // Register and get token
@@ -219,9 +220,9 @@ async fn test_change_password_succeeds() {
     login_response.assert_status(StatusCode::OK);
 }
 
-#[tokio::test]
-async fn test_change_password_wrong_current_password() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_change_password_wrong_current_password(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
     let new_password = "NewPassword456!";
 
     // Register and get token
@@ -241,9 +242,9 @@ async fn test_change_password_wrong_current_password() {
     response.assert_status(StatusCode::FORBIDDEN);
 }
 
-#[tokio::test]
-async fn test_change_password_mismatched_new_password() {
-    let (server, _pool, _mock_server) = setup_test_environment().await;
+#[sqlx::test]
+async fn test_change_password_mismatched_new_password(pool: PgPool) {
+    let (server, _mock_server) = setup_test_environment(&pool).await;
 
     // Register and get token
     let (token, _, current_password) = register_user_and_get_token(&server).await;

@@ -2,33 +2,18 @@ use api::http::dtos::LoginResponse;
 use axum::http::StatusCode;
 use axum_test::TestServer;
 use jos::api::http::handlers::create_router;
-use jos::infrastructure::{
-    config::AppConfig, setup::database::setup_database, state::setup_app_state,
-};
+use jos::infrastructure::{config::AppConfig, state::setup_app_state};
 use serde_json::json;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 use wiremock::MockServer;
 
-pub async fn setup_test_environment() -> (TestServer, PgPool, MockServer) {
+pub async fn setup_test_environment(db: &PgPool) -> (TestServer, MockServer) {
     dotenvy::dotenv().ok();
     let mock_server = MockServer::start().await;
-    let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    let db = setup_database(&database_url)
-        .await
-        .expect("failed to setup database");
 
-    // Run migrations
-    sqlx::migrate!("./migrations")
-        .run(&db)
-        .await
-        .expect("failed to run migrations");
-
-    let config = AppConfig {
-        database_url,
-        ..Default::default()
-    };
+    let config = AppConfig::default();
 
     let app_state = setup_app_state(&db, &config)
         .await
@@ -38,7 +23,7 @@ pub async fn setup_test_environment() -> (TestServer, PgPool, MockServer) {
     let server = create_router(app_state_arc.clone());
     let test_server = TestServer::new(server).unwrap();
 
-    (test_server, db, mock_server)
+    (test_server, mock_server)
 }
 
 pub async fn register_and_login(server: &TestServer) -> String {
@@ -67,7 +52,12 @@ pub async fn register_and_login(server: &TestServer) -> String {
     login_json.token
 }
 
-pub async fn register_and_login_with_refresh(server: &TestServer) -> (String, String) {
+pub struct JwtAndRefresh {
+    pub jwt: String,
+    pub refresh: String,
+}
+
+pub async fn register_and_login_with_refresh(server: &TestServer) -> JwtAndRefresh {
     let username = Uuid::new_v4().to_string();
     let email = format!("{}@example.com", username);
     let password = "Password123!";
@@ -90,7 +80,10 @@ pub async fn register_and_login_with_refresh(server: &TestServer) -> (String, St
         .await;
 
     let login_json = login_response.json::<LoginResponse>();
-    (login_json.token, login_json.refresh_token)
+    JwtAndRefresh {
+        jwt: login_json.token,
+        refresh: login_json.refresh_token,
+    }
 }
 
 pub async fn register_user_and_get_token(server: &TestServer) -> (String, String, String) {
