@@ -5,9 +5,11 @@ use axum::{extract::*, routing::*};
 use chrono::Utc;
 use domain::entities::commands::session_commands::*;
 use domain::entities::commands::table_commands::*;
+use domain::entities::TableStatus;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{ApplicationError, Error};
+use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -63,24 +65,18 @@ pub async fn get_tables(
     State(app_state): State<Arc<AppState>>,
     Query(search): Query<SearchTablesQuery>,
 ) -> Result<(StatusCode, Json<Vec<TableListItem>>)> {
-    let tables = match search.search {
-        Some(search_term) if !search_term.is_empty() => {
-            // TODO: Implement search with filters
-            app_state.table_service.get_all().await?
-        }
-        _ => app_state.table_service.get_all().await?,
-    };
+    let tables = app_state.table_service.get(&GetTableCommand {
+        search_term: search.search,
+        ..Default::default()
+    }).await?;
 
     let mut response_items = Vec::new();
 
     for table in tables {
         let gm = app_state.user_service.find_by_id(&table.gm_id).await?;
+        let game_system = app_state.game_system_service.find_by_id(table.game_system_id).await?;
 
-        // TODO: This is a placeholder. We need a GameSystemService to get the real name.
-        let game_system_name = "D&D 5e".to_string();
-
-        // TODO: This is a placeholder. We need a TableMemberService to get the real count.
-        let occupied_slots = 0;
+        let occupied_slots = app_state.table_member_service.find_by_table_id(&table.id).await?.len() as i32;
 
         let sessions = app_state
             .session_service
@@ -100,7 +96,7 @@ pub async fn get_tables(
             id: table.id,
             title: table.title,
             description: table.description,
-            game_system: game_system_name,
+            game_system: game_system.name, // Use the actual game system name
             game_master: GameMasterInfo {
                 id: gm.id,
                 username: gm.username,
@@ -135,23 +131,45 @@ pub async fn get_table_details(
 ) -> Result<Json<TableDetails>> {
     let table = app_state.table_service.find_by_id(&table_id).await?;
     let game_master = app_state.user_service.find_by_id(&table.gm_id).await?;
+    let game_system = app_state.game_system_service.find_by_id(table.game_system_id).await?;
+    let table_members = app_state.table_member_service.find_by_table_id(&table.id).await?;
 
-    // This is a placeholder for now
-    let game_system_name = "D&D 5e".to_string();
+    let mut players: Vec<PlayerInfo> = Vec::new();
+    for tm in table_members {
+        if let Some(user) = app_state.user_service.find_by_id(&tm.user_id).await.ok() {
+            players.push(PlayerInfo {
+                id: user.id,
+                username: user.username,
+            });
+        }
+    }
+
+    let sessions = app_state.session_service.get(GetSessionCommand {
+        table_id: Some(table.id),
+        ..Default::default()
+    }).await?;
+
+    let session_infos: Vec<SessionInfo> = sessions.into_iter().map(|s| SessionInfo {
+        id: s.id,
+        title: s.name,
+        description: s.description,
+        status: s.status.to_string(), // Assuming SessionStatus has a Display impl or can be converted to String
+        scheduled_at: s.scheduled_for.unwrap_or_default(), // Handle Option<Date>
+    }).collect();
 
     let response = TableDetails {
         id: table.id,
         title: table.title,
-        game_system: game_system_name,
+        game_system: game_system.name, // Use the actual game system name
         game_master: GameMasterInfo {
             id: game_master.id,
             username: game_master.username,
         },
         description: table.description,
         player_slots: table.player_slots as i32,
-        players: vec![],              // TODO: Implement player retrieval
-        status: "active".to_string(), // TODO: Map from table status
-        sessions: vec![],             // TODO: Implement session retrieval
+        players,
+        status: table.status.to_string(), // Map from table status
+        sessions: session_infos,
     };
 
     Ok(Json(response))
@@ -186,7 +204,7 @@ pub async fn update_table(
 
     let table = app_state.table_service.find_by_id(&table_id).await?;
     if table.gm_id != claims.0.sub {
-        return Err(Error::Application(ApplicationError::IncorrectPassword));
+        return Err(Error::Application(ApplicationError::Forbidden)); // Changed to Forbidden
     }
 
     let command = UpdateTableCommand {
@@ -198,6 +216,7 @@ pub async fn update_table(
             .system
             .map(|s| Uuid::parse_str(&s).unwrap_or_default())
             .into(),
+        status: payload.status.map(|s| TableStatus::from_str(&s).unwrap_or_default()).into(),
     };
 
     app_state.table_service.update(&command).await?;
@@ -207,21 +226,45 @@ pub async fn update_table(
         .user_service
         .find_by_id(&updated_table.gm_id)
         .await?;
-    let game_system_name = "D&D 5e".to_string(); // Placeholder
+    let game_system = app_state.game_system_service.find_by_id(updated_table.game_system_id).await?;
+    let table_members = app_state.table_member_service.find_by_table_id(&updated_table.id).await?;
+
+    let mut players: Vec<PlayerInfo> = Vec::new();
+    for tm in table_members {
+        if let Some(user) = app_state.user_service.find_by_id(&tm.user_id).await.ok() {
+            players.push(PlayerInfo {
+                id: user.id,
+                username: user.username,
+            });
+        }
+    }
+
+    let sessions = app_state.session_service.get(GetSessionCommand {
+        table_id: Some(updated_table.id),
+        ..Default::default()
+    }).await?;
+
+    let session_infos: Vec<SessionInfo> = sessions.into_iter().map(|s| SessionInfo {
+        id: s.id,
+        title: s.name,
+        description: s.description,
+        status: s.status.to_string(),
+        scheduled_at: s.scheduled_for.unwrap_or_default(),
+    }).collect();
 
     let response = TableDetails {
         id: updated_table.id,
         title: updated_table.title,
-        game_system: game_system_name,
+        game_system: game_system.name, // Use the actual game system name
         game_master: GameMasterInfo {
             id: game_master.id,
             username: game_master.username,
         },
         description: updated_table.description,
         player_slots: updated_table.player_slots as i32,
-        players: vec![],
-        status: "active".to_string(),
-        sessions: vec![],
+        players,
+        status: updated_table.status.to_string(), // Map from table status
+        sessions: session_infos,
     };
 
     Ok(Json(response))

@@ -1,5 +1,6 @@
 use domain::repositories::*;
 use domain::search::*;
+use domain::entities::commands::table_commands::GetTableCommand;
 use shared::Result;
 use std::sync::Arc;
 
@@ -37,7 +38,10 @@ impl SearchService {
         }
 
         if query.r#type.is_none() || query.r#type.as_ref().unwrap() == "tables" {
-            let tables = self.table_repository.search(&query.q).await?;
+            let tables = self.table_repository.read(&GetTableCommand {
+                search_term: Some(query.q.clone()),
+                ..Default::default()
+            }).await?;
             for table in tables {
                 results.push(SearchResult {
                     id: table.id.to_string(),

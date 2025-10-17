@@ -23,7 +23,7 @@ impl TableService {
         let table = self.find_by_id(&command.id).await?;
 
         if table.gm_id != command.gm_id {
-            return Err(Error::Application(ApplicationError::InvalidCredentials));
+            return Err(Error::Application(ApplicationError::Forbidden));
         }
 
         self.table_repository.delete(command).await

@@ -80,6 +80,8 @@ pub enum ApplicationError {
     InvalidCredentials,
     #[error("Incorrect password")]
     IncorrectPassword,
+    #[error("Forbidden")]
+    Forbidden, // Add this line
     #[error("Invalid input: {0}")]
     InvalidInput(String),
     #[error("Service unavailable: {0}")]
@@ -94,6 +96,9 @@ impl IntoResponse for ApplicationError {
             }
             ApplicationError::IncorrectPassword => {
                 (StatusCode::FORBIDDEN, "Incorrect password".to_string())
+            }
+            ApplicationError::Forbidden => { // Add this match arm
+                (StatusCode::FORBIDDEN, "Forbidden".to_string())
             }
             ApplicationError::InvalidInput(error) => (StatusCode::BAD_REQUEST, error),
             ApplicationError::ServiceUnavailable(error) => (StatusCode::SERVICE_UNAVAILABLE, error),

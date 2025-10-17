@@ -2,6 +2,7 @@ use domain::entities::*;
 use domain::repositories::GameSystemRepository;
 use shared::Result;
 use std::sync::Arc;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct GameSystemService {
@@ -29,5 +30,16 @@ impl GameSystemService {
 
     pub async fn delete(&self, command: &mut DeleteGameSystemCommand) -> Result<GameSystem> {
         self.game_system_repository.delete(command).await
+    }
+
+    pub async fn find_by_id(&self, id: Uuid) -> Result<GameSystem> {
+        self.game_system_repository
+            .find_by_id(id)
+            .await?
+            .ok_or_else(|| {
+                shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(
+                    format!("GameSystem not found: {}", id),
+                ))
+            })
     }
 }

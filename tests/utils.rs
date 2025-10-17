@@ -3,13 +3,9 @@ use axum_test::TestServer;
 use chrono::Duration;
 use dotenvy::dotenv;
 use jos::{
-    application::*,
-    domain::auth::Authenticator,
-    domain::entities::*,
-    infrastructure::{
-        config::AppConfig, persistence::postgres::repositories::*, security::*,
-        setup::environment::Environment, state::AppState,
-    },
+    application::{auth_service::AuthService, game_system_service::GameSystemService, password_service::PasswordService, search_service::SearchService, session_service::SessionService, table_member_service::TableMemberService, table_request_service::TableRequestService, table_service::TableService, user_service::UserService},
+    domain::{auth::Authenticator, entities::*},
+    infrastructure::{config::AppConfig, persistence::postgres::repositories::{PostgresGameSystemRepository, PostgresRefreshTokenRepository, PostgresSessionRepository, PostgresTableMemberRepository, PostgresTableRepository, PostgresTableRequestRepository, PostgresUserRepository}, security::*, setup::environment::Environment, state::AppState},
 };
 use serde_json::json;
 use sqlx::PgPool;
@@ -146,6 +142,10 @@ impl TestEnvironmentBuilder {
         let game_system_repo = Arc::new(PostgresGameSystemRepository::new(self.pool.clone()));
         let game_system_service = GameSystemService::new(game_system_repo);
 
+        // Table member service
+        let table_member_repo = Arc::new(PostgresTableMemberRepository::new(self.pool.clone()));
+        let table_member_service = TableMemberService::new(table_member_repo);
+
         let state = Arc::new(AppState {
             config: config.clone(),
             user_service: user_service.clone(),
@@ -155,6 +155,8 @@ impl TestEnvironmentBuilder {
             search_service,
             auth_service: auth_service.clone(),
             password_service,
+            game_system_service: game_system_service.clone(),
+            table_member_service: table_member_service.clone(), // Add this line
         });
 
         let server = TestServer::new(jos::api::http::handlers::create_router(state.clone()))

@@ -1,5 +1,6 @@
 use crate::utils::{TestEnvironmentBuilder, register_and_login};
 use api::http::dtos::table::*;
+use domain::entities::CreateTableMemberCommand;
 use axum::http::StatusCode;
 use sqlx::PgPool;
 
@@ -46,6 +47,7 @@ async fn test_get_tables_succeeds(pool: PgPool) {
 
     let gm = env.seeded.users.get(GM_USER_ID).unwrap();
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let game_system = env.seeded.game_systems.get("default").unwrap(); // Get the seeded game system
     let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
 
     let response = env
@@ -64,6 +66,34 @@ async fn test_get_tables_succeeds(pool: PgPool) {
     assert_eq!(table_item.title, table.title);
     assert_eq!(table_item.game_master.id, gm.id);
     assert_eq!(table_item.player_slots, table.player_slots as i32);
+    assert_eq!(table_item.game_system, game_system.name); // Assert the game system name
+    assert_eq!(table_item.occupied_slots, 0); // No players added yet
+}
+
+#[sqlx::test]
+async fn test_get_tables_with_search_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_table("table1", GM_USER_ID)
+        .with_table("another_table", GM_USER_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let table1 = env.seeded.tables.get("table1").unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    let response = env
+        .server
+        .get("/v1/tables?search=table1")
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .await;
+
+    response.assert_status_ok();
+
+    let tables_json = response.json::<Vec<TableListItem>>();
+    assert_eq!(tables_json.len(), 1);
+    assert_eq!(tables_json[0].id, table1.id);
 }
 
 #[sqlx::test]
@@ -88,6 +118,64 @@ async fn test_get_table_details_succeeds(pool: PgPool) {
     let table_json = response.json::<TableDetails>();
     assert_eq!(table_json.title, table.title);
     assert_eq!(table_json.id, table.id);
+}
+
+#[sqlx::test]
+async fn test_get_table_details_game_system_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let game_system = env.seeded.game_systems.get("default").unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    let response = env
+        .server
+        .get(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .await;
+
+    response.assert_status_ok();
+    let table_json = response.json::<TableDetails>();
+    assert_eq!(table_json.game_system, game_system.name);
+}
+
+#[sqlx::test]
+async fn test_get_table_details_players_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_user(PLAYER_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let player = env.seeded.users.get(PLAYER_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    // Add player to the table
+    let create_table_member_command = CreateTableMemberCommand {
+        table_id: table.id,
+        user_id: player.id,
+    };
+    env.state.table_member_service.create(create_table_member_command).await.unwrap();
+
+    let response = env
+        .server
+        .get(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .await;
+
+    response.assert_status_ok();
+    let table_json = response.json::<TableDetails>();
+    assert_eq!(table_json.players.len(), 1);
+    assert_eq!(table_json.players[0].id, player.id);
+    assert_eq!(table_json.players[0].username, player.username);
 }
 
 #[sqlx::test]
@@ -125,6 +213,85 @@ async fn test_update_table_succeeds(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn test_update_table_game_system_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    let new_game_system = env.seeded.game_systems.get("default").unwrap(); // Assuming "default" is a valid game system
+
+    let req = UpdateTableRequest {
+        title: None,
+        description: None,
+        max_players: None,
+        system: Some(new_game_system.id.to_string()), // Update game system
+        visibility: None,
+        status: None,
+    };
+
+    let response = env
+        .server
+        .put(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .json(&req)
+        .await;
+
+    response.assert_status_ok();
+    let table_json = response.json::<TableDetails>();
+    assert_eq!(table_json.game_system, new_game_system.name);
+}
+
+#[sqlx::test]
+async fn test_update_table_players_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_user(PLAYER_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let player = env.seeded.users.get(PLAYER_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    // Add player to the table
+    let create_table_member_command = CreateTableMemberCommand {
+        table_id: table.id,
+        user_id: player.id,
+    };
+    env.state.table_member_service.create(create_table_member_command).await.unwrap();
+
+    let req = UpdateTableRequest {
+        title: Some("Updated Title".to_string()),
+        description: None,
+        max_players: None,
+        system: None,
+        visibility: None,
+        status: None,
+    };
+
+    let response = env
+        .server
+        .put(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .json(&req)
+        .await;
+
+    response.assert_status_ok();
+    let table_json = response.json::<TableDetails>();
+    assert_eq!(table_json.players.len(), 1);
+    assert_eq!(table_json.players[0].id, player.id);
+    assert_eq!(table_json.players[0].username, player.username);
+}
+
+#[sqlx::test]
 async fn test_update_table_fails_for_non_gm(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool)
         .with_user(GM_USER_ID)
@@ -157,6 +324,28 @@ async fn test_update_table_fails_for_non_gm(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn test_delete_table_fails_for_non_gm(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_user(PLAYER_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .build()
+        .await;
+
+    let player = env.seeded.users.get(PLAYER_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let token = register_and_login(&env.server, &player.email, TEST_PASSWORD).await;
+
+    let response = env
+        .server
+        .delete(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .await;
+
+    response.assert_status(StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test]
 async fn test_delete_table_succeeds(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool)
         .with_user(GM_USER_ID)
@@ -183,5 +372,34 @@ async fn test_delete_table_succeeds(pool: PgPool) {
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
-    get_response.assert_status(StatusCode::NOT_FOUND);
+        get_response.assert_status(StatusCode::NOT_FOUND);
 }
+
+#[sqlx::test]
+async fn test_get_table_details_status_and_sessions_succeeds(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(GM_USER_ID)
+        .with_table(TABLE_ID, GM_USER_ID)
+        .with_session("test_session", TABLE_ID)
+        .build()
+        .await;
+
+    let gm = env.seeded.users.get(GM_USER_ID).unwrap();
+    let table = env.seeded.tables.get(TABLE_ID).unwrap();
+    let session = env.seeded.sessions.get("test_session").unwrap();
+    let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
+
+    let response = env
+        .server
+        .get(&format!("/v1/tables/{}", table.id))
+        .add_header("Authorization", &format!("Bearer {}", token))
+        .await;
+
+    response.assert_status_ok();
+    let table_json = response.json::<TableDetails>();
+    assert_eq!(table_json.status, table.status.to_string());
+    assert_eq!(table_json.sessions.len(), 1);
+    assert_eq!(table_json.sessions[0].id, session.id);
+    assert_eq!(table_json.sessions[0].title, session.name);
+}
+

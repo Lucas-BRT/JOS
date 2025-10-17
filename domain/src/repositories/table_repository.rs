@@ -12,5 +12,4 @@ pub trait TableRepository: Send + Sync {
     async fn find_by_id(&self, id: &Uuid) -> Result<Option<Table>>;
     async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<Table>>;
     async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<Table>>;
-    async fn search(&self, query: &str) -> Result<Vec<Table>>;
 }

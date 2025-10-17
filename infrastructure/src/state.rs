@@ -1,13 +1,19 @@
 use crate::config::AppConfig;
 use crate::persistence::Db;
-use crate::persistence::postgres::repositories::*;
+use crate::persistence::postgres::repositories::{
+    PostgresGameSystemRepository, PostgresRefreshTokenRepository, PostgresSessionRepository,
+    PostgresTableRepository, PostgresTableMemberRepository, PostgresTableRequestRepository, PostgresUserRepository,
+};
 use crate::security::{BcryptPasswordProvider, JwtTokenProvider};
 use application::auth_service::AuthService;
+use application::game_system_service::GameSystemService;
 use application::password_service::PasswordService;
 use application::search_service::SearchService;
 use application::session_service::SessionService;
+use application::table_member_service::TableMemberService;
 use application::table_request_service::TableRequestService;
-use application::{table_service::TableService, user_service::UserService};
+use application::table_service::TableService;
+use application::user_service::UserService;
 use axum::extract::FromRef;
 use shared::Result;
 use std::sync::Arc;
@@ -23,6 +29,8 @@ pub struct AppState {
     pub search_service: SearchService,
     pub auth_service: AuthService,
     pub password_service: PasswordService,
+    pub game_system_service: GameSystemService,
+    pub table_member_service: TableMemberService,
 }
 
 impl FromRef<AppState> for AppConfig {
@@ -133,6 +141,16 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
     );
     info!("✅ Auth service initialized");
 
+    // Game System service
+    let game_system_repo = Arc::new(PostgresGameSystemRepository::new(database.clone()));
+    let game_system_service = GameSystemService::new(game_system_repo.clone());
+    info!("✅ Game System service initialized");
+
+    // Table member service
+    let table_member_repo = Arc::new(PostgresTableMemberRepository::new(database.clone()));
+    let table_member_service = TableMemberService::new(table_member_repo.clone());
+    info!("✅ Table member service initialized");
+
     // Create AppState
     let app_state = AppState {
         config: config.clone(),
@@ -143,6 +161,8 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         search_service,
         auth_service,
         password_service,
+        game_system_service,
+        table_member_service,
     };
 
     info!("🎉 Application setup completed successfully!");
