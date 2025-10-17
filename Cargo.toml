@@ -22,6 +22,7 @@ axum = { workspace = true, features = ["http2"] }
 dotenvy = { workspace = true }
 test-context = { workspace = true }
 async-trait = { workspace = true }
+chrono = { workspace = true }
 
 [workspace]
 members = ["api", "application", "domain", "infrastructure", "shared"]

@@ -10,3 +10,16 @@ pub mod table_member_service;
 pub mod table_request_service;
 pub mod table_service;
 pub mod user_service;
+
+pub use auth_service::*;
+pub use error::*;
+pub use game_system_service::*;
+pub use password_service::*;
+pub use search_service::*;
+pub use session_checkin_service::*;
+pub use session_intent_service::*;
+pub use session_service::*;
+pub use table_member_service::*;
+pub use table_request_service::*;
+pub use table_service::*;
+pub use user_service::*;

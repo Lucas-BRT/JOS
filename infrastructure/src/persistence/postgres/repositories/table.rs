@@ -7,6 +7,7 @@ use shared::Result;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
+#[derive(Clone)]
 pub struct PostgresTableRepository {
     pool: PgPool,
 }

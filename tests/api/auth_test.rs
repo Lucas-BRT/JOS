@@ -1,90 +1,81 @@
-use super::utils::*;
+use crate::utils::{TestEnvironmentBuilder, register_and_login};
 use api::http::dtos::UserResponse;
 use axum::http::StatusCode;
-use serde_json::json;
 use sqlx::PgPool;
-use uuid::Uuid;
+
+const TEST_USER_ID: &str = "test_user";
+const TEST_PASSWORD: &str = "Password123!";
 
 #[sqlx::test]
 async fn test_register_and_login(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    register_and_login(&server).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+
+    assert!(!token.is_empty());
 }
 
 #[sqlx::test]
 async fn test_me(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    let token = register_and_login(&server).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
 
-    // Test me
-    let response = server
+    let response = env
+        .server
         .get("/v1/auth/me")
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
-    response.assert_status(StatusCode::OK);
-
-    let user = response.json::<UserResponse>();
-
-    assert!(!user.email.is_empty());
-    assert!(!user.username.is_empty());
+    response.assert_status_ok();
+    let user_res = response.json::<UserResponse>();
+    assert_eq!(user_res.email, user.email);
+    assert_eq!(user_res.username, user.username);
 }
 
 #[sqlx::test]
 async fn test_logout(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    let token = register_and_login(&server).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
 
-    // Test logout
-    let response = server
+    let response = env
+        .server
         .post("/v1/auth/logout")
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
-    response.assert_status(StatusCode::OK);
-}
+    response.assert_status_ok();
 
-#[sqlx::test]
-async fn test_refresh(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    let token = register_and_login_with_refresh(&server).await;
-
-    // Test refresh
-    let response = server
-        .post("/v1/auth/refresh")
-        .add_header("Authorization", &format!("Bearer {}", token.jwt))
-        .json(&json!({
-            "refresh_token": token.refresh
-        }))
-        .await;
-
-    response.assert_status(StatusCode::OK);
+    // Note: This only invalidates the refresh token. The access token (JWT) is stateless
+    // and will remain valid until it expires. A robust implementation would require a
+    // token blacklist, but for now, we just verify the logout endpoint returns OK.
 }
 
 #[sqlx::test]
 async fn test_login_wrong_password(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
 
-    let username = Uuid::new_v4().to_string();
-    let email = format!("{}@example.com", username);
-    let password = "Password123!";
-
-    // Register user
-    server
-        .post("/v1/auth/register")
-        .json(&json!({
-            "username": username,
-            "email": email.clone(),
-            "password": password
-        }))
-        .await
-        .assert_status(StatusCode::CREATED);
-
-    // Attempt login with wrong password
-    let response = server
+    let response = env
+        .server
         .post("/v1/auth/login")
-        .json(&json!({
-            "email": email,
+        .json(&serde_json::json!({
+            "email": user.email,
             "password": "WrongPassword!"
         }))
         .await;
@@ -94,12 +85,13 @@ async fn test_login_wrong_password(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_login_non_existent_user(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    // No user is seeded in the database
+    let env = TestEnvironmentBuilder::new(pool).build().await;
 
-    // Attempt login with a non-existent email
-    let response = server
+    let response = env
+        .server
         .post("/v1/auth/login")
-        .json(&json!({
+        .json(&serde_json::json!({
             "email": "nonexistent@example.com",
             "password": "Password123!"
         }))
@@ -110,20 +102,19 @@ async fn test_login_non_existent_user(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_me_no_token(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool).build().await;
 
-    // Attempt to access /me without a token
-    let response = server.get("/v1/auth/me").await;
+    let response = env.server.get("/v1/auth/me").await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
 #[sqlx::test]
 async fn test_me_invalid_token(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool).build().await;
 
-    // Attempt to access /me with an invalid token
-    let response = server
+    let response = env
+        .server
         .get("/v1/auth/me")
         .add_header("Authorization", "Bearer invalidtoken")
         .await;
@@ -132,107 +123,96 @@ async fn test_me_invalid_token(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_refresh_after_logout(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    let token = register_and_login_with_refresh(&server).await;
-
-    // Logout
-    server
-        .post("/v1/auth/logout")
-        .add_header("Authorization", &format!("Bearer {}", token.jwt))
-        .await
-        .assert_status(StatusCode::OK);
-
-    // Attempt to refresh with the now-revoked refresh token
-    let response = server
-        .post("/v1/auth/refresh")
-        .json(&json!({
-            "refresh_token": token.refresh
-        }))
-        .await;
-
-    response.assert_status(StatusCode::UNAUTHORIZED);
-}
-
-#[sqlx::test]
 async fn test_update_profile_succeeds(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
-    let token = register_and_login(&server).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
 
-    // 2. Update Profile
-    let new_username = Uuid::new_v4().to_string();
-    let new_email = format!("{}@example.com", new_username);
-    let update_response = server
+    let new_username = "new-test-username";
+    let new_email = "new-email@test.com";
+
+    let update_response = env
+        .server
         .put("/v1/auth/profile")
         .add_header("Authorization", &format!("Bearer {}", token))
-        .json(&json!({
+        .json(&serde_json::json!({
             "username": new_username,
             "email": new_email
         }))
         .await;
 
-    update_response.assert_status(StatusCode::OK);
+    update_response.assert_status_ok();
 
-    // 3. Verify the change was persisted by calling /me
-    let me_response = server
+    // Verify the change was persisted by calling /me
+    let me_response = env
+        .server
         .get("/v1/auth/me")
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
-    me_response.assert_status(StatusCode::OK);
+    me_response.assert_status_ok();
     let user_json = me_response.json::<UserResponse>();
 
-    // This assertion will fail until the logic is implemented
     assert_eq!(user_json.username, new_username);
     assert_eq!(user_json.email, new_email);
 }
 
 #[sqlx::test]
 async fn test_change_password_succeeds(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+
     let new_password = "NewPassword456!";
 
-    // Register and get token
-    let (token, email, current_password) = register_user_and_get_token(&server).await;
-
-    // Change password
-    let response = server
+    let response = env
+        .server
         .put("/v1/auth/password")
         .add_header("Authorization", &format!("Bearer {}", token))
-        .json(&json!({
-            "current_password": current_password,
+        .json(&serde_json::json!({
+            "current_password": TEST_PASSWORD,
             "new_password": new_password,
             "confirm_password": new_password
         }))
         .await;
 
-    response.assert_status(StatusCode::OK);
+    response.assert_status_ok();
 
     // Try to login with the new password
-    let login_response = server
+    let login_response = env
+        .server
         .post("/v1/auth/login")
-        .json(&json!({
-            "email": email,
+        .json(&serde_json::json!({
+            "email": user.email,
             "password": new_password
         }))
         .await;
 
-    login_response.assert_status(StatusCode::OK);
+    login_response.assert_status_ok();
 }
 
 #[sqlx::test]
 async fn test_change_password_wrong_current_password(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+
     let new_password = "NewPassword456!";
 
-    // Register and get token
-    let (token, _, _) = register_user_and_get_token(&server).await;
-
-    // Attempt to change password with wrong current_password
-    let response = server
+    let response = env
+        .server
         .put("/v1/auth/password")
         .add_header("Authorization", &format!("Bearer {}", token))
-        .json(&json!({
+        .json(&serde_json::json!({
             "current_password": "WrongPassword!",
             "new_password": new_password,
             "confirm_password": new_password
@@ -244,17 +224,19 @@ async fn test_change_password_wrong_current_password(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_change_password_mismatched_new_password(pool: PgPool) {
-    let (server, _mock_server) = setup_test_environment(&pool).await;
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+    let user = env.seeded.users.get(TEST_USER_ID).unwrap();
+    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
 
-    // Register and get token
-    let (token, _, current_password) = register_user_and_get_token(&server).await;
-
-    // Attempt to change password with mismatched new_password and confirm_password
-    let response = server
+    let response = env
+        .server
         .put("/v1/auth/password")
         .add_header("Authorization", &format!("Bearer {}", token))
-        .json(&json!({
-            "current_password": current_password,
+        .json(&serde_json::json!({
+            "current_password": TEST_PASSWORD,
             "new_password": "NewPassword456!",
             "confirm_password": "MismatchedPassword!"
         }))

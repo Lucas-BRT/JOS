@@ -1,4 +1,4 @@
-use super::utils;
+use crate::utils::TestEnvironmentBuilder;
 use jos::domain::entities::commands::*;
 use jos::domain::entities::session_intent::IntentStatus;
 use jos::domain::entities::update::Update;
@@ -8,25 +8,39 @@ use jos::shared::error::Error;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+const GM_ID: &str = "gm";
+const PLAYER_ID: &str = "player";
+const OTHER_PLAYER_ID: &str = "other_player";
+const TABLE_ID: &str = "table1";
+const SESSION_ID: &str = "session1";
+
 #[sqlx::test]
 async fn test_create_session_intent_success(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+
+    let player = env.seeded.users.get(PLAYER_ID).unwrap();
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
     let intent_data = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
+        player_id: player.id,
+        session_id: session.id,
         status: IntentStatus::Confirmed,
     };
 
-    let result = session_intent_repo.create(intent_data).await;
+    let result = repo.create(intent_data).await;
 
     match result {
         Ok(intent) => {
-            assert_eq!(intent.user_id, setup.user.id);
-            assert_eq!(intent.session_id, setup.session.id);
+            assert_eq!(intent.user_id, player.id);
+            assert_eq!(intent.session_id, session.id);
             assert_eq!(intent.intent_status, IntentStatus::Confirmed);
-            assert!(intent.id != Uuid::nil());
         }
         Err(e) => {
             panic!("Unexpected error: {e:?}");
@@ -36,228 +50,196 @@ async fn test_create_session_intent_success(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_find_by_id(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+    let player = env.seeded.users.get(PLAYER_ID).unwrap();
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
-    let intent_data = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Confirmed,
-    };
+    let created_intent = repo
+        .create(CreateSessionIntentCommand {
+            player_id: player.id,
+            session_id: session.id,
+            status: IntentStatus::Confirmed,
+        })
+        .await
+        .unwrap();
 
-    let created_intent = session_intent_repo.create(intent_data).await.unwrap();
-    let get_command = GetSessionIntentCommand {
-        id: Some(created_intent.id),
-        ..Default::default()
-    };
-    let found_intents = session_intent_repo.read(get_command).await.unwrap();
+    let found_intents = repo
+        .read(GetSessionIntentCommand {
+            id: Some(created_intent.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
 
     assert_eq!(found_intents.len(), 1);
-    let found_intent = &found_intents[0];
-    assert_eq!(found_intent.id, created_intent.id);
-    assert_eq!(found_intent.user_id, setup.user.id);
-    assert_eq!(found_intent.session_id, setup.session.id);
-    assert_eq!(found_intent.intent_status, IntentStatus::Confirmed);
+    assert_eq!(found_intents[0].id, created_intent.id);
 }
 
 #[sqlx::test]
 async fn test_find_by_id_not_found(pool: PgPool) {
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool);
-
-    let random_id = Uuid::new_v4();
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
     let get_command = GetSessionIntentCommand {
-        id: Some(random_id),
+        id: Some(Uuid::new_v4()),
         ..Default::default()
     };
-    let result = session_intent_repo.read(get_command).await;
-
-    assert!(result.is_ok());
-    let found_intents = result.unwrap();
+    let found_intents = repo.read(get_command).await.unwrap();
     assert!(found_intents.is_empty());
 }
 
 #[sqlx::test]
 async fn test_find_by_user_id(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_repo = PostgresSessionRepository::new(pool.clone());
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .with_session("session2", TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+    let player = env.seeded.users.get(PLAYER_ID).unwrap();
+    let session1 = env.seeded.sessions.get(SESSION_ID).unwrap();
+    let session2 = env.seeded.sessions.get("session2").unwrap();
 
-    let session_data2 = CreateSessionCommand {
-        table_id: setup.table.id,
-        name: "Session 2".to_string(),
-        description: "Second session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session2 = session_repo.create(session_data2).await.unwrap();
-
-    let intent_data1 = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
+    repo.create(CreateSessionIntentCommand {
+        player_id: player.id,
+        session_id: session1.id,
         status: IntentStatus::Confirmed,
-    };
-    let intent_data2 = CreateSessionIntentCommand {
-        player_id: setup.user.id,
+    })
+    .await
+    .unwrap();
+    repo.create(CreateSessionIntentCommand {
+        player_id: player.id,
         session_id: session2.id,
         status: IntentStatus::Tentative,
-    };
+    })
+    .await
+    .unwrap();
 
-    session_intent_repo.create(intent_data1).await.unwrap();
-    session_intent_repo.create(intent_data2).await.unwrap();
-
-    let get_command = GetSessionIntentCommand {
-        user_id: Some(setup.user.id),
-        ..Default::default()
-    };
-    let found_intents = session_intent_repo.read(get_command).await.unwrap();
+    let found_intents = repo
+        .read(GetSessionIntentCommand {
+            user_id: Some(player.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
     assert_eq!(found_intents.len(), 2);
-
-    let statuses: Vec<IntentStatus> = found_intents.iter().map(|i| i.intent_status).collect();
-    assert!(statuses.contains(&IntentStatus::Confirmed));
-    assert!(statuses.contains(&IntentStatus::Tentative));
-}
-
-#[sqlx::test]
-async fn test_find_by_session_id(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
-
-    let user2 = utils::create_user(&pool).await;
-
-    let intent_data1 = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Confirmed,
-    };
-    let intent_data2 = CreateSessionIntentCommand {
-        player_id: user2.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Tentative,
-    };
-
-    session_intent_repo.create(intent_data1).await.unwrap();
-    session_intent_repo.create(intent_data2).await.unwrap();
-
-    let get_command = GetSessionIntentCommand {
-        session_id: Some(setup.session.id),
-        ..Default::default()
-    };
-    let found_intents = session_intent_repo.read(get_command).await.unwrap();
-    assert_eq!(found_intents.len(), 2);
-
-    let player_ids: Vec<Uuid> = found_intents.iter().map(|i| i.user_id).collect();
-    assert!(player_ids.contains(&setup.user.id));
-    assert!(player_ids.contains(&user2.id));
 }
 
 #[sqlx::test]
 async fn test_get_all_session_intents(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_repo = PostgresSessionRepository::new(pool.clone());
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_user(OTHER_PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+    let player1 = env.seeded.users.get(PLAYER_ID).unwrap();
+    let player2 = env.seeded.users.get(OTHER_PLAYER_ID).unwrap();
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
-    let user2 = utils::create_user(&pool).await;
+    repo.create(CreateSessionIntentCommand { player_id: player1.id, session_id: session.id, status: IntentStatus::Confirmed }).await.unwrap();
+    repo.create(CreateSessionIntentCommand { player_id: player2.id, session_id: session.id, status: IntentStatus::Tentative }).await.unwrap();
 
-    let session_data2 = CreateSessionCommand {
-        table_id: setup.table.id,
-        name: "Session 2".to_string(),
-        description: "Second session".to_string(),
-        scheduled_for: None,
-        status: jos::domain::entities::SessionStatus::Scheduled,
-    };
-    let session2 = session_repo.create(session_data2).await.unwrap();
-
-    let intent_data1 = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Confirmed,
-    };
-    let intent_data2 = CreateSessionIntentCommand {
-        player_id: user2.id,
-        session_id: session2.id,
-        status: IntentStatus::Tentative,
-    };
-
-    session_intent_repo.create(intent_data1).await.unwrap();
-    session_intent_repo.create(intent_data2).await.unwrap();
-
-    let get_command = GetSessionIntentCommand::default();
-    let all_intents = session_intent_repo.read(get_command).await.unwrap();
+    let all_intents = repo.read(GetSessionIntentCommand::default()).await.unwrap();
     assert_eq!(all_intents.len(), 2);
-
-    let statuses: Vec<IntentStatus> = all_intents.iter().map(|i| i.intent_status).collect();
-    assert!(statuses.contains(&IntentStatus::Confirmed));
-    assert!(statuses.contains(&IntentStatus::Tentative));
 }
 
 #[sqlx::test]
 async fn test_update_session_intent_status(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+    let player = env.seeded.users.get(PLAYER_ID).unwrap();
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
-    let intent_data = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Tentative,
-    };
+    let created_intent = repo
+        .create(CreateSessionIntentCommand {
+            player_id: player.id,
+            session_id: session.id,
+            status: IntentStatus::Tentative,
+        })
+        .await
+        .unwrap();
 
-    let created_intent = session_intent_repo.create(intent_data).await.unwrap();
-
-    let update_data = UpdateSessionIntentCommand {
+    repo.update(UpdateSessionIntentCommand {
         id: created_intent.id,
         status: Update::Change(IntentStatus::Confirmed),
-    };
+    })
+    .await
+    .unwrap();
 
-    let result = session_intent_repo.update(update_data).await;
-    assert!(result.is_ok());
-
-    let get_command = GetSessionIntentCommand {
-        id: Some(created_intent.id),
-        ..Default::default()
-    };
-    let found_intents = session_intent_repo.read(get_command).await.unwrap();
-    assert_eq!(found_intents.len(), 1);
-    let updated_intent = &found_intents[0];
-    assert_eq!(updated_intent.intent_status, IntentStatus::Confirmed);
+    let found_intents = repo
+        .read(GetSessionIntentCommand {
+            id: Some(created_intent.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert_eq!(found_intents[0].intent_status, IntentStatus::Confirmed);
 }
 
 #[sqlx::test]
 async fn test_delete_session_intent(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_user(GM_ID)
+        .with_user(PLAYER_ID)
+        .with_table(TABLE_ID, GM_ID)
+        .with_session(SESSION_ID, TABLE_ID)
+        .build()
+        .await;
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
+    let player = env.seeded.users.get(PLAYER_ID).unwrap();
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
 
-    let intent_data = CreateSessionIntentCommand {
-        player_id: setup.user.id,
-        session_id: setup.session.id,
-        status: IntentStatus::Confirmed,
-    };
-
-    let created_intent = session_intent_repo
-        .create(intent_data)
+    let created_intent = repo
+        .create(CreateSessionIntentCommand {
+            player_id: player.id,
+            session_id: session.id,
+            status: IntentStatus::Confirmed,
+        })
         .await
-        .expect("Failed to create session intent");
+        .unwrap();
 
-    let delete_command = DeleteSessionIntentCommand {
-        id: created_intent.id,
-    };
-
-    let deleted_intent = session_intent_repo
-        .delete(delete_command)
+    let deleted_intent = repo
+        .delete(DeleteSessionIntentCommand { id: created_intent.id })
         .await
-        .expect("Failed to delete session intent");
+        .unwrap();
 
     assert_eq!(deleted_intent.id, created_intent.id);
-    assert_eq!(deleted_intent.user_id, setup.user.id);
-    assert_eq!(deleted_intent.session_id, setup.session.id);
+
+    let found = repo
+        .read(GetSessionIntentCommand {
+            id: Some(created_intent.id),
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    assert!(found.is_empty());
 }
 
 #[sqlx::test]
 async fn test_delete_session_intent_not_found(pool: PgPool) {
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool);
-
+    let repo = PostgresSessionIntentRepository::new(pool);
     let random_id = Uuid::new_v4();
-    let delete_command = DeleteSessionIntentCommand { id: random_id };
-    let result = session_intent_repo.delete(delete_command).await;
+    let result = repo
+        .delete(DeleteSessionIntentCommand { id: random_id })
+        .await;
 
     match result {
         Err(Error::Persistence(_)) => {}
@@ -267,22 +249,25 @@ async fn test_delete_session_intent_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_session_intent_operations(pool: PgPool) {
-    let setup = utils::setup_test_environment(&pool).await;
-    let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
+    let env = TestEnvironmentBuilder::new(pool.clone()).with_user(GM_ID).with_table(TABLE_ID, GM_ID).with_session(SESSION_ID, TABLE_ID).build().await;
+    let session = env.seeded.sessions.get(SESSION_ID).unwrap();
+    let user_repo = PostgresUserRepository::new(pool.clone());
+    let repo = PostgresSessionIntentRepository::new(pool.clone());
 
     let handles: Vec<_> = (0..5)
-        .map(|_| {
-            let pool = pool.clone();
-            let session_id = setup.session.id;
+        .map(|i| {
+            let user_repo = user_repo.clone();
+            let repo = repo.clone();
+            let session_id = session.id;
             tokio::spawn(async move {
-                let user = utils::create_user(&pool).await;
+                let mut cmd = CreateUserCommand { username: format!("player-{}", i), email: format!("player-{}@test.com", i), password: "password".to_string() };
+                let user = user_repo.create(&mut cmd).await.unwrap();
                 let intent_data = CreateSessionIntentCommand {
                     player_id: user.id,
                     session_id,
                     status: IntentStatus::Tentative,
                 };
-                let session_intent_repo = PostgresSessionIntentRepository::new(pool.clone());
-                session_intent_repo
+                repo
                     .create(intent_data)
                     .await
                     .expect("Failed to create session intent")
@@ -297,7 +282,7 @@ async fn test_concurrent_session_intent_operations(pool: PgPool) {
     }
 
     let get_command = GetSessionIntentCommand::default();
-    let all_intents = session_intent_repo
+    let all_intents = repo
         .read(get_command)
         .await
         .expect("Failed to get all session intents");

@@ -14,6 +14,7 @@ use shared::error::Error;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
+#[derive(Clone)]
 pub struct PostgresSessionIntentRepository {
     pool: PgPool,
 }

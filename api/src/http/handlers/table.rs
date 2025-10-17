@@ -2,10 +2,11 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::http::StatusCode;
 use axum::{extract::*, routing::*};
-use domain::entities::commands::table_commands::CreateTableCommand;
+use domain::entities::commands::table_commands::*;
+use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
-use shared::error::Error;
+use shared::error::{ApplicationError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
@@ -31,7 +32,7 @@ pub async fn create_table(
         return Err(Error::Validation(validation_error));
     }
 
-    let mut command = CreateTableCommand {
+    let command = CreateTableCommand {
         title: payload.title,
         description: payload.description,
         slots: payload.max_players as u32,
@@ -39,7 +40,7 @@ pub async fn create_table(
         gm_id: claims.0.sub,
     };
 
-    let table = app_state.table_service.create_table(&mut command).await?;
+    let table = app_state.table_service.create(&command).await?;
 
     let response = CreateTableResponse { id: table.id };
 
@@ -58,12 +59,18 @@ pub async fn create_table(
 #[axum::debug_handler]
 pub async fn get_tables(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-    Query(_search): Query<SearchTablesQuery>,
-) -> Result<Json<Vec<TableListItem>>> {
-    // TODO: Implement table listing logic with search functionality
-    // For now, return empty list
-    Ok(Json(vec![]))
+    State(app_state): State<Arc<AppState>>,
+    Query(search): Query<SearchTablesQuery>,
+) -> Result<(StatusCode, Json<Vec<Table>>)> {
+    let result = match search.search {
+        Some(search_term) if !search_term.is_empty() => {
+            // TODO: Implement search with filters
+            app_state.table_service.get_all().await?
+        }
+        _ => app_state.table_service.get_all().await?,
+    };
+
+    Ok((StatusCode::OK, Json(result)))
 }
 
 #[utoipa::path(
@@ -82,25 +89,31 @@ pub async fn get_tables(
 #[axum::debug_handler]
 pub async fn get_table_details(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<TableDetails>> {
-    // TODO: Implement table details retrieval
-    // For now, return a placeholder response
-    Ok(Json(TableDetails {
-        id: table_id,
-        title: "Placeholder Table".to_string(),
-        game_system: "D&D 5e".to_string(),
+    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let game_master = app_state.user_service.find_by_id(&table.gm_id).await?;
+
+    // This is a placeholder for now
+    let game_system_name = "D&D 5e".to_string();
+
+    let response = TableDetails {
+        id: table.id,
+        title: table.title,
+        game_system: game_system_name,
         game_master: GameMasterInfo {
-            id: Uuid::new_v4(),
-            username: "placeholder".to_string(),
+            id: game_master.id,
+            username: game_master.username,
         },
-        description: "Placeholder description".to_string(),
-        player_slots: 4,
-        players: vec![],
-        status: "active".to_string(),
-        sessions: vec![],
-    }))
+        description: table.description,
+        player_slots: table.player_slots as i32,
+        players: vec![],              // TODO: Implement player retrieval
+        status: "active".to_string(), // TODO: Map from table status
+        sessions: vec![],             // TODO: Implement session retrieval
+    };
+
+    Ok(Json(response))
 }
 
 #[utoipa::path(
@@ -122,7 +135,7 @@ pub async fn get_table_details(
 #[axum::debug_handler]
 pub async fn update_table(
     claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
     Json(payload): Json<UpdateTableRequest>,
 ) -> Result<Json<TableDetails>> {
@@ -130,24 +143,47 @@ pub async fn update_table(
         return Err(Error::Validation(validation_error));
     }
 
-    // TODO: Implement table update logic
-    // For now, return a placeholder response
-    Ok(Json(TableDetails {
+    let table = app_state.table_service.find_by_id(&table_id).await?;
+    if table.gm_id != claims.0.sub {
+        return Err(Error::Application(ApplicationError::IncorrectPassword));
+    }
+
+    let command = UpdateTableCommand {
         id: table_id,
-        title: payload.title.unwrap_or("Updated Table".to_string()),
-        game_system: payload.system.unwrap_or("D&D 5e".to_string()),
+        title: payload.title.into(),
+        description: payload.description.into(),
+        slots: payload.max_players.map(|s| s as u32).into(),
+        game_system_id: payload
+            .system
+            .map(|s| Uuid::parse_str(&s).unwrap_or_default())
+            .into(),
+    };
+
+    app_state.table_service.update(&command).await?;
+
+    let updated_table = app_state.table_service.find_by_id(&table_id).await?;
+    let game_master = app_state
+        .user_service
+        .find_by_id(&updated_table.gm_id)
+        .await?;
+    let game_system_name = "D&D 5e".to_string(); // Placeholder
+
+    let response = TableDetails {
+        id: updated_table.id,
+        title: updated_table.title,
+        game_system: game_system_name,
         game_master: GameMasterInfo {
-            id: claims.0.sub,
-            username: "placeholder".to_string(),
+            id: game_master.id,
+            username: game_master.username,
         },
-        description: payload
-            .description
-            .unwrap_or("Updated description".to_string()),
-        player_slots: payload.max_players.unwrap_or(4),
+        description: updated_table.description,
+        player_slots: updated_table.player_slots as i32,
         players: vec![],
-        status: payload.status.unwrap_or("active".to_string()),
+        status: "active".to_string(),
         sessions: vec![],
-    }))
+    };
+
+    Ok(Json(response))
 }
 
 #[utoipa::path(
@@ -166,11 +202,17 @@ pub async fn update_table(
 )]
 #[axum::debug_handler]
 pub async fn delete_table(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<DeleteTableResponse>> {
-    // TODO: Implement table deletion logic
+    let command = DeleteTableCommand {
+        id: table_id,
+        gm_id: claims.0.sub,
+    };
+
+    app_state.table_service.delete(&command).await?;
+
     Ok(Json(DeleteTableResponse {
         message: format!("Table {} deleted successfully", table_id),
     }))

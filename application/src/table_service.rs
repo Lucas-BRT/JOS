@@ -44,15 +44,17 @@ impl TableService {
         })
     }
 
+    pub async fn get_all(&self) -> Result<Vec<Table>> {
+        self.table_repository
+            .read(&GetTableCommand::default())
+            .await
+    }
+
     pub async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
         self.table_repository.read(command).await
     }
 
     pub async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
         self.table_repository.update(command).await
-    }
-
-    pub async fn create_table(&self, command: &CreateTableCommand) -> Result<Table> {
-        self.table_repository.create(command).await
     }
 }
