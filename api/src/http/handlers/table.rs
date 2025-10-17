@@ -207,16 +207,37 @@ pub async fn update_table(
         return Err(Error::Application(ApplicationError::Forbidden)); // Changed to Forbidden
     }
 
+    let game_system_id = match payload.system {
+        Some(s) => {
+            let uuid = Uuid::parse_str(&s).map_err(|_|
+                Error::Application(ApplicationError::InvalidInput(
+                    "system must be a valid UUID".to_string(),
+                )),
+            )?;
+            Some(uuid).into()
+        }
+        None => None.into(),
+    };
+
+    let status = match payload.status {
+        Some(s) => {
+            let status = TableStatus::from_str(&s).map_err(|_|
+                Error::Application(ApplicationError::InvalidInput(
+                    "Invalid table status".to_string(),
+                )),
+            )?;
+            Some(status).into()
+        }
+        None => None.into(),
+    };
+
     let command = UpdateTableCommand {
         id: table_id,
         title: payload.title.into(),
         description: payload.description.into(),
         slots: payload.max_players.map(|s| s as u32).into(),
-        game_system_id: payload
-            .system
-            .map(|s| Uuid::parse_str(&s).unwrap_or_default())
-            .into(),
-        status: payload.status.map(|s| TableStatus::from_str(&s).unwrap_or_default()).into(),
+        game_system_id,
+        status,
     };
 
     app_state.table_service.update(&command).await?;

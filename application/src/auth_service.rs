@@ -170,4 +170,29 @@ impl Authenticator for AuthService {
             .delete_by_user(user_id)
             .await?)
     }
+
+    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()> {
+        let user = self
+            .user_repository
+            .find_by_id(&command.user_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound(format!(
+                    "User not found: {}",
+                    command.user_id
+                )))
+            })?;
+
+        if !self
+            .password_provider
+            .verify_hash(command.password.clone(), user.password.clone())
+            .await?
+        {
+            return Err(Error::Application(ApplicationError::IncorrectPassword));
+        }
+
+        self.user_repository.delete_by_id(&command.user_id).await?;
+
+        Ok(())
+    }
 }

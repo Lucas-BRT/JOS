@@ -12,8 +12,6 @@ pub struct UpdateProfileRequest {
     pub username: Option<String>,
     #[validate(email)]
     pub email: Option<String>,
-    #[validate(length(min = 6))]
-    pub password: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]

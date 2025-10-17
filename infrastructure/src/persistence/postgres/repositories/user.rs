@@ -193,6 +193,20 @@ impl UserRepository for PostgresUserRepository {
         Ok(user.into())
     }
 
+    async fn delete_by_id(&self, id: &Uuid) -> Result<()> {
+        sqlx::query!(
+            r#"DELETE FROM users
+            WHERE id = $1
+            "#,
+            id
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(())
+    }
+
     async fn search(&self, query: &str) -> Result<Vec<User>> {
         let search_pattern = format!("%{}%", query);
         let users = sqlx::query_as!(

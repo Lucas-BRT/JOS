@@ -36,6 +36,12 @@ pub struct DeleteUserCommand {
 }
 
 #[derive(Debug, Clone)]
+pub struct DeleteAccountCommand {
+    pub user_id: Uuid,
+    pub password: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct LoginUserCommand {
     pub email: String,
     pub password: String,

@@ -227,7 +227,7 @@ pub async fn update_profile(
         user_id: claims.0.sub,
         username: payload.username.clone().into(),
         email: payload.email.clone().into(),
-        password: payload.password.clone().into(),
+        ..Default::default()
     };
     let updated_user = app_state.user_service.update(&mut command).await?;
 
@@ -296,15 +296,21 @@ pub async fn change_password(
 )]
 #[axum::debug_handler]
 pub async fn delete_account(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
     Json(payload): Json<DeleteAccountRequest>,
 ) -> Result<Json<DeleteAccountResponse>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 
-    // TODO: Implement account deletion logic
+    let mut command = DeleteAccountCommand {
+        user_id: claims.0.sub,
+        password: payload.password,
+    };
+
+    app_state.auth_service.delete_account(&mut command).await?;
+
     Ok(Json(DeleteAccountResponse {
         message: "Account deleted successfully".to_string(),
     }))
