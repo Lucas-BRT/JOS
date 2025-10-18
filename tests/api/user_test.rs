@@ -1,7 +1,9 @@
 use crate::utils::{TestEnvironmentBuilder, register_and_login};
+use api::http::dtos::UserResponse;
 use axum::http::StatusCode;
 use sqlx::PgPool;
-use api::http::dtos::UserResponse;
+
+use uuid::Uuid;
 
 const TEST_USER_ID: &str = "test_user";
 const TEST_PASSWORD: &str = "Password123!";
@@ -39,9 +41,11 @@ async fn test_get_user_by_id_not_found(pool: PgPool) {
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
     let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
 
+    let non_existent_uuid = Uuid::new_v4();
+
     let response = env
         .server
-        .get("/v1/user/non_existent_id")
+        .get(&format!("/v1/user/{}", non_existent_uuid))
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
@@ -52,10 +56,7 @@ async fn test_get_user_by_id_not_found(pool: PgPool) {
 async fn test_get_user_by_id_unauthorized(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool).build().await;
 
-    let response = env
-        .server
-        .get(&format!("/v1/user/{}", "some_id"))
-        .await;
+    let response = env.server.get(&format!("/v1/user/{}", "some_id")).await;
 
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
