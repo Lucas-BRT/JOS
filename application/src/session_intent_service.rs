@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::SessionIntentRepository;
 use shared::Result;
+use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -32,9 +33,13 @@ impl SessionIntentService {
         };
         let session_intents = self.session_intent_repository.read(command).await?;
 
-        session_intents.into_iter().next().ok_or(Error::Domain(
-            shared::error::DomainError::EntityNotFound(format!("Session intent not found: {}", id)),
-        ))
+        session_intents
+            .into_iter()
+            .next()
+            .ok_or(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "SessionIntent",
+                entity_id: id.to_string(),
+            }))
     }
 
     pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<SessionIntent>> {

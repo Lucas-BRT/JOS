@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::GameSystemRepository;
 use shared::Result;
+use shared::error::{DomainError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -37,9 +38,10 @@ impl GameSystemService {
             .find_by_id(id)
             .await?
             .ok_or_else(|| {
-                shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(
-                    format!("GameSystem not found: {}", id),
-                ))
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "GameSystem",
+                    entity_id: id.to_string(),
+                })
             })
     }
 }

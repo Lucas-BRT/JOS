@@ -37,10 +37,10 @@ impl TableService {
 
         let tables = self.table_repository.read(&command).await?;
         tables.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound(format!(
-                "Table not found: {}",
-                table_id
-            )))
+            Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Table",
+                entity_id: table_id.to_string(),
+            })
         })
     }
 

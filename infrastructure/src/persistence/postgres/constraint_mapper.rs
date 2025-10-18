@@ -1,7 +1,6 @@
+use crate::persistence::postgres::RepositoryError;
 use sqlx::Error as SqlxError;
 use sqlx::error::DatabaseError;
-
-use crate::persistence::postgres::RepositoryError;
 
 const UNIQUE_CONSTRAINT_CODE: &str = "23505";
 const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";
@@ -68,7 +67,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "tables_gm_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for gm_id: {}", message);
-                RepositoryError::UserNotFound
+                let id = extract_field_from_error("gm_id").unwrap_or_else(|| "unknown".into());
+                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for gm_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
@@ -82,7 +82,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
                 tracing::debug!("Game system not found: {}", message);
                 let id =
                     extract_field_from_error("game_system_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::GameSystemNotFound(id)
+                RepositoryError::GameSystemNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for game_system_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
@@ -95,7 +95,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id)
+                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for table_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
@@ -107,7 +107,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "session_intents_user_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for session intent: {}", message);
-                RepositoryError::UserNotFound
+                let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
+                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in session intents: {}",
@@ -122,7 +123,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "session_intents_session_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("Session not found: {}", message);
-                RepositoryError::SessionNotFound
+                let id = extract_field_from_error("session_id").unwrap_or_else(|| "unknown".into());
+                RepositoryError::SessionNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for session_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
@@ -136,7 +138,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
                 tracing::debug!("Session intent not found: {}", message);
                 let id = extract_field_from_error("session_intent_id")
                     .unwrap_or_else(|| "unknown".into());
-                RepositoryError::SessionIntentNotFound(id)
+                RepositoryError::SessionIntentNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for session_intent_id: {}", message);
                 RepositoryError::ForeignKeyViolation {
@@ -148,7 +150,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "table_requests_user_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for table request: {}", message);
-                RepositoryError::UserNotFound
+                let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
+                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in table requests: {}",
@@ -164,7 +167,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table request: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id)
+                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for table_id in table requests: {}",
@@ -180,7 +183,7 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table member: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id)
+                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for table_id in table members: {}",
@@ -195,7 +198,8 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         "table_members_user_id_fkey" => {
             if is_referenced_not_found {
                 tracing::debug!("User not found for table member: {}", message);
-                RepositoryError::UserNotFound
+                let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
+                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in table members: {}",

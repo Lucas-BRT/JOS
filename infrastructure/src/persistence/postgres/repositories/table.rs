@@ -4,6 +4,7 @@ use domain::entities::commands::*;
 use domain::entities::{Table, TableStatus, Update};
 use domain::repositories::TableRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -115,9 +116,9 @@ impl TableRepository for PostgresTableRepository {
             && !has_game_system_update
             && !has_status_update
         {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let title_value = match &command.title {

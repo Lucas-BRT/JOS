@@ -181,9 +181,9 @@ pub async fn update_table(
     let game_system_id = match payload.system {
         Some(s) => {
             let uuid = Uuid::parse_str(&s).map_err(|_| {
-                Error::Application(ApplicationError::InvalidInput(
-                    "system must be a valid UUID".to_string(),
-                ))
+                Error::Application(ApplicationError::InvalidInput {
+                    message: "system must be a valid UUID".to_string(),
+                })
             })?;
             Some(uuid).into()
         }
@@ -193,9 +193,9 @@ pub async fn update_table(
     let status = match payload.status {
         Some(s) => {
             let status = TableStatus::from_str(&s).map_err(|_| {
-                Error::Application(ApplicationError::InvalidInput(
-                    "Invalid table status".to_string(),
-                ))
+                Error::Application(ApplicationError::InvalidInput {
+                    message: "Invalid table status".to_string(),
+                })
             })?;
             Some(status).into()
         }

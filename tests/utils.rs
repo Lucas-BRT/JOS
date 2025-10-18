@@ -3,24 +3,11 @@ use axum_test::TestServer;
 use chrono::Duration;
 use dotenvy::dotenv;
 use jos::{
-    application::{
-        auth_service::AuthService, game_system_service::GameSystemService,
-        password_service::PasswordService, search_service::SearchService,
-        session_service::SessionService, table_member_service::TableMemberService,
-        table_request_service::TableRequestService, table_service::TableService,
-        user_service::UserService,
-    },
+    application::*,
     domain::{auth::Authenticator, entities::*},
     infrastructure::{
-        config::AppConfig,
-        persistence::postgres::repositories::{
-            PostgresGameSystemRepository, PostgresRefreshTokenRepository,
-            PostgresSessionRepository, PostgresTableMemberRepository, PostgresTableRepository,
-            PostgresTableRequestRepository, PostgresUserRepository,
-        },
-        security::*,
-        setup::environment::Environment,
-        state::AppState,
+        config::AppConfig, persistence::postgres::repositories::*, security::*,
+        setup::environment::Environment, state::AppState,
     },
 };
 use serde_json::json;

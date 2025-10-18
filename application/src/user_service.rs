@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::UserRepository;
 use shared::Result;
+use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -26,10 +27,10 @@ impl UserService {
     pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
         let users = self.user_repository.find_by_id(id).await?;
         users.into_iter().next().ok_or_else(|| {
-            Error::Domain(shared::error::DomainError::EntityNotFound(format!(
-                "User not found: {}",
-                id
-            )))
+            Error::Domain(DomainError::EntityNotFound {
+                entity_type: "User",
+                entity_id: id.to_string(),
+            })
         })
     }
 

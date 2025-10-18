@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::TableRequestRepository;
 use shared::Result;
+use shared::error::{DomainError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -31,10 +32,10 @@ impl TableRequestService {
         };
         let table_requests = self.table_request_repository.read(command).await?;
         table_requests.into_iter().next().ok_or_else(|| {
-            shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(format!(
-                "Table request not found: {}",
-                id
-            )))
+            Error::Domain(DomainError::EntityNotFound {
+                entity_type: "TableRequest",
+                entity_id: id.to_string(),
+            })
         })
     }
 

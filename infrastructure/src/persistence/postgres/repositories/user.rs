@@ -3,6 +3,7 @@ use crate::persistence::postgres::models::UserModel;
 use domain::entities::*;
 use domain::repositories::UserRepository;
 use shared::Result;
+use shared::error::ApplicationError;
 use shared::error::Error;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
@@ -56,9 +57,9 @@ impl UserRepository for PostgresUserRepository {
         let has_password_update = matches!(data.password, Update::Change(_));
 
         if !has_username_update && !has_email_update && !has_password_update {
-            return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
-                "User not found".to_string(),
-            )));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let username_value = match &data.username {

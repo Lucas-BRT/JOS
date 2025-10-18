@@ -3,6 +3,7 @@ use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
 use domain::repositories::TableMemberRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -77,9 +78,9 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         let has_user_id_update = matches!(command.user_id, Update::Change(_));
 
         if !has_table_id_update && !has_user_id_update {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let table_id_value = match &command.table_id {
@@ -95,8 +96,8 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         let updated_table_member = sqlx::query_as!(
             TableMemberModel,
             r#"
-            UPDATE table_members 
-            SET 
+            UPDATE table_members
+            SET
                 table_id = COALESCE($2, table_id),
                 user_id = COALESCE($3, user_id),
                 updated_at = NOW()

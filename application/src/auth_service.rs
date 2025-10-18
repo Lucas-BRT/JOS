@@ -135,10 +135,10 @@ impl Authenticator for AuthService {
             .find_by_id(&payload.user_id)
             .await?
             .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound(format!(
-                    "User not found: {}",
-                    payload.user_id
-                )))
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "User",
+                    entity_id: payload.user_id.to_string(),
+                })
             })?;
 
         if !self
@@ -177,10 +177,10 @@ impl Authenticator for AuthService {
             .find_by_id(&command.user_id)
             .await?
             .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound(format!(
-                    "User not found: {}",
-                    command.user_id
-                )))
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "User",
+                    entity_id: command.user_id.to_string(),
+                })
             })?;
 
         if !self

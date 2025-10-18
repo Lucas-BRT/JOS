@@ -4,6 +4,7 @@ use crate::persistence::postgres::models::table_request::ETableRequestStatus;
 use domain::entities::*;
 use domain::repositories::TableRequestRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -63,9 +64,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let has_message_update = matches!(update_data.message, Update::Change(_));
 
         if !has_status_update && !has_message_update {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let status_value = match update_data.status {

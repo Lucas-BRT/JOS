@@ -1,5 +1,4 @@
 pub mod auth_service;
-pub mod error;
 pub mod game_system_service;
 pub mod password_service;
 pub mod search_service;
@@ -12,7 +11,6 @@ pub mod table_service;
 pub mod user_service;
 
 pub use auth_service::*;
-pub use error::*;
 pub use game_system_service::*;
 pub use password_service::*;
 pub use search_service::*;

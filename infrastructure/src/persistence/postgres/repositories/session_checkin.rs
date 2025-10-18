@@ -3,6 +3,7 @@ use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
 use domain::repositories::SessionCheckinRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -85,9 +86,9 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         let has_notes_update = matches!(command.notes, Update::Change(_));
 
         if !has_session_intent_id_update && !has_attendance_update && !has_notes_update {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let session_intent_id_value = match &command.session_intent_id {
@@ -108,8 +109,8 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         let updated_session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            UPDATE session_checkins 
-            SET 
+            UPDATE session_checkins
+            SET
                 session_intent_id = COALESCE($2, session_intent_id),
                 attendance = COALESCE($3, attendance),
                 notes = COALESCE($4, notes),

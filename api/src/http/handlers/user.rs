@@ -42,9 +42,9 @@ pub async fn get_user_by_id(
     Path(user_id): Path<String>,
 ) -> Result<Json<UserResponse>> {
     let parsed_user_id = Uuid::parse_str(&user_id).map_err(|_| {
-        AppError::Application(ApplicationError::InvalidInput(
-            "Invalid user ID format".to_string(),
-        ))
+        AppError::Application(ApplicationError::InvalidInput {
+            message: "Invalid user ID format".to_string(),
+        })
     })?;
 
     let user = app_state.user_service.find_by_id(&parsed_user_id).await?;

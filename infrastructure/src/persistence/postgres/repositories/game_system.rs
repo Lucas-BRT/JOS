@@ -3,6 +3,7 @@ use crate::persistence::postgres::models::GameSystemModel;
 use domain::entities::*;
 use domain::repositories::GameSystemRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -60,9 +61,9 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         let has_name_update = matches!(command.name, Update::Change(_));
 
         if !has_name_update {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let name_value = match &command.name {
@@ -73,8 +74,8 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         let updated_game_system = sqlx::query_as!(
             GameSystemModel,
             r#"
-            UPDATE game_systems 
-            SET 
+            UPDATE game_systems
+            SET
                 name = COALESCE($2, name),
                 updated_at = NOW()
             WHERE id = $1
