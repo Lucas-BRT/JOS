@@ -125,7 +125,7 @@ async fn register(
     post,
     path = "/v1/auth/logout",
     tag = "auth",
-    security(("bearer" = [])),
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Logout successful", body = LogoutResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -180,7 +180,7 @@ async fn refresh(
     get,
     path = "/v1/auth/me",
     tag = "auth",
-    security(("bearer_auth" = [])),
+    security(("auth" = [])),
     responses(
         (status = 200, description = "User data retrieved", body = UserResponse),
         (status = 401, description = "Invalid token", body = serde_json::Value)
@@ -205,6 +205,7 @@ async fn me(
     put,
     path = "/v1/auth/profile",
     tag = "auth",
+    security(("auth" = [])),
     request_body = UpdateProfileRequest,
     responses(
         (status = 200, description = "Profile updated successfully", body = UpdateProfileResponse),
@@ -243,6 +244,7 @@ pub async fn update_profile(
     put,
     path = "/v1/auth/password",
     tag = "auth",
+    security(("auth" = [])),
     request_body = ChangePasswordRequest,
     responses(
         (status = 200, description = "Password changed successfully", body = ChangePasswordResponse),
@@ -286,6 +288,7 @@ pub async fn change_password(
     delete,
     path = "/v1/auth/account",
     tag = "auth",
+    security(("auth" = [])),
     request_body = DeleteAccountRequest,
     responses(
         (status = 200, description = "Account deleted successfully", body = DeleteAccountResponse),

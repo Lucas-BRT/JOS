@@ -10,6 +10,7 @@ use axum::{Router, routing::get};
 use infrastructure::state::AppState;
 use std::sync::Arc;
 use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub mod auth;
@@ -22,24 +23,20 @@ pub mod user;
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     let openapi_spec = ApiDoc::openapi();
+    let mut api = OpenApiRouter::new();
 
-    let v1_api_routes = build_v1_api_routes(&app_state);
-    let system_routes = build_system_routes(openapi_spec);
+    api = api
+        .merge(auth_routes(app_state.clone()).into())
+        .merge(table_routes(app_state.clone()).into())
+        .merge(session_routes(app_state.clone()).into())
+        .merge(table_request_routes(app_state.clone()).into())
+        .merge(user_routes(app_state.clone()).into());
 
     Router::new()
-        .merge(system_routes)
-        .nest("/v1", v1_api_routes)
+        .merge(build_system_routes(openapi_spec))
+        .nest("/v1", api.into())
         .layer(cors::cors_layer())
         .layer(axum::middleware::from_fn(tracing::trace_middleware))
-}
-
-fn build_v1_api_routes(app_state: &Arc<AppState>) -> Router {
-    Router::new()
-        .merge(auth_routes(app_state.clone()))
-        .merge(table_routes(app_state.clone()))
-        .merge(session_routes(app_state.clone()))
-        .merge(table_request_routes(app_state.clone()))
-        .merge(user_routes(app_state.clone()))
 }
 
 fn build_system_routes(openapi_spec: utoipa::openapi::OpenApi) -> Router {
