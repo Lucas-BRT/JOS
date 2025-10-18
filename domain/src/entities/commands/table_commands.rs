@@ -1,4 +1,4 @@
-use crate::entities::{Update, TableStatus};
+use crate::entities::{TableStatus, Update};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]

@@ -1,11 +1,12 @@
 use crate::utils::{TestEnvironmentBuilder, register_and_login};
 use api::http::dtos::table::*;
-use domain::entities::CreateTableMemberCommand;
 use axum::http::StatusCode;
+use domain::entities::{CreateTableMemberCommand, Table};
 use sqlx::PgPool;
 
 const GM_USER_ID: &str = "gm_user";
 const PLAYER_USER_ID: &str = "player_user";
+const GAME_SYSTEM_ID: &str = "default";
 const TABLE_ID: &str = "test_table";
 const TEST_PASSWORD: &str = "Password123!";
 
@@ -18,7 +19,7 @@ async fn test_create_table_succeeds(pool: PgPool) {
 
     let gm = env.seeded.users.get(GM_USER_ID).unwrap();
     let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
-    let game_system = env.seeded.game_systems.get("default").unwrap();
+    let game_system = env.seeded.game_systems.get(GAME_SYSTEM_ID).unwrap();
 
     let req = CreateTableRequest {
         title: "My Awesome Table".to_string(),
@@ -47,7 +48,6 @@ async fn test_get_tables_succeeds(pool: PgPool) {
 
     let gm = env.seeded.users.get(GM_USER_ID).unwrap();
     let table = env.seeded.tables.get(TABLE_ID).unwrap();
-    let game_system = env.seeded.game_systems.get("default").unwrap(); // Get the seeded game system
     let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
 
     let response = env
@@ -58,40 +58,44 @@ async fn test_get_tables_succeeds(pool: PgPool) {
 
     response.assert_status_ok();
 
-    let tables_json = response.json::<Vec<TableListItem>>();
+    let tables_json = response.json::<Vec<Table>>();
     assert_eq!(tables_json.len(), 1);
 
     let table_item = &tables_json[0];
     assert_eq!(table_item.id, table.id);
     assert_eq!(table_item.title, table.title);
-    assert_eq!(table_item.game_master.id, gm.id);
-    assert_eq!(table_item.player_slots, table.player_slots as i32);
-    assert_eq!(table_item.game_system, game_system.name); // Assert the game system name
-    assert_eq!(table_item.occupied_slots, 0); // No players added yet
+    assert_eq!(table_item.game_system_id, table.game_system_id);
 }
 
 #[sqlx::test]
 async fn test_get_tables_with_search_succeeds(pool: PgPool) {
+    let first_table_name = "The Dark Castle";
+    let second_table_name = "A wrong gnoll";
+
     let env = TestEnvironmentBuilder::new(pool)
         .with_user(GM_USER_ID)
-        .with_table("table1", GM_USER_ID)
-        .with_table("another_table", GM_USER_ID)
+        .with_user(PLAYER_USER_ID)
+        .with_table(first_table_name, GM_USER_ID)
+        .with_table(second_table_name, PLAYER_USER_ID)
         .build()
         .await;
 
     let gm = env.seeded.users.get(GM_USER_ID).unwrap();
-    let table1 = env.seeded.tables.get("table1").unwrap();
+    let table1 = env.seeded.tables.get(first_table_name).unwrap();
     let token = register_and_login(&env.server, &gm.email, TEST_PASSWORD).await;
 
+    println!("orangotango");
     let response = env
         .server
-        .get("/v1/tables?search=table1")
+        .get(&format!("/v1/tables?gmId={}", gm.id))
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
     response.assert_status_ok();
 
-    let tables_json = response.json::<Vec<TableListItem>>();
+    let tables_json = response.json::<Vec<Table>>();
+
+    tables_json.iter().for_each(|t| println!("{t:?}"));
     assert_eq!(tables_json.len(), 1);
     assert_eq!(tables_json[0].id, table1.id);
 }
@@ -163,7 +167,11 @@ async fn test_get_table_details_players_succeeds(pool: PgPool) {
         table_id: table.id,
         user_id: player.id,
     };
-    env.state.table_member_service.create(create_table_member_command).await.unwrap();
+    env.state
+        .table_member_service
+        .create(create_table_member_command)
+        .await
+        .unwrap();
 
     let response = env
         .server
@@ -266,7 +274,11 @@ async fn test_update_table_players_succeeds(pool: PgPool) {
         table_id: table.id,
         user_id: player.id,
     };
-    env.state.table_member_service.create(create_table_member_command).await.unwrap();
+    env.state
+        .table_member_service
+        .create(create_table_member_command)
+        .await
+        .unwrap();
 
     let req = UpdateTableRequest {
         title: Some("Updated Title".to_string()),
@@ -372,7 +384,7 @@ async fn test_delete_table_succeeds(pool: PgPool) {
         .add_header("Authorization", &format!("Bearer {}", token))
         .await;
 
-        get_response.assert_status(StatusCode::NOT_FOUND);
+    get_response.assert_status(StatusCode::NOT_FOUND);
 }
 
 #[sqlx::test]
@@ -402,4 +414,3 @@ async fn test_get_table_details_status_and_sessions_succeeds(pool: PgPool) {
     assert_eq!(table_json.sessions[0].id, session.id);
     assert_eq!(table_json.sessions[0].title, session.name);
 }
-

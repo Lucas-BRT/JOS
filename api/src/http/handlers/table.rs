@@ -2,10 +2,9 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::http::StatusCode;
 use axum::{extract::*, routing::*};
-use chrono::Utc;
 use domain::entities::commands::session_commands::*;
 use domain::entities::commands::table_commands::*;
-use domain::entities::TableStatus;
+use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{ApplicationError, Error};
@@ -64,50 +63,10 @@ pub async fn get_tables(
     _claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
     Query(search): Query<SearchTablesQuery>,
-) -> Result<(StatusCode, Json<Vec<TableListItem>>)> {
-    let tables = app_state.table_service.get(&GetTableCommand {
-        search_term: search.search,
-        ..Default::default()
-    }).await?;
+) -> Result<(StatusCode, Json<Vec<Table>>)> {
+    let response = app_state.table_service.get(&search.into()).await?;
 
-    let mut response_items = Vec::new();
-
-    for table in tables {
-        let gm = app_state.user_service.find_by_id(&table.gm_id).await?;
-        let game_system = app_state.game_system_service.find_by_id(table.game_system_id).await?;
-
-        let occupied_slots = app_state.table_member_service.find_by_table_id(&table.id).await?.len() as i32;
-
-        let sessions = app_state
-            .session_service
-            .get(GetSessionCommand {
-                table_id: Some(table.id),
-                ..Default::default()
-            })
-            .await?;
-
-        let next_session = sessions
-            .iter()
-            .filter_map(|s| s.scheduled_for)
-            .filter(|scheduled_at| *scheduled_at > Utc::now())
-            .min();
-
-        response_items.push(TableListItem {
-            id: table.id,
-            title: table.title,
-            description: table.description,
-            game_system: game_system.name, // Use the actual game system name
-            game_master: GameMasterInfo {
-                id: gm.id,
-                username: gm.username,
-            },
-            player_slots: table.player_slots as i32,
-            occupied_slots,
-            next_session,
-        });
-    }
-
-    Ok((StatusCode::OK, Json(response_items)))
+    Ok((StatusCode::OK, Json(response)))
 }
 
 #[utoipa::path(
@@ -131,8 +90,14 @@ pub async fn get_table_details(
 ) -> Result<Json<TableDetails>> {
     let table = app_state.table_service.find_by_id(&table_id).await?;
     let game_master = app_state.user_service.find_by_id(&table.gm_id).await?;
-    let game_system = app_state.game_system_service.find_by_id(table.game_system_id).await?;
-    let table_members = app_state.table_member_service.find_by_table_id(&table.id).await?;
+    let game_system = app_state
+        .game_system_service
+        .find_by_id(table.game_system_id)
+        .await?;
+    let table_members = app_state
+        .table_member_service
+        .find_by_table_id(&table.id)
+        .await?;
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
@@ -144,18 +109,24 @@ pub async fn get_table_details(
         }
     }
 
-    let sessions = app_state.session_service.get(GetSessionCommand {
-        table_id: Some(table.id),
-        ..Default::default()
-    }).await?;
+    let sessions = app_state
+        .session_service
+        .get(GetSessionCommand {
+            table_id: Some(table.id),
+            ..Default::default()
+        })
+        .await?;
 
-    let session_infos: Vec<SessionInfo> = sessions.into_iter().map(|s| SessionInfo {
-        id: s.id,
-        title: s.name,
-        description: s.description,
-        status: s.status.to_string(), // Assuming SessionStatus has a Display impl or can be converted to String
-        scheduled_at: s.scheduled_for.unwrap_or_default(), // Handle Option<Date>
-    }).collect();
+    let session_infos: Vec<SessionInfo> = sessions
+        .into_iter()
+        .map(|s| SessionInfo {
+            id: s.id,
+            title: s.name,
+            description: s.description,
+            status: s.status.to_string(), // Assuming SessionStatus has a Display impl or can be converted to String
+            scheduled_at: s.scheduled_for.unwrap_or_default(), // Handle Option<Date>
+        })
+        .collect();
 
     let response = TableDetails {
         id: table.id,
@@ -209,11 +180,11 @@ pub async fn update_table(
 
     let game_system_id = match payload.system {
         Some(s) => {
-            let uuid = Uuid::parse_str(&s).map_err(|_|
+            let uuid = Uuid::parse_str(&s).map_err(|_| {
                 Error::Application(ApplicationError::InvalidInput(
                     "system must be a valid UUID".to_string(),
-                )),
-            )?;
+                ))
+            })?;
             Some(uuid).into()
         }
         None => None.into(),
@@ -221,11 +192,11 @@ pub async fn update_table(
 
     let status = match payload.status {
         Some(s) => {
-            let status = TableStatus::from_str(&s).map_err(|_|
+            let status = TableStatus::from_str(&s).map_err(|_| {
                 Error::Application(ApplicationError::InvalidInput(
                     "Invalid table status".to_string(),
-                )),
-            )?;
+                ))
+            })?;
             Some(status).into()
         }
         None => None.into(),
@@ -247,8 +218,14 @@ pub async fn update_table(
         .user_service
         .find_by_id(&updated_table.gm_id)
         .await?;
-    let game_system = app_state.game_system_service.find_by_id(updated_table.game_system_id).await?;
-    let table_members = app_state.table_member_service.find_by_table_id(&updated_table.id).await?;
+    let game_system = app_state
+        .game_system_service
+        .find_by_id(updated_table.game_system_id)
+        .await?;
+    let table_members = app_state
+        .table_member_service
+        .find_by_table_id(&updated_table.id)
+        .await?;
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
@@ -260,18 +237,24 @@ pub async fn update_table(
         }
     }
 
-    let sessions = app_state.session_service.get(GetSessionCommand {
-        table_id: Some(updated_table.id),
-        ..Default::default()
-    }).await?;
+    let sessions = app_state
+        .session_service
+        .get(GetSessionCommand {
+            table_id: Some(updated_table.id),
+            ..Default::default()
+        })
+        .await?;
 
-    let session_infos: Vec<SessionInfo> = sessions.into_iter().map(|s| SessionInfo {
-        id: s.id,
-        title: s.name,
-        description: s.description,
-        status: s.status.to_string(),
-        scheduled_at: s.scheduled_for.unwrap_or_default(),
-    }).collect();
+    let session_infos: Vec<SessionInfo> = sessions
+        .into_iter()
+        .map(|s| SessionInfo {
+            id: s.id,
+            title: s.name,
+            description: s.description,
+            status: s.status.to_string(),
+            scheduled_at: s.scheduled_for.unwrap_or_default(),
+        })
+        .collect();
 
     let response = TableDetails {
         id: updated_table.id,

@@ -3,9 +3,25 @@ use axum_test::TestServer;
 use chrono::Duration;
 use dotenvy::dotenv;
 use jos::{
-    application::{auth_service::AuthService, game_system_service::GameSystemService, password_service::PasswordService, search_service::SearchService, session_service::SessionService, table_member_service::TableMemberService, table_request_service::TableRequestService, table_service::TableService, user_service::UserService},
+    application::{
+        auth_service::AuthService, game_system_service::GameSystemService,
+        password_service::PasswordService, search_service::SearchService,
+        session_service::SessionService, table_member_service::TableMemberService,
+        table_request_service::TableRequestService, table_service::TableService,
+        user_service::UserService,
+    },
     domain::{auth::Authenticator, entities::*},
-    infrastructure::{config::AppConfig, persistence::postgres::repositories::{PostgresGameSystemRepository, PostgresRefreshTokenRepository, PostgresSessionRepository, PostgresTableMemberRepository, PostgresTableRepository, PostgresTableRequestRepository, PostgresUserRepository}, security::*, setup::environment::Environment, state::AppState},
+    infrastructure::{
+        config::AppConfig,
+        persistence::postgres::repositories::{
+            PostgresGameSystemRepository, PostgresRefreshTokenRepository,
+            PostgresSessionRepository, PostgresTableMemberRepository, PostgresTableRepository,
+            PostgresTableRequestRepository, PostgresUserRepository,
+        },
+        security::*,
+        setup::environment::Environment,
+        state::AppState,
+    },
 };
 use serde_json::json;
 use sqlx::PgPool;
@@ -61,11 +77,17 @@ struct SessionSeedOptions {
     table_identifier: String,
 }
 
+struct GameSystemSeedOptions {
+    identifier: String,
+    name: String,
+}
+
 pub struct TestEnvironmentBuilder {
     pool: PgPool,
     users_to_seed: Vec<UserSeedOptions>,
     tables_to_seed: Vec<TableSeedOptions>,
     sessions_to_seed: Vec<SessionSeedOptions>,
+    game_systems_to_seed: Vec<GameSystemSeedOptions>,
 }
 
 impl TestEnvironmentBuilder {
@@ -75,6 +97,7 @@ impl TestEnvironmentBuilder {
             users_to_seed: Vec::new(),
             tables_to_seed: Vec::new(),
             sessions_to_seed: Vec::new(),
+            game_systems_to_seed: Vec::new(),
         }
     }
 
@@ -102,6 +125,14 @@ impl TestEnvironmentBuilder {
             identifier: identifier.to_string(),
             name: format!("Session {}", identifier),
             table_identifier: table_identifier.to_string(),
+        });
+        self
+    }
+
+    pub fn with_game_system(mut self, identifier: &str) -> Self {
+        self.game_systems_to_seed.push(GameSystemSeedOptions {
+            identifier: identifier.to_string(),
+            name: format!("Game System {}", identifier),
         });
         self
     }
