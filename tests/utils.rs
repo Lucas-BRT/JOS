@@ -149,7 +149,7 @@ impl TestEnvironmentBuilder {
         );
 
         let session_repo = Arc::new(PostgresSessionRepository::new(self.pool.clone()));
-        let session_service = SessionService::new(session_repo.clone());
+        let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
 
         let search_service = SearchService::new(user_repo.clone(), table_repo.clone());
 
@@ -218,22 +218,24 @@ impl TestEnvironmentBuilder {
         }
 
         // Seed Tables
-        for table_opts in self.tables_to_seed {
+        for table_opts in &self.tables_to_seed {
             let owner = seeded.users.get(&table_opts.owner_identifier).unwrap();
             let cmd = CreateTableCommand {
-                title: table_opts.title,
+                title: table_opts.title.clone(),
                 description: "A test table".to_string(),
                 gm_id: owner.id,
                 slots: 5,
                 game_system_id: default_gs.id,
             };
             let table = table_service.create(&cmd).await.unwrap();
-            seeded.tables.insert(table_opts.identifier, table);
+            seeded.tables.insert(table_opts.identifier.clone(), table);
         }
 
         // Seed Sessions
         for session_opts in self.sessions_to_seed {
             let table = seeded.tables.get(&session_opts.table_identifier).unwrap();
+            let table_seed_opts = self.tables_to_seed.iter().find(|t| t.identifier == session_opts.table_identifier).unwrap();
+            let owner = seeded.users.get(&table_seed_opts.owner_identifier).unwrap();
             let cmd = CreateSessionCommand {
                 table_id: table.id,
                 name: session_opts.name,
@@ -241,7 +243,7 @@ impl TestEnvironmentBuilder {
                 scheduled_for: None,
                 status: SessionStatus::Scheduled,
             };
-            let session = session_service.create(cmd).await.unwrap();
+            let session = session_service.create(owner.id, cmd).await.unwrap();
             seeded.sessions.insert(session_opts.identifier, session);
         }
 

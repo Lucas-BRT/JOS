@@ -1,22 +1,35 @@
 use domain::entities::*;
-use domain::repositories::SessionRepository;
+use domain::repositories::{SessionRepository, TableRepository};
 use shared::Result;
-use shared::error::DomainError;
-use shared::error::Error;
+use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct SessionService {
     session_repository: Arc<dyn SessionRepository>,
+    table_repository: Arc<dyn TableRepository>,
 }
 
 impl SessionService {
-    pub fn new(session_repository: Arc<dyn SessionRepository>) -> Self {
-        Self { session_repository }
+    pub fn new(session_repository: Arc<dyn SessionRepository>, table_repository: Arc<dyn TableRepository>) -> Self {
+        Self { session_repository, table_repository }
     }
 
-    pub async fn create(&self, command: CreateSessionCommand) -> Result<Session> {
+    pub async fn create(&self, gm_id: Uuid, command: CreateSessionCommand) -> Result<Session> {
+        let table = self.table_repository.find_by_id(&command.table_id).await?;
+
+        if let Some(table) = table {
+            if table.gm_id != gm_id {
+                return Err(Error::Application(ApplicationError::Forbidden));
+            }
+        } else {
+            return Err(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Table",
+                entity_id: command.table_id.to_string(),
+            }));
+        }
+
         self.session_repository.create(command).await
     }
 

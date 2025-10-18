@@ -127,7 +127,7 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
 
     // Session service
     let session_repo = Arc::new(PostgresSessionRepository::new(database.clone()));
-    let session_service = SessionService::new(session_repo.clone());
+    let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
     info!("✅ Session service initialized");
 
     // Search service
