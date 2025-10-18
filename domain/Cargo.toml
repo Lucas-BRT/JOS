@@ -11,4 +11,4 @@ chrono = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 validator = { workspace = true }
-utoipa = { version = "4.2.0", features = ["uuid", "chrono"] }
+utoipa = { workspace = true, features = ["uuid", "chrono"] }
