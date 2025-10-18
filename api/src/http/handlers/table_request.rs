@@ -11,7 +11,8 @@ use validator::Validate;
 #[utoipa::path(
     get,
     path = "/v1/requests/sent",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Sent requests retrieved successfully", body = Vec<SentRequestItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -30,7 +31,8 @@ pub async fn get_sent_requests(
 #[utoipa::path(
     get,
     path = "/v1/requests/received",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Received requests retrieved successfully", body = Vec<ReceivedRequestItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -49,7 +51,8 @@ pub async fn get_received_requests(
 #[utoipa::path(
     post,
     path = "/v1/tables/{id}/requests",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
@@ -88,7 +91,8 @@ pub async fn create_table_request(
 #[utoipa::path(
     post,
     path = "/v1/requests/{id}/accept",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
@@ -114,7 +118,8 @@ pub async fn accept_request(
 #[utoipa::path(
     post,
     path = "/v1/requests/{id}/reject",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
@@ -140,7 +145,8 @@ pub async fn reject_request(
 #[utoipa::path(
     delete,
     path = "/v1/requests/{id}",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),

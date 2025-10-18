@@ -12,6 +12,7 @@ use validator::Validate;
     get,
     path = "/v1/sessions",
     tag = "sessions",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Sessions retrieved successfully", body = Vec<SessionListItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -31,6 +32,7 @@ pub async fn get_sessions(
     post,
     path = "/v1/sessions",
     tag = "sessions",
+    security(("auth" = [])),
     request_body = CreateSessionRequest,
     responses(
         (status = 201, description = "Session created successfully", body = SessionDetails),
@@ -73,6 +75,7 @@ pub async fn create_session(
     get,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),
@@ -112,6 +115,7 @@ pub async fn get_session_details(
     put,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),
@@ -171,6 +175,7 @@ pub async fn update_session(
     delete,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),

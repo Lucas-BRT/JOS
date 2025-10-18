@@ -17,6 +17,7 @@ use validator::Validate;
     post,
     path = "/v1/tables",
     tag = "tables",
+    security(("auth" = [])),
     request_body = CreateTableRequest,
     responses(
         (status = 201, description = "Table created successfully", body = TableDetails),
@@ -53,6 +54,7 @@ pub async fn create_table(
     get,
     path = "/v1/tables",
     tag = "tables",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Tables retrieved successfully", body = Vec<TableListItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -73,6 +75,7 @@ pub async fn get_tables(
     get,
     path = "/v1/tables/{id}",
     tag = "tables",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
@@ -150,6 +153,7 @@ pub async fn get_table_details(
     put,
     path = "/v1/tables/{id}",
     tag = "tables",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
@@ -278,6 +282,7 @@ pub async fn update_table(
     delete,
     path = "/v1/tables/{id}",
     tag = "tables",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
