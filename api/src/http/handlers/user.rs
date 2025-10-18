@@ -26,6 +26,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
 #[utoipa::path(
     get,
     path = "/v1/user/{id}",
+    tag = "users",
     responses(
         (status = 200, description = "User found", body = UserResponse),
         (status = 404, description = "User not found", body = ErrorResponse)
@@ -34,7 +35,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         ("id" = String, Path, description = "User ID")
     ),
     security(
-        ("token" = [])
+        ("auth" = [])
     )
 )]
 pub async fn get_user_by_id(

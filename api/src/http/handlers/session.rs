@@ -1,10 +1,6 @@
 use crate::http::dtos::*;
 use crate::http::middleware::auth::ClaimsExtractor;
-use axum::{
-    Json, Router,
-    extract::{Path, State},
-    routing::{delete, get, post, put},
-};
+use axum::{extract::*, routing::*};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;

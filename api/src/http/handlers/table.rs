@@ -7,7 +7,7 @@ use domain::entities::commands::table_commands::*;
 use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
-use shared::error::{ApplicationError, Error};
+use shared::error::*;
 use std::str::FromStr;
 use std::sync::Arc;
 use uuid::Uuid;

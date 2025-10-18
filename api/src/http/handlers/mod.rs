@@ -1,7 +1,7 @@
-use crate::http::{
+pub use crate::http::{
     handlers::{
-        auth::auth_routes, health::health_check, search::search_routes, session::session_routes,
-        table::table_routes, table_request::table_request_routes, user::user_routes,
+        auth::auth_routes, health::health_check, session::session_routes, table::table_routes,
+        table_request::table_request_routes, user::user_routes,
     },
     middleware::{cors, tracing},
     open_api::ApiDoc,
@@ -15,7 +15,6 @@ use utoipa_swagger_ui::SwaggerUi;
 pub mod auth;
 pub mod docs;
 pub mod health;
-pub mod search;
 pub mod session;
 pub mod table;
 pub mod table_request;
@@ -41,7 +40,6 @@ fn build_v1_api_routes(app_state: &Arc<AppState>) -> Router {
         .merge(session_routes(app_state.clone()))
         .merge(table_request_routes(app_state.clone()))
         .merge(user_routes(app_state.clone()))
-        .merge(search_routes(app_state.clone()))
 }
 
 fn build_system_routes(openapi_spec: utoipa::openapi::OpenApi) -> Router {

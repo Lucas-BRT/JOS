@@ -1,17 +1,12 @@
-use axum::{
-    Json, Router,
-    extract::{Path, State},
-    routing::{delete, get, post},
-};
-use std::sync::Arc;
-use uuid::Uuid;
-use validator::Validate;
-
 use crate::http::dtos::*;
 use crate::http::middleware::auth::ClaimsExtractor;
+use axum::{extract::*, routing::*};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
+use std::sync::Arc;
+use uuid::Uuid;
+use validator::Validate;
 
 #[utoipa::path(
     get,
