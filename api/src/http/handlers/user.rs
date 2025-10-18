@@ -3,13 +3,12 @@ use crate::http::middleware::auth::auth_middleware;
 use axum::{
     Json, Router,
     extract::{Path, State},
-    http::StatusCode,
     middleware::from_fn_with_state,
 };
 use infrastructure::state::AppState;
 use shared::Error as AppError;
 use shared::Result;
-use shared::error::{ApplicationError, DomainError};
+use shared::error::ApplicationError;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -18,7 +17,7 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
         .nest(
             "/user",
             Router::new()
-                .route("/:id", axum::routing::get(get_user_by_id))
+                .route("/{:id}", axum::routing::get(get_user_by_id))
                 .layer(from_fn_with_state(state.clone(), auth_middleware)),
         )
         .with_state(state)
