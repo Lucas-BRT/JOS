@@ -1,15 +1,29 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Update<T> {
-    #[default]
-    Keep,
     Change(T),
+    Keep,
+}
+
+impl<T> Default for Update<T> {
+    fn default() -> Self {
+        Update::Keep
+    }
+}
+
+impl<T> Update<T> {
+    pub fn into_option(self) -> Option<T> {
+        match self {
+            Update::Change(value) => Some(value),
+            Update::Keep => None,
+        }
+    }
 }
 
 impl<T> From<Option<T>> for Update<T> {
-    fn from(value: Option<T>) -> Self {
-        match value {
+    fn from(opt: Option<T>) -> Self {
+        match opt {
             Some(value) => Update::Change(value),
             None => Update::Keep,
         }

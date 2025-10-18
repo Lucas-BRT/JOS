@@ -282,7 +282,6 @@ pub async fn update_table(
     delete,
     path = "/v1/tables/{id}",
     tag = "tables",
-    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),

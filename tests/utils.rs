@@ -137,8 +137,16 @@ impl TestEnvironmentBuilder {
         let table_repo = Arc::new(PostgresTableRepository::new(self.pool.clone()));
         let table_service = TableService::new(table_repo.clone());
 
+        let table_member_repo = Arc::new(PostgresTableMemberRepository::new(self.pool.clone()));
+        let table_member_service = Arc::new(TableMemberService::new(table_member_repo.clone()));
+
         let table_request_repo = Arc::new(PostgresTableRequestRepository::new(self.pool.clone()));
-        let table_request_service = TableRequestService::new(table_request_repo.clone());
+        let table_request_service = TableRequestService::new(
+            table_request_repo.clone(),
+            table_repo.clone(),
+            table_member_repo.clone(),
+            table_member_service.clone(),
+        );
 
         let session_repo = Arc::new(PostgresSessionRepository::new(self.pool.clone()));
         let session_service = SessionService::new(session_repo.clone());

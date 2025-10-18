@@ -282,4 +282,29 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
+
+    async fn find_by_user_and_table(&self, user_id: Uuid, table_id: Uuid) -> Result<Vec<TableRequest>> {
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE user_id = $1 AND table_id = $2
+            "#,
+            user_id,
+            table_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(requests.into_iter().map(|model| model.into()).collect())
+    }
 }

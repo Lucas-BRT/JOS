@@ -114,8 +114,15 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
     info!("✅ Table service initialized");
 
     // Table request service
+    let table_member_repo_for_req = Arc::new(PostgresTableMemberRepository::new(database.clone()));
+    let table_member_service_for_req = Arc::new(TableMemberService::new(table_member_repo_for_req.clone()));
     let table_request_repo = Arc::new(PostgresTableRequestRepository::new(database.clone()));
-    let table_request_service = TableRequestService::new(table_request_repo.clone());
+    let table_request_service = TableRequestService::new(
+        table_request_repo.clone(),
+        table_repo.clone(),
+        table_member_repo_for_req.clone(),
+        table_member_service_for_req.clone(),
+    );
     info!("✅ Table request service initialized");
 
     // Session service
