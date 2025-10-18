@@ -116,10 +116,10 @@ impl TestEnvironmentBuilder {
         self
     }
 
-    pub fn with_game_system(mut self, identifier: &str) -> Self {
+    pub fn with_game_system(mut self, identifier: &str, name: &str) -> Self {
         self.game_systems_to_seed.push(GameSystemSeedOptions {
             identifier: identifier.to_string(),
-            name: format!("Game System {}", identifier),
+            name: name.to_string(),
         });
         self
     }
@@ -183,6 +183,12 @@ impl TestEnvironmentBuilder {
         let mut seeded = SeededData::default();
 
         // Seed GameSystem
+        for gs_opts in self.game_systems_to_seed {
+            let mut gs_cmd = CreateGameSystemCommand { name: gs_opts.name };
+            let gs = game_system_service.create(&mut gs_cmd).await.unwrap();
+            seeded.game_systems.insert(gs_opts.identifier, gs);
+        }
+
         let mut gs_cmd = CreateGameSystemCommand {
             name: "Default Test GS".to_string(),
         };
