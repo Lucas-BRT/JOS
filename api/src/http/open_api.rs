@@ -43,6 +43,7 @@ impl Modify for SecurityAddon {
         crate::http::handlers::table_request::accept_request,
         crate::http::handlers::table_request::reject_request,
         crate::http::handlers::table_request::cancel_request,
+        crate::http::handlers::game_system::create_game_system,
         crate::http::handlers::health::health_check
     ),
     modifiers(&SecurityAddon),
@@ -52,7 +53,8 @@ impl Modify for SecurityAddon {
         (name = "tables", description = "RPG table management endpoints"),
         (name = "sessions", description = "Session management endpoints"),
         (name = "table-requests", description = "Table request management endpoints"),
-        (name = "health", description = "Health check endpoints")
+        (name = "health", description = "Health check endpoints"),
+        (name = "game_systems", description = "GameSystems endpoints")
     ),
     info(
         title = "JOS",

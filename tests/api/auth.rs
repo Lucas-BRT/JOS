@@ -1,10 +1,9 @@
-use crate::utils::{TestEnvironmentBuilder, register_and_login};
+use crate::utils::{DEFAULT_USER_PASSWORD, TestEnvironmentBuilder, register_and_login};
 use api::http::dtos::UserResponse;
 use axum::http::StatusCode;
 use sqlx::PgPool;
 
 const TEST_USER_ID: &str = "test_user";
-const TEST_PASSWORD: &str = "Password123!";
 
 #[sqlx::test]
 async fn test_register_and_login(pool: PgPool) {
@@ -15,7 +14,7 @@ async fn test_register_and_login(pool: PgPool) {
 
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
 
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     assert!(!token.is_empty());
 }
@@ -27,7 +26,7 @@ async fn test_me(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let response = env
         .server
@@ -48,7 +47,7 @@ async fn test_logout(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let response = env
         .server
@@ -129,7 +128,7 @@ async fn test_update_profile_succeeds(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let new_username = "new-test-username";
     let new_email = "new-email@test.com";
@@ -167,7 +166,7 @@ async fn test_change_password_succeeds(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let new_password = "NewPassword456!";
 
@@ -176,7 +175,7 @@ async fn test_change_password_succeeds(pool: PgPool) {
         .put("/v1/auth/password")
         .add_header("Authorization", &format!("Bearer {}", token))
         .json(&serde_json::json!({
-            "current_password": TEST_PASSWORD,
+            "current_password": DEFAULT_USER_PASSWORD,
             "new_password": new_password,
             "confirm_password": new_password
         }))
@@ -204,7 +203,7 @@ async fn test_change_password_wrong_current_password(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let new_password = "NewPassword456!";
 
@@ -229,14 +228,14 @@ async fn test_change_password_mismatched_new_password(pool: PgPool) {
         .build()
         .await;
     let user = env.seeded.users.get(TEST_USER_ID).unwrap();
-    let token = register_and_login(&env.server, &user.email, TEST_PASSWORD).await;
+    let token = register_and_login(&env.server, &user.email, DEFAULT_USER_PASSWORD).await;
 
     let response = env
         .server
         .put("/v1/auth/password")
         .add_header("Authorization", &format!("Bearer {}", token))
         .json(&serde_json::json!({
-            "current_password": TEST_PASSWORD,
+            "current_password": DEFAULT_USER_PASSWORD,
             "new_password": "NewPassword456!",
             "confirm_password": "MismatchedPassword!"
         }))

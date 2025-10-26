@@ -1,9 +1,10 @@
 use crate::utils::TestEnvironmentBuilder;
 use jos::application::SessionService;
-use jos::domain::entities::commands::CreateSessionCommand;
 use jos::domain::entities::SessionStatus;
-use jos::domain::repositories::TableRepository;
-use jos::infrastructure::persistence::postgres::repositories::{PostgresSessionRepository, PostgresTableRepository};
+use jos::domain::entities::commands::CreateSessionCommand;
+use jos::infrastructure::persistence::postgres::repositories::{
+    PostgresSessionRepository, PostgresTableRepository,
+};
 use std::sync::Arc;
 
 const GM_ID: &str = "gm";
@@ -39,7 +40,11 @@ async fn test_create_session_success(pool: sqlx::PgPool) {
     let result = session_service.create(gm.id, command).await;
 
     // Assert
-    assert!(result.is_ok(), "Expected successful creation, but got {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "Expected successful creation, but got {:?}",
+        result.err()
+    );
     let session = result.unwrap();
     assert_eq!(session.table_id, table.id);
     assert_eq!(session.name, "Test Session");
@@ -78,7 +83,10 @@ async fn test_create_session_fails_if_not_gm(pool: sqlx::PgPool) {
     assert!(result.is_err(), "Expected an error, but got Ok");
     match result.unwrap_err() {
         jos::shared::error::Error::Application(app_error) => {
-            assert!(matches!(app_error, jos::shared::error::ApplicationError::Forbidden));
+            assert!(matches!(
+                app_error,
+                jos::shared::error::ApplicationError::Forbidden
+            ));
         }
         _ => panic!("Incorrect error type returned"),
     }

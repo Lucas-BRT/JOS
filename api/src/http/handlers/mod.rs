@@ -1,8 +1,5 @@
+use crate::http::handlers::tracing::trace_middleware;
 pub use crate::http::{
-    handlers::{
-        auth::auth_routes, health::health_check, session::session_routes, table::table_routes,
-        table_request::table_request_routes, user::user_routes,
-    },
     middleware::{cors, tracing},
     open_api::ApiDoc,
 };
@@ -15,11 +12,20 @@ use utoipa_swagger_ui::SwaggerUi;
 
 pub mod auth;
 pub mod docs;
+pub mod game_system;
 pub mod health;
 pub mod session;
 pub mod table;
 pub mod table_request;
 pub mod user;
+
+pub use auth::auth_routes;
+pub use game_system::game_system_routes;
+pub use health::health_check;
+pub use session::session_routes;
+pub use table::table_routes;
+pub use table_request::table_request_routes;
+pub use user::user_routes;
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
     let openapi_spec = ApiDoc::openapi();
@@ -30,13 +36,14 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
         .merge(table_routes(app_state.clone()).into())
         .merge(session_routes(app_state.clone()).into())
         .merge(table_request_routes(app_state.clone()).into())
-        .merge(user_routes(app_state.clone()).into());
+        .merge(user_routes(app_state.clone()).into())
+        .merge(game_system_routes(app_state.clone()).into());
 
     Router::new()
         .merge(build_system_routes(openapi_spec))
         .nest("/v1", api.into())
         .layer(cors::cors_layer())
-        .layer(axum::middleware::from_fn(tracing::trace_middleware))
+        .layer(axum::middleware::from_fn(trace_middleware))
 }
 
 fn build_system_routes(openapi_spec: utoipa::openapi::OpenApi) -> Router {

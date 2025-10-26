@@ -18,6 +18,8 @@ use std::sync::Arc;
 use uuid::Uuid;
 use wiremock::MockServer;
 
+pub const DEFAULT_USER_PASSWORD: &str = "Password123!";
+
 fn config_for_test(_pool: &PgPool) -> AppConfig {
     dotenv().ok();
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set for tests");
@@ -210,7 +212,7 @@ impl TestEnvironmentBuilder {
             let mut cmd = CreateUserCommand {
                 username: user_opts.username,
                 email: user_opts.email,
-                password: "Password123!".to_string(),
+                password: DEFAULT_USER_PASSWORD.to_string(),
             };
             // Use the auth_service to register the user, which handles password hashing
             let user = auth_service.register(&mut cmd).await.unwrap();
@@ -234,7 +236,11 @@ impl TestEnvironmentBuilder {
         // Seed Sessions
         for session_opts in self.sessions_to_seed {
             let table = seeded.tables.get(&session_opts.table_identifier).unwrap();
-            let table_seed_opts = self.tables_to_seed.iter().find(|t| t.identifier == session_opts.table_identifier).unwrap();
+            let table_seed_opts = self
+                .tables_to_seed
+                .iter()
+                .find(|t| t.identifier == session_opts.table_identifier)
+                .unwrap();
             let owner = seeded.users.get(&table_seed_opts.owner_identifier).unwrap();
             let cmd = CreateSessionCommand {
                 table_id: table.id,
