@@ -78,7 +78,6 @@ test-context = "0.1.4"
 [profile.release]
 opt-level = 3
 
-
 [toolchain]
-channel = "1.85.1"
+channel = "1.90"
 componentes = ["rustfmt", "clippy"]
