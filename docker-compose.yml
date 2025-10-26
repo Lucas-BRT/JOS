@@ -3,7 +3,8 @@ services:
     container_name: jos-local-api
     build:
       context: .
-      dockerfile: .local/Dockerfile
+      dockerfile: Dockerfile
+      target: development
     volumes:
       - ./:/app
       - cargo-cache:/usr/local/cargo/registry

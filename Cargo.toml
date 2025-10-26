@@ -71,9 +71,14 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter", "json"] }
 
 # Development Dependencies
-axum-test = "*"
+axum-test = "18.0.0"
 wiremock = "0.6.0"
 test-context = "0.1.4"
 
 [profile.release]
 opt-level = 3
+
+
+[toolchain]
+channel = "1.85.1"
+componentes = ["rustfmt", "clippy"]
