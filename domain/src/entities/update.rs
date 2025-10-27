@@ -1,15 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum Update<T> {
     Change(T),
+    #[default]
     Keep,
-}
-
-impl<T> Default for Update<T> {
-    fn default() -> Self {
-        Update::Keep
-    }
 }
 
 impl<T> Update<T> {

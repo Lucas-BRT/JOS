@@ -98,7 +98,7 @@ async fn get_game_systems(
         .get(&mut GetGameSystemCommand::default())
         .await?
         .iter()
-        .map(|gs| GameSystemResponse::from(gs))
+        .map(GameSystemResponse::from)
         .collect();
 
     Ok(Json(systems))

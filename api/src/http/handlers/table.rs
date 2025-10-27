@@ -104,7 +104,7 @@ pub async fn get_table_details(
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
-        if let Some(user) = app_state.user_service.find_by_id(&tm.user_id).await.ok() {
+        if let Ok(user) = app_state.user_service.find_by_id(&tm.user_id).await {
             players.push(PlayerInfo {
                 id: user.id,
                 username: user.username,
@@ -233,7 +233,7 @@ pub async fn update_table(
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
-        if let Some(user) = app_state.user_service.find_by_id(&tm.user_id).await.ok() {
+        if let Ok(user) = app_state.user_service.find_by_id(&tm.user_id).await {
             players.push(PlayerInfo {
                 id: user.id,
                 username: user.username,
