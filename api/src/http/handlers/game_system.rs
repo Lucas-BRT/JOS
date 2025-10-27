@@ -65,7 +65,7 @@ async fn create_game_system(
     Ok(CreateTableResponse { id })
 }
 
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
+#[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
 pub struct GameSystemResponse {
     pub id: Uuid,
     pub name: String,

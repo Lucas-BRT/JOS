@@ -16,6 +16,7 @@ const OTHER_USER_ID: &str = "other_user";
 async fn test_create_table_success(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool.clone())
         .with_user(GM_ID)
+        .with_game_system("default", "d&d")
         .build()
         .await;
     let repo = PostgresTableRepository::new(pool.clone());
@@ -259,7 +260,10 @@ async fn test_delete_table_not_found(pool: PgPool) {
 
 #[sqlx::test]
 async fn test_concurrent_table_operations(pool: PgPool) {
-    let env = TestEnvironmentBuilder::new(pool.clone()).build().await;
+    let env = TestEnvironmentBuilder::new(pool.clone())
+        .with_game_system("default", "d&d")
+        .build()
+        .await;
     let user_repo = PostgresUserRepository::new(pool.clone());
     let repo = PostgresTableRepository::new(pool.clone());
     let game_system = env.seeded.game_systems.get("default").unwrap();

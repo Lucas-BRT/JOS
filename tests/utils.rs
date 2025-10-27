@@ -199,14 +199,6 @@ impl TestEnvironmentBuilder {
             seeded.game_systems.insert(gs_opts.identifier, gs);
         }
 
-        let mut gs_cmd = CreateGameSystemCommand {
-            name: "Default Test GS".to_string(),
-        };
-        let default_gs = game_system_service.create(&mut gs_cmd).await.unwrap();
-        seeded
-            .game_systems
-            .insert("default".to_string(), default_gs.clone());
-
         // Seed Users
         for user_opts in self.users_to_seed {
             let mut cmd = CreateUserCommand {
@@ -219,6 +211,22 @@ impl TestEnvironmentBuilder {
             seeded.users.insert(user_opts.identifier, user);
         }
 
+        let mut default_gs = None;
+
+        if self.tables_to_seed.len() > 0 {
+            default_gs = Some(
+                game_system_service
+                    .create(&mut CreateGameSystemCommand {
+                        name: "Default Test GS".to_string(),
+                    })
+                    .await
+                    .unwrap(),
+            );
+            seeded
+                .game_systems
+                .insert("default".to_string(), default_gs.clone().unwrap().clone());
+        }
+
         // Seed Tables
         for table_opts in &self.tables_to_seed {
             let owner = seeded.users.get(&table_opts.owner_identifier).unwrap();
@@ -227,7 +235,7 @@ impl TestEnvironmentBuilder {
                 description: "A test table".to_string(),
                 gm_id: owner.id,
                 slots: 5,
-                game_system_id: default_gs.id,
+                game_system_id: default_gs.clone().unwrap().id,
             };
             let table = table_service.create(&cmd).await.unwrap();
             seeded.tables.insert(table_opts.identifier.clone(), table);

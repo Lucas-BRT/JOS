@@ -58,3 +58,21 @@ async fn test_get_all_game_systems(pool: PgPool) {
 
     assert!(response.iter().any(|gs| gs.name == game_name))
 }
+
+#[sqlx::test]
+async fn test_get_all_game_systems_empty(pool: PgPool) {
+    let env = TestEnvironmentBuilder::new(pool)
+        .with_user(TEST_USER_ID)
+        .build()
+        .await;
+
+    let response = env.server.get("/v1/game_systems").await;
+
+    response.assert_status_ok();
+
+    let response = response.json::<Vec<GameSystemResponse>>();
+
+    println!("{response:#?}");
+
+    assert!(response.is_empty())
+}

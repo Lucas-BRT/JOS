@@ -14,6 +14,7 @@ const TEST_PASSWORD: &str = "Password123!";
 async fn test_create_table_succeeds(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool)
         .with_user(GM_USER_ID)
+        .with_game_system(GAME_SYSTEM_ID, "D&D")
         .build()
         .await;
 
