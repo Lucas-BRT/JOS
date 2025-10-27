@@ -1,4 +1,4 @@
-use crate::entities::Update;
+use crate::entities::{TableStatus, Update};
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -17,6 +17,7 @@ pub struct UpdateTableCommand {
     pub description: Update<String>,
     pub slots: Update<u32>,
     pub game_system_id: Update<Uuid>,
+    pub status: Update<TableStatus>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,4 +33,5 @@ pub struct GetTableCommand {
     pub title: Option<String>,
     pub game_system_id: Option<Uuid>,
     pub slots: Option<u32>,
+    pub search_term: Option<String>,
 }

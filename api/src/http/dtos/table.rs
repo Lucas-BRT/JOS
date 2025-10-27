@@ -1,6 +1,8 @@
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
+use domain::entities::Table;
 use serde::{Deserialize, Serialize};
+use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -9,13 +11,11 @@ use validator::Validate;
 pub struct CreateTableRequest {
     #[validate(length(min = 1, max = 100))]
     pub title: String,
-    #[validate(length(min = 1, max = 50))]
-    pub system: String,
+    pub system_id: Uuid,
     #[validate(length(max = 1000))]
     pub description: String,
     #[validate(range(min = 1, max = 20))]
     pub max_players: i32,
-    pub visibility: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
@@ -61,7 +61,7 @@ pub struct TableListItem {
     pub game_master: GameMasterInfo,
     pub player_slots: i32,
     pub occupied_slots: i32,
-    pub next_session: Option<DateTime<Utc>>,
+    pub next_session: Option<Date>,
     pub description: String,
 }
 
@@ -76,6 +76,17 @@ pub struct TableDetails {
     pub players: Vec<PlayerInfo>,
     pub status: String,
     pub sessions: Vec<SessionInfo>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct CreateTableResponse {
+    pub id: Uuid,
+}
+
+impl From<Table> for CreateTableResponse {
+    fn from(value: Table) -> Self {
+        Self { id: value.id }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

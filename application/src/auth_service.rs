@@ -7,6 +7,7 @@ use log::warn;
 use rand::RngCore;
 use shared::Result;
 use shared::error::ApplicationError;
+use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
 use uuid::{NoContext, Uuid};
@@ -129,34 +130,69 @@ impl Authenticator for AuthService {
     }
 
     async fn update_password(&self, payload: &mut UpdatePasswordCommand) -> Result<()> {
-        let user = self.user_repository.find_by_id(&payload.user_id).await?;
+        let user = self
+            .user_repository
+            .find_by_id(&payload.user_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "User",
+                    entity_id: payload.user_id.to_string(),
+                })
+            })?;
 
-        match user {
-            Some(user) => {
-                let new_passoword_hash =
-                    self.password_provider.generate_hash(user.password).await?;
-
-                let mut command = UpdateUserCommand {
-                    password: Update::Change(new_passoword_hash),
-                    ..Default::default()
-                };
-
-                self.user_repository.update(&mut command).await?;
-
-                Ok(())
-            }
-            None => {
-                return Err(Error::Domain(shared::error::DomainError::EntityNotFound(
-                    format!("User not found: {}", payload.user_id),
-                )));
-            }
+        if !self
+            .password_provider
+            .verify_hash(payload.current_password.clone(), user.password.clone())
+            .await?
+        {
+            return Err(Error::Application(ApplicationError::IncorrectPassword));
         }
-    }
 
+        let new_password_hash = self
+            .password_provider
+            .generate_hash(payload.new_password.clone())
+            .await?;
+
+        let mut command = UpdateUserCommand {
+            user_id: payload.user_id,
+            password: Update::Change(new_password_hash),
+            ..Default::default()
+        };
+
+        self.user_repository.update(&mut command).await?;
+
+        Ok(())
+    }
     async fn logout(&self, user_id: &Uuid) -> Result<()> {
         Ok(self
             .refresh_token_repository
             .delete_by_user(user_id)
             .await?)
+    }
+
+    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()> {
+        let user = self
+            .user_repository
+            .find_by_id(&command.user_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "User",
+                    entity_id: command.user_id.to_string(),
+                })
+            })?;
+
+        if !self
+            .password_provider
+            .verify_hash(command.password.clone(), user.password.clone())
+            .await?
+        {
+            return Err(Error::Application(ApplicationError::IncorrectPassword));
+        }
+
+        self.user_repository.delete_by_id(&command.user_id).await?;
+
+        Ok(())
     }
 }

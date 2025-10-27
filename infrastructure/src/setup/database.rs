@@ -37,7 +37,7 @@ async fn health_check_database(database: &Db) -> Result<()> {
 async fn run_postgres_migrations(database: &Db) -> Result<()> {
     info!("🔄 Running database migrations...");
 
-    sqlx::migrate!("./migrations")
+    sqlx::migrate!("../migrations")
         .run(database)
         .await
         .map_err(|err| Error::Setup(SetupError::FailedToRunDBMigrations(err.to_string())))?;

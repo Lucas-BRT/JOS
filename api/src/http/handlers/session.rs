@@ -1,10 +1,6 @@
 use crate::http::dtos::*;
 use crate::http::middleware::auth::ClaimsExtractor;
-use axum::{
-    Json, Router,
-    extract::{Path, State},
-    routing::{delete, get, post, put},
-};
+use axum::{extract::*, routing::*};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
@@ -16,6 +12,7 @@ use validator::Validate;
     get,
     path = "/v1/sessions",
     tag = "sessions",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Sessions retrieved successfully", body = Vec<SessionListItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -35,6 +32,7 @@ pub async fn get_sessions(
     post,
     path = "/v1/sessions",
     tag = "sessions",
+    security(("auth" = [])),
     request_body = CreateSessionRequest,
     responses(
         (status = 201, description = "Session created successfully", body = SessionDetails),
@@ -50,9 +48,7 @@ pub async fn create_session(
     Json(payload): Json<CreateSessionRequest>,
 ) -> Result<Json<SessionDetails>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement session creation logic
@@ -79,6 +75,7 @@ pub async fn create_session(
     get,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),
@@ -118,6 +115,7 @@ pub async fn get_session_details(
     put,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),
@@ -138,9 +136,7 @@ pub async fn update_session(
     Json(payload): Json<UpdateSessionRequest>,
 ) -> Result<Json<SessionDetails>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement session update logic
@@ -179,6 +175,7 @@ pub async fn update_session(
     delete,
     path = "/v1/sessions/{id}",
     tag = "sessions",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Session ID")
     ),

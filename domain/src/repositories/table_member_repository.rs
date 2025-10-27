@@ -9,9 +9,9 @@ use uuid::Uuid;
 pub trait TableMemberRepository: Send + Sync {
     async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember>;
     async fn read(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>>;
-    async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember>;
-    async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>>;
     async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableMember>>;
-    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableMember>>;
+    async fn find_by_table_and_user(&self, table_id: Uuid, user_id: Uuid) -> Result<Option<TableMember>>;
+    async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember>;
+    async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember>;
 }

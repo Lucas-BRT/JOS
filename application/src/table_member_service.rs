@@ -1,6 +1,7 @@
 use domain::entities::*;
 use domain::repositories::TableMemberRepository;
 use shared::Result;
+use shared::error::{DomainError, Error};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -31,10 +32,10 @@ impl TableMemberService {
         };
         let table_members = self.table_member_repository.read(command).await?;
         table_members.into_iter().next().ok_or_else(|| {
-            shared::error::Error::Domain(shared::error::DomainError::EntityNotFound(format!(
-                "Table member not found: {}",
-                id
-            )))
+            Error::Domain(DomainError::EntityNotFound {
+                entity_type: "TableMember",
+                entity_id: id.to_string(),
+            })
         })
     }
 

@@ -4,6 +4,7 @@ use crate::persistence::postgres::models::table_request::ETableRequestStatus;
 use domain::entities::*;
 use domain::repositories::TableRequestRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -63,9 +64,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let has_message_update = matches!(update_data.message, Update::Change(_));
 
         if !has_status_update && !has_message_update {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let status_value = match update_data.status {
@@ -274,6 +275,31 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             WHERE status = $1
             "#,
             status as ETableRequestStatus
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(requests.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_user_and_table(&self, user_id: Uuid, table_id: Uuid) -> Result<Vec<TableRequest>> {
+        let requests = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+            SELECT
+                id,
+                user_id,
+                table_id,
+                message,
+                status as "status: ETableRequestStatus",
+                created_at,
+                updated_at
+            FROM table_requests
+            WHERE user_id = $1 AND table_id = $2
+            "#,
+            user_id,
+            table_id
         )
         .fetch_all(&self.pool)
         .await

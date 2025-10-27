@@ -1,22 +1,18 @@
-use axum::{
-    Json, Router,
-    extract::{Path, State},
-    routing::{delete, get, post},
-};
+use crate::http::dtos::*;
+use crate::http::middleware::auth::ClaimsExtractor;
+use axum::{extract::*, routing::*};
+use infrastructure::state::AppState;
+use shared::Result;
+use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::http::dtos::*;
-use crate::http::middleware::auth::ClaimsExtractor;
-use infrastructure::state::AppState;
-use shared::Result;
-use shared::error::Error;
-
 #[utoipa::path(
     get,
     path = "/v1/requests/sent",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Sent requests retrieved successfully", body = Vec<SentRequestItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -35,7 +31,8 @@ pub async fn get_sent_requests(
 #[utoipa::path(
     get,
     path = "/v1/requests/received",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Received requests retrieved successfully", body = Vec<ReceivedRequestItem>),
         (status = 401, description = "Authentication required", body = ErrorResponse)
@@ -54,7 +51,8 @@ pub async fn get_received_requests(
 #[utoipa::path(
     post,
     path = "/v1/tables/{id}/requests",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
@@ -75,9 +73,7 @@ pub async fn create_table_request(
     Json(payload): Json<CreateTableRequestRequest>,
 ) -> Result<Json<TableRequestResponse>> {
     if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(
-            shared::error::ValidationError::ValidationFailed(validation_error.to_string()),
-        ));
+        return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement table request creation logic
@@ -95,7 +91,8 @@ pub async fn create_table_request(
 #[utoipa::path(
     post,
     path = "/v1/requests/{id}/accept",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
@@ -121,7 +118,8 @@ pub async fn accept_request(
 #[utoipa::path(
     post,
     path = "/v1/requests/{id}/reject",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),
@@ -147,7 +145,8 @@ pub async fn reject_request(
 #[utoipa::path(
     delete,
     path = "/v1/requests/{id}",
-    tag = "requests",
+    tag = "table-requests",
+    security(("auth" = [])),
     params(
         ("id" = Uuid, Path, description = "Request ID")
     ),

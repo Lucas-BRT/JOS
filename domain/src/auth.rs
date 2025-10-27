@@ -19,6 +19,7 @@ pub trait Authenticator {
     async fn register(&self, command: &mut CreateUserCommand) -> Result<User>;
     async fn update_password(&self, command: &mut UpdatePasswordCommand) -> Result<()>;
     async fn logout(&self, user_id: &Uuid) -> Result<()>;
+    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()>;
 }
 
 #[async_trait]

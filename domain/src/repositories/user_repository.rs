@@ -10,5 +10,6 @@ pub trait UserRepository: Send + Sync {
     async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>>;
     async fn update(&self, command: &mut UpdateUserCommand) -> Result<User>;
     async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User>;
+    async fn delete_by_id(&self, id: &Uuid) -> Result<()>;
     async fn search(&self, query: &str) -> Result<Vec<User>>;
 }

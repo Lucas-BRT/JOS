@@ -4,6 +4,7 @@ use crate::persistence::postgres::models::session::ESessionStatus;
 use domain::entities::*;
 use domain::repositories::SessionRepository;
 use shared::Result;
+use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -105,9 +106,9 @@ impl SessionRepository for PostgresSessionRepository {
             && !has_scheduled_for_update
             && !has_status_update
         {
-            return Err(shared::error::Error::Persistence(
-                shared::error::PersistenceError::DatabaseError("Row not found".to_string()),
-            ));
+            return Err(Error::Application(ApplicationError::InvalidInput {
+                message: "No fields to update".to_string(),
+            }));
         }
 
         let name_value = match &command.name {
@@ -134,8 +135,8 @@ impl SessionRepository for PostgresSessionRepository {
             sqlx::query_as!(
                 SessionModel,
                 r#"
-                UPDATE sessions 
-                SET 
+                UPDATE sessions
+                SET
                     name = COALESCE($2, name),
                     description = COALESCE($3, description),
                     scheduled_for = COALESCE($4, scheduled_for),
@@ -165,8 +166,8 @@ impl SessionRepository for PostgresSessionRepository {
             sqlx::query_as!(
                 SessionModel,
                 r#"
-                UPDATE sessions 
-                SET 
+                UPDATE sessions
+                SET
                     name = COALESCE($2, name),
                     description = COALESCE($3, description),
                     scheduled_for = COALESCE($4, scheduled_for),

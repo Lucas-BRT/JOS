@@ -10,10 +10,12 @@ use domain::{
     repositories::SessionIntentRepository,
 };
 use shared::Result;
+use shared::error::DomainError;
 use shared::error::Error;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
+#[derive(Clone)]
 pub struct PostgresSessionIntentRepository {
     pool: PgPool,
 }
@@ -69,9 +71,10 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
 
             return match session_intent {
                 Some(session_intent) => Ok(session_intent),
-                None => Err(Error::Domain(shared::error::DomainError::EntityNotFound(
-                    "Session intent not found".to_string(),
-                ))),
+                None => Err(Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "SessionIntent",
+                    entity_id: command.id.to_string(),
+                })),
             };
         }
 
@@ -83,8 +86,8 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let updated_model = sqlx::query_as!(
             SessionIntentModel,
             r#"
-                UPDATE session_intents 
-                SET 
+                UPDATE session_intents
+                SET
                     intent_status = COALESCE($2, intent_status),
                     updated_at = NOW()
                 WHERE id = $1

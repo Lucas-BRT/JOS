@@ -1,12 +1,13 @@
 use thiserror::Error;
+use uuid::Uuid;
 use validator::ValidationErrors;
 
 #[derive(Debug, Error, Clone)]
 pub enum UserDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("User not found")]
-    UserNotFound,
+    #[error("User not found: {0}")]
+    UserNotFound(Uuid),
     #[error("Username already exists: {0}")]
     UsernameAlreadyExists(String),
     #[error("Email already exists: {0}")]
@@ -18,9 +19,9 @@ pub enum TableDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
     #[error("Table not found: {0}")]
-    TableNotFound(String),
-    #[error("User is not the game master of this table")]
-    NotGameMaster,
+    TableNotFound(Uuid),
+    #[error("User {user_id} is not the game master of table {table_id}")]
+    NotGameMaster { user_id: Uuid, table_id: Uuid },
     #[error("Table is full")]
     TableFull,
     #[error("Table status does not allow this operation: {0}")]
@@ -32,7 +33,7 @@ pub enum SessionDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
     #[error("Session not found: {0}")]
-    SessionNotFound(String),
+    SessionNotFound(Uuid),
     #[error("Session is not accepting intents")]
     NotAcceptingIntents,
     #[error("Invalid session status transition: from {from} to {to}")]
@@ -47,8 +48,8 @@ pub enum SessionDomainError {
 pub enum SessionIntentDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("Session intent not found")]
-    SessionIntentNotFound,
+    #[error("Session intent not found: {0}")]
+    SessionIntentNotFound(Uuid),
     #[error("User already has intent for this session")]
     IntentAlreadyExists,
     #[error("Cannot change intent status: session has already started")]
@@ -62,7 +63,7 @@ pub enum TableRequestDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
     #[error("Table request not found: {0}")]
-    TableRequestNotFound(String),
+    TableRequestNotFound(Uuid),
     #[error("User already has a pending request for this table")]
     RequestAlreadyExists,
     #[error("Cannot approve request: table is full")]
@@ -77,8 +78,8 @@ pub enum TableRequestDomainError {
 pub enum GameSystemDomainError {
     #[error("Validation failed: {0}")]
     Validation(#[from] ValidationErrors),
-    #[error("Game system not found")]
-    GameSystemNotFound,
+    #[error("Game system not found: {0}")]
+    GameSystemNotFound(Uuid),
     #[error("Game system name already exists: {0}")]
     GameSystemNameAlreadyExists(String),
 }

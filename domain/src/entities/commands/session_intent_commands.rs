@@ -8,7 +8,7 @@ pub struct CreateSessionIntentCommand {
     pub status: IntentStatus,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct UpdateSessionIntentCommand {
     pub id: Uuid,
     pub status: Update<IntentStatus>,
