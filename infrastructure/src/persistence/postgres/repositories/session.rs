@@ -29,7 +29,7 @@ impl SessionRepository for PostgresSessionRepository {
             r#"INSERT INTO sessions
                 (
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,
@@ -40,7 +40,7 @@ impl SessionRepository for PostgresSessionRepository {
                 ($1, $2, $3, $4, $5, $6, NOW(), NOW())
             RETURNING
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,
@@ -49,7 +49,7 @@ impl SessionRepository for PostgresSessionRepository {
                 updated_at
             "#,
             uuid,
-            session.name,
+            session.title,
             session.description,
             session.table_id,
             session.scheduled_for,
@@ -68,7 +68,7 @@ impl SessionRepository for PostgresSessionRepository {
             r#"
             SELECT
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,
@@ -77,13 +77,13 @@ impl SessionRepository for PostgresSessionRepository {
                 updated_at
             FROM sessions
             WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::text IS NULL OR name = $2)
+              AND ($2::text IS NULL OR title = $2)
               AND ($3::uuid IS NULL OR table_id = $3)
               AND ($4::timestamptz IS NULL OR scheduled_for >= $4)
               AND ($5::timestamptz IS NULL OR scheduled_for <= $5)
             "#,
             command.id,
-            command.name,
+            command.title,
             command.table_id,
             command.scheduled_for_start,
             command.scheduled_for_end
@@ -96,12 +96,12 @@ impl SessionRepository for PostgresSessionRepository {
     }
 
     async fn update(&self, command: UpdateSessionCommand) -> Result<Session> {
-        let has_name_update = matches!(command.name, Update::Change(_));
+        let has_title_update = matches!(command.title, Update::Change(_));
         let has_description_update = matches!(command.description, Update::Change(_));
         let has_scheduled_for_update = matches!(command.scheduled_for, Update::Change(_));
         let has_status_update = matches!(command.status, Update::Change(_));
 
-        if !has_name_update
+        if !has_title_update
             && !has_description_update
             && !has_scheduled_for_update
             && !has_status_update
@@ -111,8 +111,8 @@ impl SessionRepository for PostgresSessionRepository {
             }));
         }
 
-        let name_value = match &command.name {
-            Update::Change(name) => Some(name.as_str()),
+        let title_value = match &command.title {
+            Update::Change(title) => Some(title.as_str()),
             Update::Keep => None,
         };
 
@@ -137,7 +137,7 @@ impl SessionRepository for PostgresSessionRepository {
                 r#"
                 UPDATE sessions
                 SET
-                    name = COALESCE($2, name),
+                    title = COALESCE($2, title),
                     description = COALESCE($3, description),
                     scheduled_for = COALESCE($4, scheduled_for),
                     status = $5::session_status,
@@ -145,7 +145,7 @@ impl SessionRepository for PostgresSessionRepository {
                 WHERE id = $1
                 RETURNING
                     id,
-                    name,
+                    title,
                     description,
                     table_id,
                     scheduled_for,
@@ -154,7 +154,7 @@ impl SessionRepository for PostgresSessionRepository {
                     updated_at
                 "#,
                 command.id,
-                name_value,
+                title_value,
                 description_value,
                 scheduled_for_value,
                 status as ESessionStatus,
@@ -168,14 +168,14 @@ impl SessionRepository for PostgresSessionRepository {
                 r#"
                 UPDATE sessions
                 SET
-                    name = COALESCE($2, name),
+                    title = COALESCE($2, title),
                     description = COALESCE($3, description),
                     scheduled_for = COALESCE($4, scheduled_for),
                     updated_at = NOW()
                 WHERE id = $1
                 RETURNING
                     id,
-                    name,
+                    title,
                     description,
                     table_id,
                     scheduled_for,
@@ -184,7 +184,7 @@ impl SessionRepository for PostgresSessionRepository {
                     updated_at
                 "#,
                 command.id,
-                name_value,
+                title_value,
                 description_value,
                 scheduled_for_value
             )
@@ -203,7 +203,7 @@ impl SessionRepository for PostgresSessionRepository {
             WHERE id = $1
             RETURNING
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,
@@ -226,7 +226,7 @@ impl SessionRepository for PostgresSessionRepository {
             r#"
             SELECT
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,
@@ -251,7 +251,7 @@ impl SessionRepository for PostgresSessionRepository {
             r#"
             SELECT
                 id,
-                name,
+                title,
                 description,
                 table_id,
                 scheduled_for,

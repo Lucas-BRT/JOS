@@ -252,7 +252,7 @@ impl TestEnvironmentBuilder {
             let owner = seeded.users.get(&table_seed_opts.owner_identifier).unwrap();
             let cmd = CreateSessionCommand {
                 table_id: table.id,
-                name: session_opts.name,
+                title: session_opts.name,
                 description: "A test session".to_string(),
                 scheduled_for: None,
                 status: SessionStatus::Scheduled,

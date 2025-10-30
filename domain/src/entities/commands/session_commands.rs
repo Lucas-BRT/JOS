@@ -5,7 +5,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone)]
 pub struct CreateSessionCommand {
     pub table_id: Uuid,
-    pub name: String,
+    pub title: String,
     pub description: String,
     pub scheduled_for: Option<Date>,
     pub status: SessionStatus,
@@ -15,7 +15,7 @@ pub struct CreateSessionCommand {
 pub struct GetSessionCommand {
     pub id: Option<Uuid>,
     pub table_id: Option<Uuid>,
-    pub name: Option<String>,
+    pub title: Option<String>,
     pub status: Option<SessionStatus>,
     pub scheduled_for_start: Option<Date>,
     pub scheduled_for_end: Option<Date>,
@@ -24,7 +24,7 @@ pub struct GetSessionCommand {
 #[derive(Debug, Clone, Default)]
 pub struct UpdateSessionCommand {
     pub id: Uuid,
-    pub name: Update<String>,
+    pub title: Update<String>,
     pub description: Update<String>,
     pub scheduled_for: Update<Option<Date>>,
     pub status: Update<SessionStatus>,

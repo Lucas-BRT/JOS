@@ -1,6 +1,8 @@
 use crate::http::dtos::*;
-use crate::http::middleware::auth::ClaimsExtractor;
+use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
+use axum::middleware::from_fn_with_state;
 use axum::{extract::*, routing::*};
+use domain::entities::{CreateSessionCommand, GetSessionCommand};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::Error;
@@ -10,7 +12,7 @@ use validator::Validate;
 
 #[utoipa::path(
     get,
-    path = "/v1/sessions",
+    path = "/v1/tables/{table_id}/sessions",
     tag = "sessions",
     security(("auth" = [])),
     responses(
@@ -20,17 +22,27 @@ use validator::Validate;
 )]
 #[axum::debug_handler]
 pub async fn get_sessions(
+    Path(table_id): Path<Uuid>,
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<SessionListItem>>> {
-    // TODO: Implement session listing logic
-    // For now, return empty list
-    Ok(Json(vec![]))
+    State(app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<GetSessionsResponse>>> {
+    let sessions = app_state
+        .session_service
+        .get(GetSessionCommand {
+            table_id: Some(table_id),
+            ..Default::default()
+        })
+        .await?
+        .iter()
+        .map(GetSessionsResponse::from)
+        .collect();
+
+    Ok(Json(sessions))
 }
 
 #[utoipa::path(
     post,
-    path = "/v1/sessions",
+    path = "/v1/tables/{table_id}/sessions",
     tag = "sessions",
     security(("auth" = [])),
     request_body = CreateSessionRequest,
@@ -44,71 +56,29 @@ pub async fn get_sessions(
 #[axum::debug_handler]
 pub async fn create_session(
     claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    State(app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateSessionRequest>,
-) -> Result<Json<SessionDetails>> {
+) -> Result<Json<CreateSessionResponse>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 
-    // TODO: Implement session creation logic
-    // For now, return a placeholder response
-    Ok(Json(SessionDetails {
-        id: Uuid::new_v4(),
-        title: payload.title,
-        description: payload.description,
-        status: "Awaiting Confirmations".to_string(),
-        scheduled_at: payload.scheduled_at,
-        accepting_proposals: true,
-        updated_at: chrono::Utc::now(),
-        created_at: chrono::Utc::now(),
-        date: payload.scheduled_at.format("%Y-%m-%d").to_string(),
-        time: payload.scheduled_at.format("%H:%M").to_string(),
-        max_players: payload.max_players,
-        master_id: claims.0.sub,
-        table_id: payload.table_id,
-        players: vec![],
-    }))
-}
+    let session = app_state
+        .session_service
+        .create(
+            claims.0.sub,
+            CreateSessionCommand {
+                table_id,
+                title: payload.title,
+                description: payload.description,
+                scheduled_for: payload.scheduled_for,
+                status: payload.status.unwrap_or_default(),
+            },
+        )
+        .await?;
 
-#[utoipa::path(
-    get,
-    path = "/v1/sessions/{id}",
-    tag = "sessions",
-    security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Session ID")
-    ),
-    responses(
-        (status = 200, description = "Session details retrieved", body = SessionDetails),
-        (status = 404, description = "Session not found", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
-)]
-#[axum::debug_handler]
-pub async fn get_session_details(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-    Path(session_id): Path<Uuid>,
-) -> Result<Json<SessionDetails>> {
-    // TODO: Implement session details retrieval
-    // For now, return a placeholder response
-    Ok(Json(SessionDetails {
-        id: session_id,
-        title: "Placeholder Session".to_string(),
-        description: "Placeholder description".to_string(),
-        status: "Awaiting Confirmations".to_string(),
-        scheduled_at: chrono::Utc::now(),
-        accepting_proposals: true,
-        updated_at: chrono::Utc::now(),
-        created_at: chrono::Utc::now(),
-        date: chrono::Utc::now().format("%Y-%m-%d").to_string(),
-        time: chrono::Utc::now().format("%H:%M").to_string(),
-        max_players: 4,
-        master_id: Uuid::new_v4(),
-        table_id: Uuid::new_v4(),
-        players: vec![],
-    }))
+    Ok(Json(CreateSessionResponse { id: session.id }))
 }
 
 #[utoipa::path(
@@ -121,7 +91,7 @@ pub async fn get_session_details(
     ),
     request_body = UpdateSessionRequest,
     responses(
-        (status = 200, description = "Session updated successfully", body = SessionDetails),
+        (status = 200, description = "Session updated successfully", body = UpdateSessionResponse),
         (status = 400, description = "Validation error", body = ErrorResponse),
         (status = 401, description = "Authentication required", body = ErrorResponse),
         (status = 403, description = "Not authorized to update this session", body = ErrorResponse),
@@ -130,45 +100,18 @@ pub async fn get_session_details(
 )]
 #[axum::debug_handler]
 pub async fn update_session(
-    claims: ClaimsExtractor,
+    _claims: ClaimsExtractor,
     State(_app_state): State<Arc<AppState>>,
     Path(session_id): Path<Uuid>,
     Json(payload): Json<UpdateSessionRequest>,
-) -> Result<Json<SessionDetails>> {
+) -> Result<Json<UpdateSessionResponse>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 
     // TODO: Implement session update logic
     // For now, return a placeholder response
-    Ok(Json(SessionDetails {
-        id: session_id,
-        title: payload.title.unwrap_or("Updated Session".to_string()),
-        description: payload
-            .description
-            .unwrap_or("Updated description".to_string()),
-        status: payload
-            .status
-            .unwrap_or("Awaiting Confirmations".to_string()),
-        scheduled_at: payload.scheduled_at.unwrap_or(chrono::Utc::now()),
-        accepting_proposals: true,
-        updated_at: chrono::Utc::now(),
-        created_at: chrono::Utc::now(),
-        date: payload
-            .scheduled_at
-            .unwrap_or(chrono::Utc::now())
-            .format("%Y-%m-%d")
-            .to_string(),
-        time: payload
-            .scheduled_at
-            .unwrap_or(chrono::Utc::now())
-            .format("%H:%M")
-            .to_string(),
-        max_players: payload.max_players.unwrap_or(4),
-        master_id: claims.0.sub,
-        table_id: Uuid::new_v4(),
-        players: vec![],
-    }))
+    Ok(Json(UpdateSessionResponse { id: session_id }))
 }
 
 #[utoipa::path(
@@ -201,13 +144,18 @@ pub async fn delete_session(
 pub fn session_routes(state: Arc<AppState>) -> Router {
     Router::new()
         .nest(
+            "/tables/{table_id}/sessions",
+            Router::new()
+                .route("/", post(create_session))
+                .route("/", get(get_sessions)),
+        )
+        .nest(
             "/sessions",
             Router::new()
                 .route("/", get(get_sessions))
-                .route("/", post(create_session))
-                .route("/{id}", get(get_session_details))
                 .route("/{id}", put(update_session))
                 .route("/{id}", delete(delete_session)),
         )
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)
 }
