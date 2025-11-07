@@ -213,7 +213,7 @@ impl TestEnvironmentBuilder {
 
         let mut default_gs = None;
 
-        if self.tables_to_seed.len() > 0 {
+        if !self.tables_to_seed.is_empty() {
             default_gs = Some(
                 game_system_service
                     .create(&mut CreateGameSystemCommand {
@@ -252,7 +252,7 @@ impl TestEnvironmentBuilder {
             let owner = seeded.users.get(&table_seed_opts.owner_identifier).unwrap();
             let cmd = CreateSessionCommand {
                 table_id: table.id,
-                name: session_opts.name,
+                title: session_opts.name,
                 description: "A test session".to_string(),
                 scheduled_for: None,
                 status: SessionStatus::Scheduled,

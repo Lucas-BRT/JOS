@@ -7,7 +7,7 @@ use uuid::Uuid;
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Session {
     pub id: Uuid,
-    pub name: String,
+    pub title: String,
     pub description: String,
     pub table_id: Uuid,
     pub scheduled_for: Option<Date>,
@@ -16,8 +16,9 @@ pub struct Session {
     pub updated_at: Date,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize, ToSchema, Default)]
 pub enum SessionStatus {
+    #[default]
     Scheduled,
     InProgress,
     Completed,

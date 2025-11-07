@@ -124,7 +124,7 @@ pub async fn get_table_details(
         .into_iter()
         .map(|s| SessionInfo {
             id: s.id,
-            title: s.name,
+            title: s.title,
             description: s.description,
             status: s.status.to_string(), // Assuming SessionStatus has a Display impl or can be converted to String
             scheduled_at: s.scheduled_for.unwrap_or_default(), // Handle Option<Date>
@@ -253,7 +253,7 @@ pub async fn update_table(
         .into_iter()
         .map(|s| SessionInfo {
             id: s.id,
-            title: s.name,
+            title: s.title,
             description: s.description,
             status: s.status.to_string(),
             scheduled_at: s.scheduled_for.unwrap_or_default(),

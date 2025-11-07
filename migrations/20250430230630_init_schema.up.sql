@@ -48,7 +48,7 @@ CREATE TABLE table_members (
 
 CREATE TABLE sessions (
     "id" UUID NOT NULL,
-    "name" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "table_id" UUID NOT NULL,
     "scheduled_for" TIMESTAMPTZ,

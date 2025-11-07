@@ -413,5 +413,5 @@ async fn test_get_table_details_status_and_sessions_succeeds(pool: PgPool) {
     assert_eq!(table_json.status, table.status.to_string());
     assert_eq!(table_json.sessions.len(), 1);
     assert_eq!(table_json.sessions[0].id, session.id);
-    assert_eq!(table_json.sessions[0].title, session.name);
+    assert_eq!(table_json.sessions[0].title, session.title);
 }

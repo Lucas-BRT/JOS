@@ -36,7 +36,7 @@ impl From<SessionStatus> for ESessionStatus {
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
 pub struct SessionModel {
     pub id: Uuid,
-    pub name: String,
+    pub title: String,
     pub description: String,
     pub table_id: Uuid,
     pub scheduled_for: Option<Date>,
@@ -49,7 +49,7 @@ impl From<SessionModel> for Session {
     fn from(model: SessionModel) -> Self {
         Session {
             id: model.id,
-            name: model.name,
+            title: model.title,
             description: model.description,
             table_id: model.table_id,
             scheduled_for: model.scheduled_for,

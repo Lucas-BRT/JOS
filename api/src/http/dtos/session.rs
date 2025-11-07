@@ -1,9 +1,31 @@
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
+use domain::entities::{Session, SessionStatus};
 use serde::{Deserialize, Serialize};
+use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+#[derive(Deserialize, Serialize, ToSchema, Default)]
+pub enum ISessionStatus {
+    #[default]
+    Scheduled,
+    InProgress,
+    Completed,
+    Cancelled,
+}
+
+impl From<ISessionStatus> for SessionStatus {
+    fn from(value: ISessionStatus) -> Self {
+        match value {
+            ISessionStatus::Scheduled => SessionStatus::Scheduled,
+            ISessionStatus::InProgress => SessionStatus::InProgress,
+            ISessionStatus::Completed => SessionStatus::Completed,
+            ISessionStatus::Cancelled => SessionStatus::Cancelled,
+        }
+    }
+}
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateSessionRequest {
@@ -11,10 +33,13 @@ pub struct CreateSessionRequest {
     pub title: String,
     #[validate(length(max = 1000))]
     pub description: String,
-    pub scheduled_at: DateTime<Utc>,
-    pub table_id: Uuid,
-    #[validate(range(min = 1, max = 20))]
-    pub max_players: i32,
+    pub scheduled_for: Option<Date>,
+    pub status: Option<SessionStatus>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct CreateSessionResponse {
+    pub id: Uuid,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
@@ -23,10 +48,29 @@ pub struct UpdateSessionRequest {
     pub title: Option<String>,
     #[validate(length(max = 1000))]
     pub description: Option<String>,
-    pub scheduled_at: Option<DateTime<Utc>>,
+    pub scheduled_for: Option<Option<Date>>,
     #[validate(range(min = 1, max = 20))]
     pub max_players: Option<i32>,
-    pub status: Option<String>,
+    pub status: Option<ISessionStatus>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema, Validate)]
+pub struct UpdateSessionResponse {
+    pub title: String,
+    pub description: String,
+    pub scheduled_for: Option<Date>,
+    pub status: SessionStatus,
+}
+
+impl From<Session> for UpdateSessionResponse {
+    fn from(value: Session) -> Self {
+        Self {
+            title: value.title,
+            description: value.description,
+            scheduled_for: value.scheduled_for,
+            status: value.status,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -40,30 +84,36 @@ pub struct SessionPlayer {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+pub struct GetSessionsResponse {
+    pub id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub scheduled_for: Option<Date>,
+}
+
+impl From<&Session> for GetSessionsResponse {
+    fn from(session: &Session) -> Self {
+        Self {
+            id: session.id,
+            title: session.title.clone(),
+            description: session.description.clone(),
+            scheduled_for: session.scheduled_for,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionListItem {
     pub id: Uuid,
     pub title: String,
     pub description: String,
     pub status: String,
-    pub scheduled_at: DateTime<Utc>,
+    pub scheduled_for: DateTime<Utc>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionDetails {
     pub id: Uuid,
-    pub title: String,
-    pub description: String,
-    pub status: String,
-    pub scheduled_at: DateTime<Utc>,
-    pub accepting_proposals: bool,
-    pub updated_at: DateTime<Utc>,
-    pub created_at: DateTime<Utc>,
-    pub date: String,
-    pub time: String,
-    pub max_players: i32,
-    pub master_id: Uuid,
-    pub table_id: Uuid,
-    pub players: Vec<SessionPlayer>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

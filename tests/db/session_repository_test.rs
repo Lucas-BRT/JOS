@@ -23,7 +23,7 @@ async fn test_create_session_success(pool: PgPool) {
 
     let session_data = CreateSessionCommand {
         table_id: table.id,
-        name: "Test Session".to_string(),
+        title: "Test Session".to_string(),
         description: "A session for testing".to_string(),
         scheduled_for: None,
         status: SessionStatus::Scheduled,
@@ -34,7 +34,7 @@ async fn test_create_session_success(pool: PgPool) {
     match result {
         Ok(session) => {
             assert_eq!(session.table_id, table.id);
-            assert_eq!(session.name, "Test Session");
+            assert_eq!(session.title, "Test Session");
             assert!(session.id != Uuid::nil());
         }
         Err(e) => {
@@ -55,7 +55,7 @@ async fn test_find_by_id(pool: PgPool) {
 
     let session_data = CreateSessionCommand {
         table_id: table.id,
-        name: "Test Session".to_string(),
+        title: "Test Session".to_string(),
         description: "A session for testing".to_string(),
         scheduled_for: None,
         status: SessionStatus::Scheduled,
@@ -100,7 +100,7 @@ async fn test_find_by_table_id(pool: PgPool) {
     session_repo
         .create(CreateSessionCommand {
             table_id: table1.id,
-            name: "Session 1".to_string(),
+            title: "Session 1".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -110,7 +110,7 @@ async fn test_find_by_table_id(pool: PgPool) {
     session_repo
         .create(CreateSessionCommand {
             table_id: table2.id,
-            name: "Session 2".to_string(),
+            title: "Session 2".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -124,7 +124,7 @@ async fn test_find_by_table_id(pool: PgPool) {
     };
     let found_sessions = session_repo.read(get_command).await.unwrap();
     assert_eq!(found_sessions.len(), 1);
-    assert_eq!(found_sessions[0].name, "Session 1");
+    assert_eq!(found_sessions[0].title, "Session 1");
 }
 
 #[sqlx::test]
@@ -142,7 +142,7 @@ async fn test_get_all_sessions(pool: PgPool) {
     session_repo
         .create(CreateSessionCommand {
             table_id: table1.id,
-            name: "Session 1".to_string(),
+            title: "Session 1".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -152,7 +152,7 @@ async fn test_get_all_sessions(pool: PgPool) {
     session_repo
         .create(CreateSessionCommand {
             table_id: table2.id,
-            name: "Session 2".to_string(),
+            title: "Session 2".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -166,7 +166,7 @@ async fn test_get_all_sessions(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn test_update_session_name(pool: PgPool) {
+async fn test_update_session_title(pool: PgPool) {
     let env = TestEnvironmentBuilder::new(pool.clone())
         .with_user(GM_ID)
         .with_table(TABLE_ID, GM_ID)
@@ -178,7 +178,7 @@ async fn test_update_session_name(pool: PgPool) {
     let created_session = session_repo
         .create(CreateSessionCommand {
             table_id: table.id,
-            name: "Original Name".to_string(),
+            title: "Original Name".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -188,7 +188,7 @@ async fn test_update_session_name(pool: PgPool) {
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
-        name: Update::Change("New Name".to_string()),
+        title: Update::Change("New Name".to_string()),
         ..Default::default()
     };
 
@@ -201,7 +201,7 @@ async fn test_update_session_name(pool: PgPool) {
         })
         .await
         .unwrap();
-    assert_eq!(found_sessions[0].name, "New Name");
+    assert_eq!(found_sessions[0].title, "New Name");
 }
 
 #[sqlx::test]
@@ -217,7 +217,7 @@ async fn test_update_session_description(pool: PgPool) {
     let created_session = session_repo
         .create(CreateSessionCommand {
             table_id: table.id,
-            name: "Test Session".to_string(),
+            title: "Test Session".to_string(),
             description: "Original Description".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -256,7 +256,7 @@ async fn test_update_session_status(pool: PgPool) {
     let created_session = session_repo
         .create(CreateSessionCommand {
             table_id: table.id,
-            name: "Test Session".to_string(),
+            title: "Test Session".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -295,7 +295,7 @@ async fn test_delete_session(pool: PgPool) {
     let created_session = session_repo
         .create(CreateSessionCommand {
             table_id: table.id,
-            name: "To Be Deleted".to_string(),
+            title: "To Be Deleted".to_string(),
             description: "".to_string(),
             scheduled_for: None,
             status: SessionStatus::Scheduled,
@@ -349,7 +349,7 @@ async fn test_concurrent_session_operations(pool: PgPool) {
             tokio::spawn(async move {
                 let session_data = CreateSessionCommand {
                     table_id,
-                    name: format!("Session {}", i),
+                    title: format!("Session {}", i),
                     description: format!("Description for session {}", i),
                     scheduled_for: None,
                     status: SessionStatus::Scheduled,

@@ -34,7 +34,6 @@ impl Modify for SecurityAddon {
         crate::http::handlers::table::delete_table,
         crate::http::handlers::session::create_session,
         crate::http::handlers::session::get_sessions,
-        crate::http::handlers::session::get_session_details,
         crate::http::handlers::session::update_session,
         crate::http::handlers::session::delete_session,
         crate::http::handlers::table_request::create_table_request,
