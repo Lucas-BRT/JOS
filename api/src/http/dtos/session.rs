@@ -16,13 +16,13 @@ pub enum ISessionStatus {
     Cancelled,
 }
 
-impl From<SessionStatus> for ISessionStatus {
-    fn from(value: SessionStatus) -> Self {
+impl From<ISessionStatus> for SessionStatus {
+    fn from(value: ISessionStatus) -> Self {
         match value {
-            SessionStatus::Scheduled => ISessionStatus::Scheduled,
-            SessionStatus::InProgress => ISessionStatus::InProgress,
-            SessionStatus::Completed => ISessionStatus::Completed,
-            SessionStatus::Cancelled => ISessionStatus::Cancelled,
+            ISessionStatus::Scheduled => SessionStatus::Scheduled,
+            ISessionStatus::InProgress => SessionStatus::InProgress,
+            ISessionStatus::Completed => SessionStatus::Completed,
+            ISessionStatus::Cancelled => SessionStatus::Cancelled,
         }
     }
 }
@@ -48,15 +48,29 @@ pub struct UpdateSessionRequest {
     pub title: Option<String>,
     #[validate(length(max = 1000))]
     pub description: Option<String>,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<Option<Date>>,
     #[validate(range(min = 1, max = 20))]
     pub max_players: Option<i32>,
-    pub status: Option<String>,
+    pub status: Option<ISessionStatus>,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct UpdateSessionResponse {
-    pub id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub scheduled_for: Option<Date>,
+    pub status: SessionStatus,
+}
+
+impl From<Session> for UpdateSessionResponse {
+    fn from(value: Session) -> Self {
+        Self {
+            title: value.title,
+            description: value.description,
+            scheduled_for: value.scheduled_for,
+            status: value.status,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

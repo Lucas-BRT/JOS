@@ -213,7 +213,7 @@ impl TestEnvironmentBuilder {
 
         let mut default_gs = None;
 
-        if self.tables_to_seed.len() > 0 {
+        if !self.tables_to_seed.is_empty() {
             default_gs = Some(
                 game_system_service
                     .create(&mut CreateGameSystemCommand {
