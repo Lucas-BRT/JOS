@@ -1,21 +1,21 @@
-use crate::entities::Update;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
-pub struct CreateGameSystemCommand {
-    pub name: String,
+#[derive(Debug, Clone, Copy)]
+pub struct CreateGameSystemCommand<'a> {
+    pub id: Uuid,
+    pub name: &'a str,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct GetGameSystemCommand {
+pub struct GetGameSystemCommand<'a> {
     pub id: Option<Uuid>,
-    pub name: Option<String>,
+    pub name: Option<&'a str>,
 }
 
 #[derive(Debug, Clone)]
-pub struct UpdateGameSystemCommand {
+pub struct UpdateGameSystemCommand<'a> {
     pub id: Uuid,
-    pub name: Update<String>,
+    pub name: Option<&'a str>,
 }
 
 #[derive(Debug, Clone)]

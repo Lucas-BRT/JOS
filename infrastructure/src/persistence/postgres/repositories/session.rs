@@ -3,11 +3,11 @@ use crate::persistence::postgres::models::SessionModel;
 use crate::persistence::postgres::models::session::ESessionStatus;
 use domain::entities::*;
 use domain::repositories::SessionRepository;
-use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
+#[derive(Clone)]
 pub struct PostgresSessionRepository {
     pool: PgPool,
 }
@@ -20,9 +20,8 @@ impl PostgresSessionRepository {
 
 #[async_trait::async_trait]
 impl SessionRepository for PostgresSessionRepository {
-    async fn create(&self, session: CreateSessionCommand) -> Result<Session> {
-        let status = ESessionStatus::from(session.status);
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+    async fn create(&self, command: &CreateSessionCommand) -> Result<Session, Error> {
+        let status = ESessionStatus::from(command.status);
 
         let created_session = sqlx::query_as!(
             SessionModel,
@@ -48,11 +47,11 @@ impl SessionRepository for PostgresSessionRepository {
                 created_at,
                 updated_at
             "#,
-            uuid,
-            session.title,
-            session.description,
-            session.table_id,
-            session.scheduled_for,
+            command.id,
+            command.title,
+            command.description,
+            command.table_id,
+            command.scheduled_for,
             status as ESessionStatus
         )
         .fetch_one(&self.pool)
@@ -62,7 +61,7 @@ impl SessionRepository for PostgresSessionRepository {
         Ok(created_session.into())
     }
 
-    async fn read(&self, command: GetSessionCommand) -> Result<Vec<Session>> {
+    async fn read(&self, command: &GetSessionCommand) -> Result<Vec<Session>, Error> {
         let sessions = sqlx::query_as!(
             SessionModel,
             r#"
@@ -95,108 +94,55 @@ impl SessionRepository for PostgresSessionRepository {
         Ok(sessions.into_iter().map(|s| s.into()).collect())
     }
 
-    async fn update(&self, command: UpdateSessionCommand) -> Result<Session> {
-        let has_title_update = matches!(command.title, Update::Change(_));
-        let has_description_update = matches!(command.description, Update::Change(_));
-        let has_scheduled_for_update = matches!(command.scheduled_for, Update::Change(_));
-        let has_status_update = matches!(command.status, Update::Change(_));
+    async fn update(&self, command: &UpdateSessionCommand) -> Result<Session, Error> {
+        let has_title_update = command.title.is_some();
+        let has_description_update = command.description.is_some();
+        let has_scheduled_for_update = command.scheduled_for.is_some();
+        let has_status_update = command.status.is_some();
 
-        if !has_title_update
-            && !has_description_update
-            && !has_scheduled_for_update
-            && !has_status_update
+        if !(has_title_update
+            || has_description_update
+            || has_scheduled_for_update
+            || has_status_update)
         {
             return Err(Error::Application(ApplicationError::InvalidInput {
-                message: "No fields to update".to_string(),
+                message: "No fields to update".into(),
             }));
         }
 
-        let title_value = match &command.title {
-            Update::Change(title) => Some(title.as_str()),
-            Update::Keep => None,
-        };
+        let status = command.status.map(ESessionStatus::from);
+        let scheduled_for = command.scheduled_for.flatten();
 
-        let description_value = match &command.description {
-            Update::Change(description) => Some(description.as_str()),
-            Update::Keep => None,
-        };
+        let updated = sqlx::query_as!(
+            SessionModel,
+            r#"
+            UPDATE sessions
+            SET
+                title = COALESCE($2, title),
+                description = COALESCE($3, description),
+                scheduled_for = COALESCE($4, scheduled_for),
+                status = COALESCE($5::session_status, status),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING
+                id, title, description, table_id,
+                scheduled_for, status as "status: ESessionStatus",
+                created_at, updated_at
+            "#,
+            command.id,
+            command.title,
+            command.description,
+            scheduled_for,
+            status as Option<ESessionStatus>
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
 
-        let scheduled_for_value = match &command.scheduled_for {
-            Update::Change(scheduled_for) => scheduled_for.as_ref(),
-            Update::Keep => None,
-        };
-
-        let status_value = match command.status {
-            Update::Change(status) => Some(ESessionStatus::from(status)),
-            Update::Keep => None,
-        };
-
-        let updated_session = if let Some(status) = status_value {
-            sqlx::query_as!(
-                SessionModel,
-                r#"
-                UPDATE sessions
-                SET
-                    title = COALESCE($2, title),
-                    description = COALESCE($3, description),
-                    scheduled_for = COALESCE($4, scheduled_for),
-                    status = $5::session_status,
-                    updated_at = NOW()
-                WHERE id = $1
-                RETURNING
-                    id,
-                    title,
-                    description,
-                    table_id,
-                    scheduled_for,
-                    status as "status: ESessionStatus",
-                    created_at,
-                    updated_at
-                "#,
-                command.id,
-                title_value,
-                description_value,
-                scheduled_for_value,
-                status as ESessionStatus,
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?
-        } else {
-            sqlx::query_as!(
-                SessionModel,
-                r#"
-                UPDATE sessions
-                SET
-                    title = COALESCE($2, title),
-                    description = COALESCE($3, description),
-                    scheduled_for = COALESCE($4, scheduled_for),
-                    updated_at = NOW()
-                WHERE id = $1
-                RETURNING
-                    id,
-                    title,
-                    description,
-                    table_id,
-                    scheduled_for,
-                    status as "status: ESessionStatus",
-                    created_at,
-                    updated_at
-                "#,
-                command.id,
-                title_value,
-                description_value,
-                scheduled_for_value
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?
-        };
-
-        Ok(updated_session.into())
+        Ok(todo!())
     }
 
-    async fn delete(&self, command: DeleteSessionCommand) -> Result<Session> {
+    async fn delete(&self, command: &DeleteSessionCommand) -> Result<Session, Error> {
         let session = sqlx::query_as!(
             SessionModel,
             r#"DELETE FROM sessions
@@ -211,16 +157,16 @@ impl SessionRepository for PostgresSessionRepository {
                 created_at,
                 updated_at
             "#,
-            command.id
+            command.table_id
         )
         .fetch_one(&self.pool)
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(session.into())
+        Ok(todo!())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<Session>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Session>, Error> {
         let session = sqlx::query_as!(
             SessionModel,
             r#"
@@ -245,7 +191,7 @@ impl SessionRepository for PostgresSessionRepository {
         Ok(session.map(|model| model.into()))
     }
 
-    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Session>> {
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Session>, Error> {
         let sessions = sqlx::query_as!(
             SessionModel,
             r#"

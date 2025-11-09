@@ -1,11 +1,15 @@
-use crate::persistence::postgres::RepositoryError;
+use shared::Error;
+use shared::error::InfrastructureError;
 use sqlx::Error as SqlxError;
 use sqlx::error::DatabaseError;
 
 const UNIQUE_CONSTRAINT_CODE: &str = "23505";
 const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";
 
-pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) -> RepositoryError {
+pub fn map_constraint_violation(
+    db_err: &dyn DatabaseError,
+    constraint: &str,
+) -> InfrastructureError {
     let message = db_err.message();
     let is_referenced_not_found = message.contains("is not present in table");
 
@@ -44,23 +48,23 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         // Unique constraints
         "users_username_key" => {
             tracing::debug!("Username already taken: {}", message);
-            RepositoryError::UsernameAlreadyTaken
+            InfrastructureError::UsernameAlreadyTaken
         }
         "users_email_key" => {
             tracing::debug!("Email already taken: {}", message);
-            RepositoryError::EmailAlreadyTaken
+            InfrastructureError::EmailAlreadyTaken
         }
         "game_systems_name_key" => {
             tracing::debug!("Game system name already taken: {}", message);
-            RepositoryError::GameSystemNameAlreadyTaken
+            InfrastructureError::GameSystemNameAlreadyTaken
         }
         "session_intents_user_id_session_id_key" => {
             tracing::debug!("User session intent already exists: {}", message);
-            RepositoryError::UserSessionIntentAlreadyExists
+            InfrastructureError::UserSessionIntentAlreadyExists
         }
         "table_members_table_id_user_id_key" => {
             tracing::debug!("User already member of table: {}", message);
-            RepositoryError::UserAlreadyMemberOfTable
+            InfrastructureError::UserAlreadyMemberOfTable
         }
 
         // Foreign key constraints
@@ -68,10 +72,10 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("User not found for gm_id: {}", message);
                 let id = extract_field_from_error("gm_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for gm_id: {}", message);
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "tables".into(),
                     field: "gm_id".into(),
                 }
@@ -82,10 +86,10 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
                 tracing::debug!("Game system not found: {}", message);
                 let id =
                     extract_field_from_error("game_system_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::GameSystemNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::GameSystemNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for game_system_id: {}", message);
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "tables".into(),
                     field: "game_system_id".into(),
                 }
@@ -95,10 +99,10 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for table_id: {}", message);
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "sessions".into(),
                     field: "table_id".into(),
                 }
@@ -108,13 +112,13 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("User not found for session intent: {}", message);
                 let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in session intents: {}",
                     message
                 );
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "session_intents".into(),
                     field: "user_id".into(),
                 }
@@ -124,10 +128,10 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Session not found: {}", message);
                 let id = extract_field_from_error("session_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::SessionNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::SessionNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for session_id: {}", message);
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "session_intents".into(),
                     field: "session_id".into(),
                 }
@@ -138,10 +142,10 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
                 tracing::debug!("Session intent not found: {}", message);
                 let id = extract_field_from_error("session_intent_id")
                     .unwrap_or_else(|| "unknown".into());
-                RepositoryError::SessionIntentNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::SessionIntentNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!("Foreign key violation for session_intent_id: {}", message);
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "session_checkins".into(),
                     field: "session_intent_id".into(),
                 }
@@ -151,13 +155,13 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("User not found for table request: {}", message);
                 let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in table requests: {}",
                     message
                 );
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "table_requests".into(),
                     field: "user_id".into(),
                 }
@@ -167,13 +171,13 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table request: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for table_id in table requests: {}",
                     message
                 );
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "table_requests".into(),
                     field: "table_id".into(),
                 }
@@ -183,13 +187,13 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("Table not found for table member: {}", message);
                 let id = extract_field_from_error("table_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::RpgTableNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::RpgTableNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for table_id in table members: {}",
                     message
                 );
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "table_members".into(),
                     field: "table_id".into(),
                 }
@@ -199,13 +203,13 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
             if is_referenced_not_found {
                 tracing::debug!("User not found for table member: {}", message);
                 let id = extract_field_from_error("user_id").unwrap_or_else(|| "unknown".into());
-                RepositoryError::UserNotFound(id.parse().unwrap_or_default())
+                InfrastructureError::UserNotFound(id.parse().unwrap_or_default())
             } else {
                 tracing::warn!(
                     "Foreign key violation for user_id in table members: {}",
                     message
                 );
-                RepositoryError::ForeignKeyViolation {
+                InfrastructureError::ForeignKeyViolation {
                     table: "table_members".into(),
                     field: "user_id".into(),
                 }
@@ -213,14 +217,14 @@ pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) ->
         }
         _ => {
             tracing::error!("Unknown constraint violation: {} - {}", constraint, message);
-            RepositoryError::UnknownConstraint(constraint.into())
+            InfrastructureError::UnknownConstraint(constraint.into())
         }
     }
 }
 
-pub fn map_database_error(error: SqlxError) -> RepositoryError {
+pub fn map_database_error(error: SqlxError) -> Error {
     match error {
-        SqlxError::RowNotFound => RepositoryError::NotFound,
+        SqlxError::RowNotFound => Error::Infrastructure(InfrastructureError::NotFound),
         SqlxError::Database(db_err) => {
             if let Some(code) = db_err.code() {
                 match code.as_ref() {
@@ -231,26 +235,34 @@ pub fn map_database_error(error: SqlxError) -> RepositoryError {
                                 constraint,
                                 code
                             );
-                            return map_constraint_violation(&*db_err, constraint);
+                            return Error::Infrastructure(map_constraint_violation(
+                                &*db_err, constraint,
+                            ));
                         }
                     }
                     "23514" => {
                         tracing::warn!("Check constraint violation: {}", db_err.message());
-                        return RepositoryError::ValidationError(db_err.message().into());
+                        return Error::Infrastructure(InfrastructureError::ValidationError(
+                            db_err.message().into(),
+                        ));
                     }
                     "22P02" => {
                         tracing::warn!("Invalid input value: {}", db_err.message());
-                        return RepositoryError::InvalidInput(db_err.message().into());
+                        return Error::Infrastructure(InfrastructureError::InvalidInput(
+                            db_err.message().into(),
+                        ));
                     }
                     _ => {}
                 }
             }
             tracing::error!("Unhandled database error: {:?}", db_err);
-            RepositoryError::DatabaseError(SqlxError::Database(db_err))
+            Error::Infrastructure(InfrastructureError::Database(
+                SqlxError::Database(db_err).to_string(),
+            ))
         }
         _ => {
             tracing::error!("Unhandled general sqlx error: {:?}", error);
-            RepositoryError::DatabaseError(error)
+            Error::Infrastructure(InfrastructureError::DatabaseError(error.to_string()))
         }
     }
 }

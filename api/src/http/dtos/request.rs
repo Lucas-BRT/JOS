@@ -1,7 +1,6 @@
 use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -27,7 +26,7 @@ pub struct ReceivedRequestItem {
     pub id: Uuid,
     pub player_id: Uuid,
     pub table_id: Uuid,
-    pub request_date: Date,
+    pub request_date: DateTime<Utc>,
     pub message: String,
 }
 

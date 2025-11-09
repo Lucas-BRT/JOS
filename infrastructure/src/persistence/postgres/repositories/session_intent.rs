@@ -5,15 +5,13 @@ use crate::persistence::postgres::{
 use domain::{
     entities::{
         CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
-        SessionIntent, Update, UpdateSessionIntentCommand,
+        SessionIntent, UpdateSessionIntentCommand,
     },
     repositories::SessionIntentRepository,
 };
-use shared::Result;
-use shared::error::DomainError;
-use shared::error::Error;
+use shared::error::{Error, InfrastructureError};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresSessionIntentRepository {
@@ -28,8 +26,7 @@ impl PostgresSessionIntentRepository {
 
 #[async_trait::async_trait]
 impl SessionIntentRepository for PostgresSessionIntentRepository {
-    async fn create(&self, command: CreateSessionIntentCommand) -> Result<SessionIntent> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
+    async fn create(&self, command: &CreateSessionIntentCommand) -> Result<SessionIntent, Error> {
         let status = EIntentStatus::from(command.status);
 
         let session_intent = sqlx::query_as!(
@@ -51,7 +48,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
                 created_at,
                 updated_at
             "#,
-            uuid,
+            command.id,
             command.player_id,
             command.session_id,
             status as EIntentStatus,
@@ -63,24 +60,16 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(session_intent.into())
     }
 
-    async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
-        let status_to_update = matches!(command.status, Update::Change(_));
+    async fn update(&self, command: &UpdateSessionIntentCommand) -> Result<SessionIntent, Error> {
+        let status_to_update = matches!(command.status, Some(_));
 
         if !status_to_update {
-            let session_intent = self.find_by_id(command.id).await?;
-
-            return match session_intent {
-                Some(session_intent) => Ok(session_intent),
-                None => Err(Error::Domain(DomainError::EntityNotFound {
-                    entity_type: "SessionIntent",
-                    entity_id: command.id.to_string(),
-                })),
-            };
+            return Err(Error::Infrastructure(InfrastructureError::NothingToUpdate));
         }
 
-        let new_status: Option<EIntentStatus> = match command.status {
-            Update::Change(status) => Some(status.into()),
-            Update::Keep => None,
+        let new_status = match command.status {
+            Some(status) => Some(status.into()),
+            None => None,
         };
 
         let updated_model = sqlx::query_as!(
@@ -109,7 +98,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(updated_model.into())
     }
 
-    async fn delete(&self, command: DeleteSessionIntentCommand) -> Result<SessionIntent> {
+    async fn delete(&self, command: &DeleteSessionIntentCommand) -> Result<SessionIntent, Error> {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"DELETE FROM session_intents
@@ -131,7 +120,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(session_intent.into())
     }
 
-    async fn read(&self, command: GetSessionIntentCommand) -> Result<Vec<SessionIntent>> {
+    async fn read(&self, command: &GetSessionIntentCommand) -> Result<Vec<SessionIntent>, Error> {
         let sessions = sqlx::query_as!(
             SessionIntentModel,
             r#"
@@ -158,7 +147,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(sessions.into_iter().map(|s| s.into()).collect())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>, Error> {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"
@@ -181,7 +170,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         Ok(session_intent.map(|model| model.into()))
     }
 
-    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<SessionIntent>> {
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<SessionIntent>, Error> {
         let session_intents = sqlx::query_as!(
             SessionIntentModel,
             r#"
@@ -207,7 +196,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
             .collect())
     }
 
-    async fn find_by_session_id(&self, session_id: Uuid) -> Result<Vec<SessionIntent>> {
+    async fn find_by_session_id(&self, session_id: Uuid) -> Result<Vec<SessionIntent>, Error> {
         let session_intents = sqlx::query_as!(
             SessionIntentModel,
             r#"

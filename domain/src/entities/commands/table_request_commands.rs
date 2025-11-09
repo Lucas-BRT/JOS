@@ -1,17 +1,18 @@
-use crate::entities::{TableRequestStatus, Update};
+use crate::entities::TableRequestStatus;
 use uuid::Uuid;
 
-pub struct CreateTableRequestCommand {
+pub struct CreateTableRequestCommand<'a> {
+    pub id: Uuid,
     pub user_id: Uuid,
     pub table_id: Uuid,
-    pub message: Option<String>,
+    pub message: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct UpdateTableRequestCommand {
+pub struct UpdateTableRequestCommand<'a> {
     pub id: Uuid,
-    pub status: Update<TableRequestStatus>,
-    pub message: Update<Option<String>>,
+    pub status: Option<TableRequestStatus>,
+    pub message: Option<Option<&'a str>>,
 }
 
 pub struct DeleteTableRequestCommand {

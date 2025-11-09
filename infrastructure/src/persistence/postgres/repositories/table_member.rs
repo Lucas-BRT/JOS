@@ -2,7 +2,7 @@ use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableMemberModel;
 use domain::entities::*;
 use domain::repositories::TableMemberRepository;
-use shared::Result;
+use shared::Error;
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -19,7 +19,7 @@ impl PostgresTableMemberRepository {
 
 #[async_trait::async_trait]
 impl TableMemberRepository for PostgresTableMemberRepository {
-    async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
+    async fn create(&self, command: &CreateTableMemberCommand) -> Result<TableMember, Error> {
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let member = sqlx::query_as!(
@@ -38,15 +38,15 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(member.into())
     }
 
-    async fn read(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>> {
+    async fn read(&self, command: &GetTableMemberCommand) -> Result<Vec<TableMember>, Error> {
         let members = sqlx::query_as!(
             TableMemberModel,
             r#"SELECT * FROM table_members
                WHERE ($1::uuid IS NULL OR id = $1)
                  AND ($2::uuid IS NULL OR table_id = $2)
-                 AND ($3::uuid IS NULL OR user_id = $3)"#, 
-            command.id, 
-            command.table_id, 
+                 AND ($3::uuid IS NULL OR user_id = $3)"#,
+            command.id,
+            command.table_id,
             command.user_id
         )
         .fetch_all(&self.pool)
@@ -56,7 +56,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(members.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>, Error> {
         let member = sqlx::query_as!(
             TableMemberModel,
             "SELECT * FROM table_members WHERE id = $1",
@@ -69,7 +69,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(member.map(|m| m.into()))
     }
 
-    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableMember>> {
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableMember>, Error> {
         let members = sqlx::query_as!(
             TableMemberModel,
             "SELECT * FROM table_members WHERE table_id = $1",
@@ -82,7 +82,11 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(members.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn find_by_table_and_user(&self, table_id: Uuid, user_id: Uuid) -> Result<Option<TableMember>> {
+    async fn find_by_table_and_user(
+        &self,
+        table_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<TableMember>, Error> {
         let member = sqlx::query_as!(
             TableMemberModel,
             "SELECT * FROM table_members WHERE table_id = $1 AND user_id = $2",
@@ -96,7 +100,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(member.map(|m| m.into()))
     }
 
-    async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember> {
+    async fn update(&self, command: &UpdateTableMemberCommand) -> Result<TableMember, Error> {
         let member = sqlx::query_as!(
             TableMemberModel,
             r#"UPDATE table_members
@@ -106,8 +110,8 @@ impl TableMemberRepository for PostgresTableMemberRepository {
                WHERE id = $1
                RETURNING *"#,
             command.id,
-            command.table_id.into_option(),
-            command.user_id.into_option()
+            command.table_id,
+            command.user_id
         )
         .fetch_one(&self.pool)
         .await
@@ -116,7 +120,7 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(member.into())
     }
 
-    async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember> {
+    async fn delete(&self, command: &DeleteTableMemberCommand) -> Result<TableMember, Error> {
         let deleted = sqlx::query_as!(
             TableMemberModel,
             "DELETE FROM table_members WHERE id = $1 RETURNING *",

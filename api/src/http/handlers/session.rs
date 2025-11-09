@@ -1,14 +1,19 @@
-use crate::http::dtos::*;
-use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
-use axum::middleware::from_fn_with_state;
-use axum::{extract::*, routing::*};
-use domain::entities::*;
-use infrastructure::state::AppState;
-use shared::Result;
-use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
+
+use crate::http::{
+    dtos::*,
+    error::HttpError,
+    middleware::auth::{ClaimsExtractor, auth_middleware},
+};
+use axum::{
+    Json, Router,
+    extract::{Path, State},
+    middleware::from_fn_with_state,
+    routing::*,
+};
+use domain::services::{ISessionService, ITableService};
+use infrastructure::state::AppState;
 use uuid::Uuid;
-use validator::Validate;
 
 #[utoipa::path(
     get,
@@ -16,22 +21,27 @@ use validator::Validate;
     tag = "sessions",
     security(("auth" = [])),
     responses(
-        (status = 200, description = "Sessions retrieved successfully", body = Vec<SessionListItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
     )
 )]
 #[axum::debug_handler]
 pub async fn get_sessions(
     Path(table_id): Path<Uuid>,
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<GetSessionsResponse>>> {
+    State(table_service): State<Arc<dyn ITableService>>,
+) -> Result<Json<Vec<GetSessionsResponse>>, HttpError> {
+    /*
     let user_id = claims.0.sub;
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let table = table_service.find_by_id(table_id).await?;
 
-    if table.gm_id != user_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
+    if table.is_none() {
+        return Err(Error::Domain(DomainError::TableNotFound).into());
+    }
+
+    let table = table.unwrap();
+
+    if table.owner_id() != user_id {
+        return Err(Error::Application(ApplicationError::InvalidCredentials).into());
     }
 
     let sessions = app_state
@@ -46,6 +56,8 @@ pub async fn get_sessions(
         .collect();
 
     Ok(Json(sessions))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -54,47 +66,36 @@ pub async fn get_sessions(
     tag = "sessions",
     security(("auth" = [])),
     request_body = CreateSessionRequest,
-    responses(
-        (status = 201, description = "Session created successfully", body = SessionDetails),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to create session for this table", body = ErrorResponse)
-    )
+    responses()
 )]
 #[axum::debug_handler]
 pub async fn create_session(
     claims: ClaimsExtractor,
     Path(table_id): Path<Uuid>,
-    State(app_state): State<Arc<AppState>>,
+    State(session_service): State<Arc<dyn ISessionService>>,
     Json(payload): Json<CreateSessionRequest>,
-) -> Result<Json<CreateSessionResponse>> {
-    if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(validation_error));
-    }
-
+) -> Result<Json<CreateSessionResponse>, HttpError> {
+    /*
     let user_id = claims.0.sub;
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let table = session_service.create().await;
 
-    if table.gm_id != user_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
+    let table = table_service.find_by_id(table_id).await?;
+
+    let table = match table {
+        Some(t) => t,
+        None => return Err(Error::Domain(DomainError::TableNotFound).into()),
+    };
+
+    if table.owner_id() != user_id {
+        return Err(Error::Application(ApplicationError::InvalidCredentials).into());
     }
 
-    let session = app_state
-        .session_service
-        .create(
-            user_id,
-            CreateSessionCommand {
-                table_id,
-                title: payload.title,
-                description: payload.description,
-                scheduled_for: payload.scheduled_for,
-                status: payload.status.unwrap_or_default(),
-            },
-        )
-        .await?;
+    let session = session_service.create(todo!()).await?;
 
     Ok(Json(CreateSessionResponse { id: session.id }))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -118,22 +119,23 @@ pub async fn create_session(
 #[axum::debug_handler]
 pub async fn update_session(
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+    State(app_app): State<Arc<dyn ISessionService>>,
     Path((table_id, session_id)): Path<(Uuid, Uuid)>,
     Json(payload): Json<UpdateSessionRequest>,
-) -> Result<Json<UpdateSessionResponse>> {
+) -> Result<Json<UpdateSessionResponse>, HttpError> {
+    /*
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let table = app_app.table_service.find_by_id(&table_id).await?;
     if table.gm_id != claims.0.sub {
         return Err(Error::Domain(DomainError::BusinessRuleViolation {
             message: "User is not the GM of the table".to_string(),
         }));
     }
 
-    let session = app_state.session_service.find_by_id(&session_id).await?;
+    let session = app_app.session_service.find_by_id(&session_id).await?;
 
     let status = Update::from(payload.status.map(SessionStatus::from));
 
@@ -145,9 +147,11 @@ pub async fn update_session(
         status,
     };
 
-    let updated_session = app_state.session_service.update(command).await?;
+    let updated_session = app_app.session_service.update(command).await?;
 
     Ok(Json(updated_session.into()))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -169,26 +173,26 @@ pub async fn update_session(
 #[axum::debug_handler]
 pub async fn delete_session(
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+    State(session_service): State<Arc<dyn ISessionService>>,
     Path((table_id, session_id)): Path<(Uuid, Uuid)>,
-) -> Result<Json<DeleteSessionResponse>> {
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if claims.0.sub != table.gm_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
-
-    app_state
-        .session_service
-        .delete(DeleteSessionCommand { id: session_id })
+) -> Result<Json<DeleteSessionResponse>, HttpError> {
+    /*
+    session_service
+        .delete(DeleteSessionCommand {
+            table_id,
+            requester_id: claims.user_id(),
+            session_id,
+        })
         .await?;
 
     Ok(Json(DeleteSessionResponse {
         message: format!("Session {} deleted successfully", session_id),
     }))
+    */
+    todo!()
 }
 
-pub fn session_routes(state: Arc<AppState>) -> Router {
+pub fn session_routes(state: AppState) -> Router {
     Router::new()
         .nest(
             "/tables/{table_id}/sessions",

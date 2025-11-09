@@ -1,8 +1,7 @@
+use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::SessionCheckinModel;
-use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
 use domain::repositories::SessionCheckinRepository;
-use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
@@ -20,7 +19,7 @@ impl PostgresSessionCheckinRepository {
 
 #[async_trait::async_trait]
 impl SessionCheckinRepository for PostgresSessionCheckinRepository {
-    async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
+    async fn create(&self, command: &CreateSessionCheckinCommand) -> Result<SessionCheckin, Error> {
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let created_session_checkin = sqlx::query_as!(
@@ -50,7 +49,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         Ok(created_session_checkin.into())
     }
 
-    async fn read(&self, command: GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>> {
+    async fn read(&self, command: &GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>, Error> {
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
@@ -72,7 +71,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(session_checkins
             .into_iter()
@@ -80,10 +79,10 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
             .collect())
     }
 
-    async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
-        let has_session_intent_id_update = matches!(command.session_intent_id, Update::Change(_));
-        let has_attendance_update = matches!(command.attendance, Update::Change(_));
-        let has_notes_update = matches!(command.notes, Update::Change(_));
+    async fn update(&self, command: &UpdateSessionCheckinCommand) -> Result<SessionCheckin, Error> {
+        let has_session_intent_id_update = matches!(command.session_intent_id, Some(_));
+        let has_attendance_update = matches!(command.attendance, Some(_));
+        let has_notes_update = matches!(command.notes, Some(_));
 
         if !has_session_intent_id_update && !has_attendance_update && !has_notes_update {
             return Err(Error::Application(ApplicationError::InvalidInput {
@@ -92,18 +91,18 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         }
 
         let session_intent_id_value = match &command.session_intent_id {
-            Update::Change(session_intent_id) => Some(*session_intent_id),
-            Update::Keep => None,
+            Some(session_intent_id) => Some(*session_intent_id),
+            None => None,
         };
 
         let attendance_value = match command.attendance {
-            Update::Change(attendance) => Some(attendance),
-            Update::Keep => None,
+            Some(attendance) => Some(attendance),
+            None => None,
         };
 
         let notes_value = match &command.notes {
-            Update::Change(notes) => notes.as_ref().map(|n| n.as_str()),
-            Update::Keep => None,
+            Some(notes) => notes.as_ref().map(|n| n),
+            None => None,
         };
 
         let updated_session_checkin = sqlx::query_as!(
@@ -130,7 +129,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         Ok(updated_session_checkin.into())
     }
 
-    async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
+    async fn delete(&self, command: &DeleteSessionCheckinCommand) -> Result<SessionCheckin, Error> {
         let session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"DELETE FROM session_checkins
@@ -142,12 +141,12 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         )
         .fetch_one(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(session_checkin.into())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionCheckin>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionCheckin>, Error> {
         let session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"
@@ -165,7 +164,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         )
         .fetch_optional(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(session_checkin.map(|model| model.into()))
     }
@@ -173,7 +172,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
     async fn find_by_session_intent_id(
         &self,
         session_intent_id: Uuid,
-    ) -> Result<Vec<SessionCheckin>> {
+    ) -> Result<Vec<SessionCheckin>, Error> {
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
@@ -191,7 +190,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(session_checkins
             .into_iter()
@@ -199,7 +198,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
             .collect())
     }
 
-    async fn find_by_attendance(&self, attendance: bool) -> Result<Vec<SessionCheckin>> {
+    async fn find_by_attendance(&self, attendance: bool) -> Result<Vec<SessionCheckin>, Error> {
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
@@ -217,7 +216,7 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         )
         .fetch_all(&self.pool)
         .await
-        .map_err(RepositoryError::DatabaseError)?;
+        .map_err(constraint_mapper::map_database_error)?;
 
         Ok(session_checkins
             .into_iter()

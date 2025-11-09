@@ -1,61 +1,76 @@
 use domain::entities::*;
 use domain::repositories::{SessionRepository, TableRepository};
-use shared::Result;
-use shared::error::{ApplicationError, DomainError, Error};
-use std::sync::Arc;
+use domain::services::ISessionService;
+use shared::Error;
+use shared::error::{ApplicationError, DomainError};
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct SessionService {
-    session_repository: Arc<dyn SessionRepository>,
-    table_repository: Arc<dyn TableRepository>,
+pub struct SessionService<T, U>
+where
+    T: SessionRepository,
+    U: TableRepository,
+{
+    session_repository: T,
+    table_repository: U,
 }
 
-impl SessionService {
-    pub fn new(session_repository: Arc<dyn SessionRepository>, table_repository: Arc<dyn TableRepository>) -> Self {
-        Self { session_repository, table_repository }
-    }
-
-    pub async fn create(&self, gm_id: Uuid, command: CreateSessionCommand) -> Result<Session> {
-        let table = self.table_repository.find_by_id(&command.table_id).await?;
-
-        if let Some(table) = table {
-            if table.gm_id != gm_id {
-                return Err(Error::Application(ApplicationError::Forbidden));
-            }
-        } else {
-            return Err(Error::Domain(DomainError::EntityNotFound {
-                entity_type: "Table",
-                entity_id: command.table_id.to_string(),
-            }));
+impl<T, U> SessionService<T, U>
+where
+    T: SessionRepository,
+    U: TableRepository,
+{
+    pub fn new(session_repository: T, table_repository: U) -> Self {
+        Self {
+            session_repository,
+            table_repository,
         }
+    }
+}
 
-        self.session_repository.create(command).await
+#[async_trait::async_trait]
+impl<T, U> ISessionService for SessionService<T, U>
+where
+    T: SessionRepository,
+    U: TableRepository,
+{
+    async fn create(&self, command: &CreateSessionCommand) -> Result<Session, Error> {
+        let table = self.table_repository.find_by_id(command.table_id).await?;
+
+        match table {
+            Some(table) => {
+                if table.owner_id() != command.gm_id {
+                    return Err(Error::Domain(DomainError::UserNotTableGameMaster));
+                }
+
+                self.session_repository.create(command).await
+            }
+            None => return Err(Error::Domain(DomainError::TableNotFound)),
+        }
     }
 
-    pub async fn get(&self, command: GetSessionCommand) -> Result<Vec<Session>> {
-        self.session_repository.read(command).await
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Session>, Error> {
+        self.session_repository.find_by_id(id).await
     }
 
-    pub async fn find_by_id(&self, id: &Uuid) -> Result<Session> {
-        let command = GetSessionCommand {
-            id: Some(*id),
-            ..Default::default()
-        };
-        let sessions = self.session_repository.read(command).await?;
-        sessions.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound {
-                entity_type: "Session",
-                entity_id: id.to_string(),
-            })
-        })
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Session>, Error> {
+        self.session_repository.find_by_table_id(table_id).await
     }
 
-    pub async fn update(&self, command: UpdateSessionCommand) -> Result<Session> {
+    async fn update(&self, command: &UpdateSessionCommand) -> Result<Session, Error> {
         self.session_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: DeleteSessionCommand) -> Result<Session> {
+    async fn delete(&self, command: &DeleteSessionCommand) -> Result<Session, Error> {
+        let table = match self.table_repository.find_by_id(command.table_id).await? {
+            Some(t) => t,
+            None => return Err(Error::Domain(DomainError::TableNotFound)),
+        };
+
+        if command.requester_id != table.owner_id() {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
         self.session_repository.delete(command).await
     }
 }

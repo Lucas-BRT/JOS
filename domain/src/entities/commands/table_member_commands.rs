@@ -1,4 +1,3 @@
-use crate::entities::Update;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
@@ -10,8 +9,8 @@ pub struct CreateTableMemberCommand {
 #[derive(Debug, Clone, Default)]
 pub struct UpdateTableMemberCommand {
     pub id: Uuid,
-    pub table_id: Update<Uuid>,
-    pub user_id: Update<Uuid>,
+    pub table_id: Option<Uuid>,
+    pub user_id: Option<Uuid>,
 }
 
 #[derive(Debug, Clone)]

@@ -1,18 +1,16 @@
 use crate::persistence::Db;
 use crate::persistence::postgres::create_postgres_pool;
-use shared::Result;
-use shared::error::Error;
-use shared::error::SetupError;
+use shared::error::{Error, InfrastructureError};
 use tracing::*;
 
-pub async fn setup_database(database_url: &str) -> Result<Db> {
+pub async fn setup_database(database_url: &str) -> Result<Db, Error> {
     let database = connect_to_database(database_url).await?;
     run_postgres_migrations(&database).await?;
     health_check_database(&database).await?;
     Ok(database)
 }
 
-async fn connect_to_database(database_url: &str) -> Result<Db> {
+async fn connect_to_database(database_url: &str) -> Result<Db, Error> {
     info!("🔌 Establishing database connection...");
     let pool = create_postgres_pool(database_url).await?;
     info!("✅ Database connection established");
@@ -20,27 +18,31 @@ async fn connect_to_database(database_url: &str) -> Result<Db> {
     Ok(pool)
 }
 
-async fn health_check_database(database: &Db) -> Result<()> {
+async fn health_check_database(database: &Db) -> Result<(), Error> {
     let result = sqlx::query("SELECT 1").execute(database).await;
 
     if result.is_err() {
         error!("❌ Database health check failed");
-        return Err(Error::Setup(SetupError::DatabaseHealthCheckFailed(
-            result.err().unwrap().to_string(),
-        )));
+        return Err(Error::Infrastructure(
+            InfrastructureError::DatabaseHealthCheckFailed(result.err().unwrap().to_string()),
+        ));
     }
 
     info!("✅ Database health check passed");
     Ok(())
 }
 
-async fn run_postgres_migrations(database: &Db) -> Result<()> {
+async fn run_postgres_migrations(database: &Db) -> Result<(), Error> {
     info!("🔄 Running database migrations...");
 
     sqlx::migrate!("../migrations")
         .run(database)
         .await
-        .map_err(|err| Error::Setup(SetupError::FailedToRunDBMigrations(err.to_string())))?;
+        .map_err(|err| {
+            Error::Infrastructure(InfrastructureError::FailedToRunDBMigrations(
+                err.to_string(),
+            ))
+        })?;
 
     info!("✅ Database migrations completed");
 

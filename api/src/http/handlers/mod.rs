@@ -27,7 +27,7 @@ pub use table::table_routes;
 pub use table_request::table_request_routes;
 pub use user::user_routes;
 
-pub fn create_router(app_state: Arc<AppState>) -> Router {
+pub fn create_router(app_state: AppState) -> Router {
     let openapi_spec = ApiDoc::openapi();
     let mut api = OpenApiRouter::new();
 

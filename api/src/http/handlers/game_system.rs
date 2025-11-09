@@ -1,42 +1,8 @@
-use crate::http::{dtos::CreateTableResponse, middleware::auth::auth_middleware};
-use axum::{
-    Json, Router,
-    extract::State,
-    middleware::from_fn_with_state,
-    response::IntoResponse,
-    routing::{get, post},
-};
-use domain::entities::{CreateGameSystemCommand, GameSystem, GetGameSystemCommand};
+use crate::http::{dtos::*, error::HttpError, middleware::auth::auth_middleware};
+use axum::{Json, Router, extract::State, middleware::from_fn_with_state, routing::*};
+use domain::services::IGameSystemService;
 use infrastructure::state::AppState;
-use serde::*;
-use shared::{Error, Result};
 use std::sync::Arc;
-use utoipa::ToSchema;
-use uuid::Uuid;
-use validator::Validate;
-
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
-pub struct CreateGameSystemRequest {
-    #[validate(length(max = 80))]
-    name: String,
-}
-
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
-pub struct CreateGameSystemRespose {
-    id: Uuid,
-}
-
-impl IntoResponse for CreateTableResponse {
-    fn into_response(self) -> axum::response::Response {
-        Json(self.id).into_response()
-    }
-}
-
-impl From<CreateGameSystemRequest> for CreateGameSystemCommand {
-    fn from(value: CreateGameSystemRequest) -> Self {
-        Self { name: value.name }
-    }
-}
 
 #[utoipa::path(
     post,
@@ -49,35 +15,20 @@ impl From<CreateGameSystemRequest> for CreateGameSystemCommand {
 )]
 #[axum::debug_handler]
 async fn create_game_system(
-    State(app_state): State<Arc<AppState>>,
+    State(app_app): State<Arc<dyn IGameSystemService>>,
     Json(payload): Json<CreateGameSystemRequest>,
-) -> Result<CreateTableResponse> {
-    if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(validation_error));
-    }
+) -> Result<Json<CreateTableResponse>, HttpError> {
+    /*
+    let command = CreateGameSystemCommand {
+        id: Uuid::new_v4(),
+        name: payload.name,
+    };
 
-    let id = app_state
-        .game_system_service
-        .create(&mut payload.into())
-        .await?
-        .id;
+    let created = app_app.game_system_service.create(&command).await?;
 
-    Ok(CreateTableResponse { id })
-}
-
-#[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
-pub struct GameSystemResponse {
-    pub id: Uuid,
-    pub name: String,
-}
-
-impl From<&GameSystem> for GameSystemResponse {
-    fn from(value: &GameSystem) -> Self {
-        Self {
-            id: value.id,
-            name: value.name.clone(),
-        }
-    }
+    Ok(Json(CreateGameSystemRespose { id: created.id }))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -86,14 +37,14 @@ impl From<&GameSystem> for GameSystemResponse {
     tag = "game_systems",
     request_body = CreateGameSystemRequest,
     responses(
-        (status = 200, description = "", body = Vec<String>),
     )
 )]
 #[axum::debug_handler]
 async fn get_game_systems(
-    State(app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<GameSystemResponse>>> {
-    let systems = app_state
+    State(app_app): State<Arc<dyn IGameSystemService>>,
+) -> Result<Json<Vec<GameSystemResponse>>, HttpError> {
+    /*
+    let systems = app_app
         .game_system_service
         .get(&mut GetGameSystemCommand::default())
         .await?
@@ -102,9 +53,11 @@ async fn get_game_systems(
         .collect();
 
     Ok(Json(systems))
+    */
+    todo!()
 }
 
-pub fn game_system_routes(state: Arc<AppState>) -> Router {
+pub fn game_system_routes(state: AppState) -> Router {
     let protected = Router::new()
         .route("/", post(create_game_system))
         .layer(from_fn_with_state(state.clone(), auth_middleware));

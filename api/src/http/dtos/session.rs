@@ -2,7 +2,6 @@ use axum::response::IntoResponse;
 use chrono::{DateTime, Utc};
 use domain::entities::{Session, SessionStatus};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -33,7 +32,7 @@ pub struct CreateSessionRequest {
     pub title: String,
     #[validate(length(max = 1000))]
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
     pub status: Option<SessionStatus>,
 }
 
@@ -48,7 +47,7 @@ pub struct UpdateSessionRequest {
     pub title: Option<String>,
     #[validate(length(max = 1000))]
     pub description: Option<String>,
-    pub scheduled_for: Option<Option<Date>>,
+    pub scheduled_for: Option<Option<DateTime<Utc>>>,
     #[validate(range(min = 1, max = 20))]
     pub max_players: Option<i32>,
     pub status: Option<ISessionStatus>,
@@ -58,7 +57,7 @@ pub struct UpdateSessionRequest {
 pub struct UpdateSessionResponse {
     pub title: String,
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
     pub status: SessionStatus,
 }
 
@@ -88,7 +87,7 @@ pub struct GetSessionsResponse {
     pub id: Uuid,
     pub title: String,
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
 }
 
 impl From<&Session> for GetSessionsResponse {

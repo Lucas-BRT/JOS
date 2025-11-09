@@ -1,7 +1,6 @@
 use domain::entities::*;
 use domain::repositories::SessionCheckinRepository;
-use shared::Result;
-use shared::error::{DomainError, Error};
+use shared::Error;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -17,52 +16,43 @@ impl SessionCheckinService {
         }
     }
 
-    pub async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn create<'a>(
+        &self,
+        command: &'a CreateSessionCheckinCommand<'a>,
+    ) -> Result<SessionCheckin, Error> {
         self.session_checkin_repository.create(command).await
     }
 
-    pub async fn get(&self, command: GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>> {
-        self.session_checkin_repository.read(command).await
-    }
-
-    pub async fn find_by_id(&self, id: &Uuid) -> Result<SessionCheckin> {
-        let command = GetSessionCheckinCommand {
-            id: Some(*id),
-            ..Default::default()
-        };
-        let session_checkins = self.session_checkin_repository.read(command).await?;
-        session_checkins.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound {
-                entity_type: "SessionCheckin",
-                entity_id: id.to_string(),
-            })
-        })
+    pub async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionCheckin>, Error> {
+        self.session_checkin_repository.find_by_id(id).await
     }
 
     pub async fn find_by_session_intent_id(
         &self,
-        session_intent_id: &Uuid,
-    ) -> Result<Vec<SessionCheckin>> {
-        let command = GetSessionCheckinCommand {
-            session_intent_id: Some(*session_intent_id),
-            ..Default::default()
-        };
-        self.session_checkin_repository.read(command).await
+        session_intent_id: Uuid,
+    ) -> Result<Vec<SessionCheckin>, Error> {
+        self.session_checkin_repository
+            .find_by_session_intent_id(session_intent_id)
+            .await
     }
 
-    pub async fn find_by_attendance(&self, attendance: bool) -> Result<Vec<SessionCheckin>> {
-        let command = GetSessionCheckinCommand {
-            attendance: Some(attendance),
-            ..Default::default()
-        };
-        self.session_checkin_repository.read(command).await
+    pub async fn find_by_attendance(&self, attendance: bool) -> Result<Vec<SessionCheckin>, Error> {
+        self.session_checkin_repository
+            .find_by_attendance(attendance)
+            .await
     }
 
-    pub async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn update<'a>(
+        &self,
+        command: &UpdateSessionCheckinCommand<'a>,
+    ) -> Result<SessionCheckin, Error> {
         self.session_checkin_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
+    pub async fn delete(
+        &self,
+        command: &DeleteSessionCheckinCommand,
+    ) -> Result<SessionCheckin, Error> {
         self.session_checkin_repository.delete(command).await
     }
 }

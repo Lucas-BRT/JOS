@@ -8,9 +8,10 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
-use domain::auth::Claims;
+use domain::{auth::Claims, services::IAuthService};
 use infrastructure::state::AppState;
 use std::sync::Arc;
+use uuid::Uuid;
 
 // Wrapper to implement FromRequestParts locally
 pub struct ClaimsExtractor(pub Claims);
@@ -31,8 +32,14 @@ where
     }
 }
 
+impl ClaimsExtractor {
+    pub fn user_id(&self) -> Uuid {
+        self.0.sub
+    }
+}
+
 pub async fn auth_middleware(
-    State(app_state): State<Arc<AppState>>,
+    State(auth_service): State<Arc<dyn IAuthService>>,
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     mut request: Request,
     next: Next,
@@ -42,10 +49,8 @@ pub async fn auth_middleware(
         None => return Err(StatusCode::UNAUTHORIZED),
     };
 
-    let token_data = app_state
-        .auth_service
-        .jwt_provider
-        .decode_token(&token)
+    let token_data = auth_service
+        .decode_access_token(&token)
         .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
 

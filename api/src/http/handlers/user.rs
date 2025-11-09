@@ -1,25 +1,23 @@
-use crate::http::dtos::{ErrorResponse, UserResponse};
+use crate::http::dtos::*;
+use crate::http::error::HttpError;
 use crate::http::middleware::auth::auth_middleware;
+use axum::routing::*;
 use axum::{
     Json, Router,
     extract::{Path, State},
     middleware::from_fn_with_state,
 };
+use domain::services::IUserService;
 use infrastructure::state::AppState;
-use shared::Error as AppError;
-use shared::Result;
+use shared::Error;
 use shared::error::ApplicationError;
 use std::sync::Arc;
 use uuid::Uuid;
 
-pub fn user_routes(state: Arc<AppState>) -> Router {
+pub fn user_routes(state: AppState) -> Router {
     Router::new()
-        .nest(
-            "/user",
-            Router::new()
-                .route("/{:id}", axum::routing::get(get_user_by_id))
-                .layer(from_fn_with_state(state.clone(), auth_middleware)),
-        )
+        .route("/:id", get(get_user_by_id))
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)
 }
 
@@ -39,16 +37,16 @@ pub fn user_routes(state: Arc<AppState>) -> Router {
     )
 )]
 pub async fn get_user_by_id(
-    State(app_state): State<Arc<AppState>>,
+    State(user_service): State<Arc<dyn IUserService>>,
     Path(user_id): Path<String>,
-) -> Result<Json<UserResponse>> {
+) -> Result<Json<UserResponse>, HttpError> {
     let parsed_user_id = Uuid::parse_str(&user_id).map_err(|_| {
-        AppError::Application(ApplicationError::InvalidInput {
+        Error::Application(ApplicationError::InvalidInput {
             message: "Invalid user ID format".to_string(),
         })
     })?;
 
-    let user = app_state.user_service.find_by_id(&parsed_user_id).await?;
+    let user = user_service.find_by_id(parsed_user_id).await?;
 
-    Ok(Json(user.into()))
+    todo!()
 }

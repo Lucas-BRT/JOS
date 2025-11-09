@@ -1,12 +1,13 @@
 use crate::http::dtos::*;
+use crate::http::error::HttpError;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::http::StatusCode;
 use axum::{extract::*, routing::*};
 use domain::entities::commands::session_commands::*;
 use domain::entities::commands::table_commands::*;
 use domain::entities::*;
+use domain::services::ITableService;
 use infrastructure::state::AppState;
-use shared::Result;
 use shared::error::*;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -28,26 +29,28 @@ use validator::Validate;
 #[axum::debug_handler]
 pub async fn create_table(
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+    State(table_service): State<Arc<dyn ITableService>>,
     Json(payload): Json<CreateTableRequest>,
-) -> Result<(StatusCode, Json<CreateTableResponse>)> {
-    if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(validation_error));
-    }
+) -> Result<(StatusCode, Json<CreateTableResponse>), HttpError> {
+    // if let Err(validation_error) = payload.validate() {
+    //     return Err(Error::Validation(validation_error));
+    // }
 
-    let command = CreateTableCommand {
-        title: payload.title,
-        description: payload.description,
-        slots: payload.max_players as u32,
-        game_system_id: payload.system_id,
-        gm_id: claims.0.sub,
-    };
+    // let command = CreateTableCommand {
+    //     title: payload.title,
+    //     description: payload.description,
+    //     slots: payload.max_playersasu32,
+    //     game_system_id: payload.system_id,
+    //     gm_id: claims.0.sub,
+    //     id: todo!(),
+    // };
 
-    let table = app_state.table_service.create(&command).await?;
+    // let table = app_state.table_service.create(&command).await?;
 
-    let response = CreateTableResponse { id: table.id };
+    // let response = CreateTableResponse { id: table.id() };
 
-    Ok((StatusCode::CREATED, Json(response)))
+    // Ok((StatusCode::CREATED, Json(response)))
+    todo!()
 }
 
 #[utoipa::path(
@@ -63,12 +66,15 @@ pub async fn create_table(
 #[axum::debug_handler]
 pub async fn get_tables(
     _claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+    State(table_service): State<Arc<dyn ITableService>>,
     Query(search): Query<SearchTablesQuery>,
-) -> Result<(StatusCode, Json<Vec<Table>>)> {
-    let response = app_state.table_service.get(&search.into()).await?;
+) -> Result<(StatusCode, Json<Vec<()>>), HttpError> {
+    /*
+    let response = app_app.table_service.get(&search.into()).await?;
 
     Ok((StatusCode::OK, Json(response)))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -88,23 +94,25 @@ pub async fn get_tables(
 #[axum::debug_handler]
 pub async fn get_table_details(
     _claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+
+    State(table_service): State<Arc<dyn ITableService>>,
     Path(table_id): Path<Uuid>,
-) -> Result<Json<TableDetails>> {
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-    let game_master = app_state.user_service.find_by_id(&table.gm_id).await?;
-    let game_system = app_state
+) -> Result<Json<TableDetails>, HttpError> {
+    /*
+    let table = app_app.table_service.find_by_id(&table_id).await?;
+    let game_master = app_app.user_service.find_by_id(&table.gm_id).await?;
+    let game_system = app_app
         .game_system_service
         .find_by_id(table.game_system_id)
         .await?;
-    let table_members = app_state
+    let table_members = app_app
         .table_member_service
         .find_by_table_id(&table.id)
         .await?;
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
-        if let Ok(user) = app_state.user_service.find_by_id(&tm.user_id).await {
+        if let Ok(user) = app_app.user_service.find_by_id(&tm.user_id).await {
             players.push(PlayerInfo {
                 id: user.id,
                 username: user.username,
@@ -112,7 +120,7 @@ pub async fn get_table_details(
         }
     }
 
-    let sessions = app_state
+    let sessions = app_app
         .session_service
         .get(GetSessionCommand {
             table_id: Some(table.id),
@@ -147,6 +155,8 @@ pub async fn get_table_details(
     };
 
     Ok(Json(response))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -169,15 +179,17 @@ pub async fn get_table_details(
 #[axum::debug_handler]
 pub async fn update_table(
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+
+    State(table_service): State<Arc<dyn ITableService>>,
     Path(table_id): Path<Uuid>,
     Json(payload): Json<UpdateTableRequest>,
-) -> Result<Json<TableDetails>> {
+) -> Result<Json<TableDetails>, HttpError> {
+    /*
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let table = app_app.table_service.find_by_id(&table_id).await?;
     if table.gm_id != claims.0.sub {
         return Err(Error::Application(ApplicationError::Forbidden)); // Changed to Forbidden
     }
@@ -215,25 +227,25 @@ pub async fn update_table(
         status,
     };
 
-    app_state.table_service.update(&command).await?;
+    app_app.table_service.update(&command).await?;
 
-    let updated_table = app_state.table_service.find_by_id(&table_id).await?;
-    let game_master = app_state
+    let updated_table = app_app.table_service.find_by_id(&table_id).await?;
+    let game_master = app_app
         .user_service
         .find_by_id(&updated_table.gm_id)
         .await?;
-    let game_system = app_state
+    let game_system = app_app
         .game_system_service
         .find_by_id(updated_table.game_system_id)
         .await?;
-    let table_members = app_state
+    let table_members = app_app
         .table_member_service
         .find_by_table_id(&updated_table.id)
         .await?;
 
     let mut players: Vec<PlayerInfo> = Vec::new();
     for tm in table_members {
-        if let Ok(user) = app_state.user_service.find_by_id(&tm.user_id).await {
+        if let Ok(user) = app_app.user_service.find_by_id(&tm.user_id).await {
             players.push(PlayerInfo {
                 id: user.id,
                 username: user.username,
@@ -241,7 +253,7 @@ pub async fn update_table(
         }
     }
 
-    let sessions = app_state
+    let sessions = app_app
         .session_service
         .get(GetSessionCommand {
             table_id: Some(updated_table.id),
@@ -276,6 +288,8 @@ pub async fn update_table(
     };
 
     Ok(Json(response))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -295,22 +309,26 @@ pub async fn update_table(
 #[axum::debug_handler]
 pub async fn delete_table(
     claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+
+    State(table_service): State<Arc<dyn ITableService>>,
     Path(table_id): Path<Uuid>,
-) -> Result<Json<DeleteTableResponse>> {
+) -> Result<Json<DeleteTableResponse>, HttpError> {
+    /*
     let command = DeleteTableCommand {
         id: table_id,
         gm_id: claims.0.sub,
     };
 
-    app_state.table_service.delete(&command).await?;
+    app_app.table_service.delete(&command).await?;
 
     Ok(Json(DeleteTableResponse {
         message: format!("Table {} deleted successfully", table_id),
     }))
+    */
+    todo!()
 }
 
-pub fn table_routes(state: Arc<AppState>) -> Router {
+pub fn table_routes(state: AppState) -> Router {
     Router::new()
         .nest(
             "/tables",

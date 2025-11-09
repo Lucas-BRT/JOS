@@ -2,8 +2,9 @@ use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::RefreshTokenRow;
 use domain::entities::RefreshToken;
 use domain::repositories::RefreshTokenRepository;
-use shared::Result;
+use shared::Error;
 use sqlx::PgPool;
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresRefreshTokenRepository {
@@ -18,7 +19,7 @@ impl PostgresRefreshTokenRepository {
 
 #[async_trait::async_trait]
 impl RefreshTokenRepository for PostgresRefreshTokenRepository {
-    async fn create(&self, token: &RefreshToken) -> Result<()> {
+    async fn create(&self, token: &RefreshToken) -> Result<(), Error> {
         sqlx::query!(
             r#"INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at)
                VALUES ($1, $2, $3, $4, NOW())"#,
@@ -33,7 +34,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         Ok(())
     }
 
-    async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>> {
+    async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>, Error> {
         let row = sqlx::query_as!(
             RefreshTokenRow,
             r#"SELECT id, user_id, token, expires_at, created_at
@@ -47,7 +48,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         Ok(row.map(|r| r.into()))
     }
 
-    async fn delete_by_token(&self, token: &str) -> Result<()> {
+    async fn delete_by_token(&self, token: &str) -> Result<(), Error> {
         sqlx::query!(r#"DELETE FROM refresh_tokens WHERE token = $1"#, token)
             .execute(&self.pool)
             .await
@@ -55,7 +56,7 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
         Ok(())
     }
 
-    async fn delete_by_user(&self, user_id: &uuid::Uuid) -> Result<()> {
+    async fn delete_by_user(&self, user_id: Uuid) -> Result<(), Error> {
         sqlx::query!(r#"DELETE FROM refresh_tokens WHERE user_id = $1"#, user_id)
             .execute(&self.pool)
             .await

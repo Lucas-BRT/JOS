@@ -3,10 +3,9 @@ use crate::persistence::postgres::models::TableRequestModel;
 use crate::persistence::postgres::models::table_request::ETableRequestStatus;
 use domain::entities::*;
 use domain::repositories::TableRequestRepository;
-use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableRequestRepository {
@@ -21,9 +20,10 @@ impl PostgresTableRequestRepository {
 
 #[async_trait::async_trait]
 impl TableRequestRepository for PostgresTableRequestRepository {
-    async fn create(&self, request_data: CreateTableRequestCommand) -> Result<TableRequest> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+    async fn create(
+        &self,
+        request_data: &CreateTableRequestCommand,
+    ) -> Result<TableRequest, Error> {
         let result = sqlx::query_as!(
             TableRequestModel,
             r#"INSERT INTO table_requests
@@ -46,7 +46,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     created_at,
                     updated_at
                 "#,
-            uuid,
+            request_data.id,
             request_data.user_id,
             request_data.table_id,
             request_data.message,
@@ -59,9 +59,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(result.into())
     }
 
-    async fn update(&self, update_data: UpdateTableRequestCommand) -> Result<TableRequest> {
-        let has_status_update = matches!(update_data.status, Update::Change(_));
-        let has_message_update = matches!(update_data.message, Update::Change(_));
+    async fn update(&self, update_data: &UpdateTableRequestCommand) -> Result<TableRequest, Error> {
+        let has_status_update = matches!(update_data.status, Some(_));
+        let has_message_update = matches!(update_data.message, Some(_));
 
         if !has_status_update && !has_message_update {
             return Err(Error::Application(ApplicationError::InvalidInput {
@@ -70,13 +70,13 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         }
 
         let status_value = match update_data.status {
-            Update::Change(status) => Some(ETableRequestStatus::from(status)),
-            Update::Keep => None,
+            Some(status) => Some(ETableRequestStatus::from(status)),
+            None => None,
         };
 
         let message_value = match &update_data.message {
-            Update::Change(message) => message.as_ref().map(|m| m.as_str()),
-            Update::Keep => None,
+            Some(message) => message.as_ref(),
+            None => None,
         };
 
         let updated_request = if let Some(status) = status_value {
@@ -134,7 +134,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(updated_request.into())
     }
 
-    async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest> {
+    async fn delete(&self, command: &DeleteTableRequestCommand) -> Result<TableRequest, Error> {
         let table = sqlx::query_as!(
             TableRequestModel,
             r#"DELETE FROM table_requests
@@ -157,7 +157,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(table.into())
     }
 
-    async fn read(&self, command: GetTableRequestCommand) -> Result<Vec<TableRequest>> {
+    async fn read(&self, command: &GetTableRequestCommand) -> Result<Vec<TableRequest>, Error> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
@@ -185,7 +185,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableRequest>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableRequest>, Error> {
         let request = sqlx::query_as!(
             TableRequestModel,
             r#"
@@ -209,7 +209,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(request.map(|model| model.into()))
     }
 
-    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>> {
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>, Error> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
@@ -233,7 +233,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableRequest>> {
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableRequest>, Error> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
@@ -257,7 +257,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_status(&self, status: TableRequestStatus) -> Result<Vec<TableRequest>> {
+    async fn find_by_status(&self, status: TableRequestStatus) -> Result<Vec<TableRequest>, Error> {
         let status = ETableRequestStatus::from(status);
 
         let requests = sqlx::query_as!(
@@ -283,7 +283,11 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_user_and_table(&self, user_id: Uuid, table_id: Uuid) -> Result<Vec<TableRequest>> {
+    async fn find_by_user_and_table(
+        &self,
+        user_id: Uuid,
+        table_id: Uuid,
+    ) -> Result<Vec<TableRequest>, Error> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"

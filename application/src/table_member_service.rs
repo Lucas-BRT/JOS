@@ -1,65 +1,51 @@
 use domain::entities::*;
 use domain::repositories::TableMemberRepository;
-use shared::Result;
-use shared::error::{DomainError, Error};
-use std::sync::Arc;
+use domain::services::ITableMemberService;
+use shared::Error;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct TableMemberService {
-    table_member_repository: Arc<dyn TableMemberRepository>,
+pub struct TableMemberService<T: TableMemberRepository> {
+    table_member_repository: T,
 }
 
-impl TableMemberService {
-    pub fn new(table_member_repository: Arc<dyn TableMemberRepository>) -> Self {
+impl<T> TableMemberService<T>
+where
+    T: TableMemberRepository,
+{
+    pub fn new(table_member_repository: T) -> Self {
         Self {
             table_member_repository,
         }
     }
+}
 
-    pub async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
+#[async_trait::async_trait]
+impl<T> ITableMemberService for TableMemberService<T>
+where
+    T: TableMemberRepository,
+{
+    async fn create(&self, command: &CreateTableMemberCommand) -> Result<TableMember, Error> {
         self.table_member_repository.create(command).await
     }
 
-    pub async fn get(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>> {
+    async fn get(&self, command: &GetTableMemberCommand) -> Result<Vec<TableMember>, Error> {
         self.table_member_repository.read(command).await
     }
 
-    pub async fn find_by_id(&self, id: &Uuid) -> Result<TableMember> {
-        let command = GetTableMemberCommand {
-            id: Some(*id),
-            ..Default::default()
-        };
-        let table_members = self.table_member_repository.read(command).await?;
-        table_members.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound {
-                entity_type: "TableMember",
-                entity_id: id.to_string(),
-            })
-        })
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>, Error> {
+        self.table_member_repository.find_by_id(id).await
     }
 
-    pub async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<TableMember>> {
-        let command = GetTableMemberCommand {
-            table_id: Some(*table_id),
-            ..Default::default()
-        };
-        self.table_member_repository.read(command).await
+    async fn find_by_table_id(&self, id: Uuid) -> Result<Vec<TableMember>, Error> {
+        self.table_member_repository.find_by_table_id(id).await
     }
 
-    pub async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<TableMember>> {
-        let command = GetTableMemberCommand {
-            user_id: Some(*user_id),
-            ..Default::default()
-        };
-        self.table_member_repository.read(command).await
-    }
-
-    pub async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember> {
+    async fn update(&self, command: &UpdateTableMemberCommand) -> Result<TableMember, Error> {
         self.table_member_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember> {
+    async fn delete(&self, command: &DeleteTableMemberCommand) -> Result<TableMember, Error> {
         self.table_member_repository.delete(command).await
     }
 }

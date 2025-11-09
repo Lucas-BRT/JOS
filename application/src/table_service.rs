@@ -1,60 +1,66 @@
 use domain::entities::*;
 use domain::repositories::TableRepository;
-use shared::Result;
-use shared::error::{ApplicationError, DomainError, Error};
-use std::sync::Arc;
+use domain::services::ITableService;
+use shared::Error;
+use shared::error::DomainError;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct TableService {
-    table_repository: Arc<dyn TableRepository>,
+pub struct TableService<T>
+where
+    T: TableRepository,
+{
+    table_repository: T,
 }
 
-impl TableService {
-    pub fn new(table_repository: Arc<dyn TableRepository>) -> Self {
+impl<T> TableService<T>
+where
+    T: TableRepository,
+{
+    pub fn new(table_repository: T) -> Self {
         Self { table_repository }
     }
+}
 
-    pub async fn create(&self, command: &CreateTableCommand) -> Result<Table> {
+#[async_trait::async_trait]
+impl<T> ITableService for TableService<T>
+where
+    T: TableRepository,
+{
+    async fn find_by_gm_id(&self, gm_id: Uuid) -> Result<Vec<Table>, Error> {
+        todo!()
+    }
+
+    async fn find_by_game_system_id(&self, game_system_id: Uuid) -> Result<Vec<Table>, Error> {
+        todo!()
+    }
+
+    async fn create(&self, command: &CreateTableCommand) -> Result<Table, Error> {
         self.table_repository.create(command).await
     }
 
-    pub async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
-        let table = self.find_by_id(&command.id).await?;
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Table>, Error> {
+        let table = self.table_repository.find_by_id(id).await?;
 
-        if table.gm_id != command.gm_id {
-            return Err(Error::Application(ApplicationError::Forbidden));
-        }
-
-        self.table_repository.delete(command).await
+        Ok(table)
     }
 
-    pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Table> {
-        let command = GetTableCommand {
-            id: Some(*table_id),
-            ..Default::default()
-        };
-
-        let tables = self.table_repository.read(&command).await?;
-        tables.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound {
-                entity_type: "Table",
-                entity_id: table_id.to_string(),
-            })
-        })
-    }
-
-    pub async fn get_all(&self) -> Result<Vec<Table>> {
-        self.table_repository
-            .read(&GetTableCommand::default())
-            .await
-    }
-
-    pub async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
-        self.table_repository.read(command).await
-    }
-
-    pub async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
+    async fn update(&self, command: &UpdateTableCommand) -> Result<Table, Error> {
         self.table_repository.update(command).await
+    }
+
+    async fn delete(&self, command: &DeleteTableCommand) -> Result<Table, Error> {
+        let table = self.find_by_id(command.id).await?;
+
+        match table {
+            Some(table) => {
+                if table.owner_id() != command.gm_id {
+                    return Err(Error::Domain(DomainError::UserNotTableGameMaster));
+                }
+
+                self.table_repository.delete(command).await
+            }
+            None => Err(Error::Domain(DomainError::TableNotFound)),
+        }
     }
 }

@@ -1,26 +1,26 @@
-use crate::entities::Update;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
-pub struct CreateUserCommand {
-    pub username: String,
-    pub email: String,
+pub struct CreateUserCommand<'a> {
+    pub id: Uuid,
+    pub username: &'a str,
+    pub email: &'a str,
     pub password: String,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct UpdateUserCommand {
+pub struct UpdateUserCommand<'a> {
     pub user_id: Uuid,
-    pub username: Update<String>,
-    pub email: Update<String>,
-    pub password: Update<String>,
+    pub username: Option<&'a str>,
+    pub email: Option<&'a str>,
+    pub password: Option<&'a str>,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct UpdatePasswordCommand {
+pub struct UpdatePasswordCommand<'a> {
     pub user_id: Uuid,
-    pub current_password: String,
-    pub new_password: String,
+    pub current_password: &'a str,
+    pub new_password: &'a str,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -36,13 +36,13 @@ pub struct DeleteUserCommand {
 }
 
 #[derive(Debug, Clone)]
-pub struct DeleteAccountCommand {
+pub struct DeleteAccountCommand<'a> {
     pub user_id: Uuid,
-    pub password: String,
+    pub password: &'a str,
 }
 
 #[derive(Debug, Clone)]
-pub struct LoginUserCommand {
-    pub email: String,
-    pub password: String,
+pub struct LoginUserCommand<'a> {
+    pub email: &'a str,
+    pub password: &'a str,
 }

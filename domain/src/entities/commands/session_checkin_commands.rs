@@ -1,19 +1,18 @@
-use crate::entities::Update;
 use uuid::Uuid;
 
 #[derive(Debug, Clone)]
-pub struct CreateSessionCheckinCommand {
+pub struct CreateSessionCheckinCommand<'a> {
     pub session_intent_id: Uuid,
     pub attendance: bool,
-    pub notes: Option<String>,
+    pub notes: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct UpdateSessionCheckinCommand {
+pub struct UpdateSessionCheckinCommand<'a> {
     pub id: Uuid,
-    pub session_intent_id: Update<Uuid>,
-    pub attendance: Update<bool>,
-    pub notes: Update<Option<String>>,
+    pub session_intent_id: Option<Uuid>,
+    pub attendance: Option<bool>,
+    pub notes: Option<Option<&'a str>>,
 }
 
 #[derive(Debug, Clone)]

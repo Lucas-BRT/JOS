@@ -1,35 +1,21 @@
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
-use serde_json::json;
-use shared::error::Error;
+use axum::response::{IntoResponse, Response};
+use shared::Error;
 
-#[derive(Debug)]
-pub enum AuthError {
-    InvalidToken,
-}
+pub struct HttpError(Error);
 
-impl IntoResponse for AuthError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            AuthError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
-        };
-
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
+impl From<Error> for HttpError {
+    fn from(error: Error) -> Self {
+        HttpError(error)
     }
 }
 
-#[derive(Debug)]
-pub struct ApiError(pub Error);
-
-impl IntoResponse for ApiError {
+impl IntoResponse for HttpError {
     fn into_response(self) -> Response {
-        self.0.into_response()
+        match self.0 {
+            Error::Application(application_error) => todo!(),
+            Error::Domain(domain_error) => todo!(),
+            Error::Infrastructure(infrastructure_error) => todo!(),
+            Error::InternalServerError(_) => todo!(),
+        }
     }
 }

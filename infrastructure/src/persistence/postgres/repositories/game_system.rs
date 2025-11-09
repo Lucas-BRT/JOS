@@ -1,11 +1,11 @@
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::GameSystemModel;
+use domain::entities::game_system::GameSystemBuilder;
 use domain::entities::*;
 use domain::repositories::GameSystemRepository;
-use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresGameSystemRepository {
@@ -20,9 +20,7 @@ impl PostgresGameSystemRepository {
 
 #[async_trait::async_trait]
 impl GameSystemRepository for PostgresGameSystemRepository {
-    async fn create(&self, command: &mut CreateGameSystemCommand) -> Result<GameSystem> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+    async fn create(&self, command: &CreateGameSystemCommand) -> Result<GameSystem, Error> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
@@ -30,17 +28,22 @@ impl GameSystemRepository for PostgresGameSystemRepository {
             VALUES ($1, $2, NOW(), NOW())
             RETURNING *
             "#,
-            uuid,
+            command.id,
             command.name
         )
         .fetch_one(&self.pool)
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(result.into())
+        let game_system = GameSystemBuilder::default()
+            .with_id(result.id)
+            .with_name(result.name)
+            .build()?;
+
+        Ok(game_system)
     }
 
-    async fn read(&self, command: &mut GetGameSystemCommand) -> Result<Vec<GameSystem>> {
+    async fn read(&self, command: &GetGameSystemCommand) -> Result<Vec<GameSystem>, Error> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"
@@ -54,11 +57,21 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(result.into_iter().map(|m| m.into()).collect())
+        let systems = result
+            .into_iter()
+            .map(|gs| {
+                GameSystemBuilder::default()
+                    .with_id(gs.id)
+                    .with_name(gs.name)
+                    .build()
+            })
+            .collect::<Result<Vec<GameSystem>, Error>>()?;
+
+        Ok(systems)
     }
 
-    async fn update(&self, command: &mut UpdateGameSystemCommand) -> Result<GameSystem> {
-        let has_name_update = matches!(command.name, Update::Change(_));
+    async fn update(&self, command: &UpdateGameSystemCommand) -> Result<GameSystem, Error> {
+        let has_name_update = command.name.is_some();
 
         if !has_name_update {
             return Err(Error::Application(ApplicationError::InvalidInput {
@@ -66,12 +79,7 @@ impl GameSystemRepository for PostgresGameSystemRepository {
             }));
         }
 
-        let name_value = match &command.name {
-            Update::Change(name) => Some(name.as_str()),
-            Update::Keep => None,
-        };
-
-        let updated_game_system = sqlx::query_as!(
+        let result = sqlx::query_as!(
             GameSystemModel,
             r#"
             UPDATE game_systems
@@ -82,16 +90,21 @@ impl GameSystemRepository for PostgresGameSystemRepository {
             RETURNING *
             "#,
             command.id,
-            name_value
+            command.name
         )
         .fetch_one(&self.pool)
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(updated_game_system.into())
+        let system = GameSystemBuilder::default()
+            .with_id(result.id)
+            .with_name(result.name)
+            .build()?;
+
+        Ok(system)
     }
 
-    async fn delete(&self, command: &mut DeleteGameSystemCommand) -> Result<GameSystem> {
+    async fn delete(&self, command: &DeleteGameSystemCommand) -> Result<GameSystem, Error> {
         let result = sqlx::query_as!(
             GameSystemModel,
             r#"DELETE FROM game_systems WHERE id = $1 RETURNING *"#,
@@ -101,11 +114,16 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(result.into())
+        let system = GameSystemBuilder::default()
+            .with_id(result.id)
+            .with_name(result.name)
+            .build()?;
+
+        Ok(system)
     }
 
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<GameSystem>> {
-        let game_system = sqlx::query_as!(
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<GameSystem>, Error> {
+        let result = sqlx::query_as!(
             GameSystemModel,
             r#"
             SELECT *
@@ -118,11 +136,20 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(game_system.map(|model| model.into()))
+        match result {
+            Some(gs) => {
+                let system = GameSystemBuilder::default()
+                    .with_id(gs.id)
+                    .with_name(gs.name)
+                    .build()?;
+                Ok(Some(system))
+            }
+            None => Ok(None),
+        }
     }
 
-    async fn find_by_name(&self, name: &str) -> Result<Option<GameSystem>> {
-        let game_system = sqlx::query_as!(
+    async fn find_by_name(&self, name: &str) -> Result<Option<GameSystem>, Error> {
+        let result = sqlx::query_as!(
             GameSystemModel,
             r#"
             SELECT *
@@ -135,6 +162,15 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(game_system.map(|model| model.into()))
+        match result {
+            Some(gs) => {
+                let system = GameSystemBuilder::default()
+                    .with_id(gs.id)
+                    .with_name(gs.name)
+                    .build()?;
+                Ok(Some(system))
+            }
+            None => Ok(None),
+        }
     }
 }

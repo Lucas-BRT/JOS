@@ -1,4 +1,3 @@
-use domain::entities::GetTableCommand;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -9,16 +8,6 @@ pub struct SearchTablesQuery {
     pub gm_id: Option<Uuid>,
     #[serde(rename = "gameSystemId")]
     pub game_system_id: Option<Uuid>,
-}
-
-impl From<SearchTablesQuery> for GetTableCommand {
-    fn from(value: SearchTablesQuery) -> Self {
-        Self {
-            gm_id: value.gm_id,
-            game_system_id: value.game_system_id,
-            ..Default::default()
-        }
-    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

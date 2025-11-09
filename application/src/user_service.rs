@@ -1,44 +1,52 @@
 use domain::entities::*;
 use domain::repositories::UserRepository;
-use shared::Result;
-use shared::error::DomainError;
-use shared::error::Error;
-use std::sync::Arc;
+use domain::services::user_service::IUserService;
+use shared::Error;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct UserService {
-    user_repository: Arc<dyn UserRepository>,
+pub struct UserService<T>
+where
+    T: UserRepository,
+{
+    user_repository: T,
 }
 
-impl UserService {
-    pub fn new(user_repository: Arc<dyn UserRepository>) -> Self {
+impl<T> UserService<T>
+where
+    T: UserRepository,
+{
+    pub fn new(user_repository: T) -> Self {
         Self { user_repository }
     }
+}
 
-    pub async fn create(&self, command: &mut CreateUserCommand) -> Result<User> {
+#[async_trait::async_trait]
+impl<T> IUserService for UserService<T>
+where
+    T: UserRepository,
+{
+    async fn create(&self, command: &CreateUserCommand) -> Result<User, Error> {
         self.user_repository.create(command).await
     }
 
-    pub async fn get(&self, command: &mut GetUserCommand) -> Result<Vec<User>> {
-        self.user_repository.read(command).await
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, Error> {
+        self.user_repository.find_by_id(id).await
     }
 
-    pub async fn find_by_id(&self, id: &Uuid) -> Result<User> {
-        let users = self.user_repository.find_by_id(id).await?;
-        users.into_iter().next().ok_or_else(|| {
-            Error::Domain(DomainError::EntityNotFound {
-                entity_type: "User",
-                entity_id: id.to_string(),
-            })
-        })
+    async fn find_by_username(&self, username: &str) -> Result<Option<User>, Error> {
+        todo!()
     }
 
-    pub async fn update(&self, command: &mut UpdateUserCommand) -> Result<User> {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, Error> {
+        todo!()
+    }
+
+    async fn update(&self, command: &UpdateUserCommand) -> Result<User, Error> {
         self.user_repository.update(command).await
     }
 
-    pub async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User> {
+    async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User, Error> {
         self.user_repository.delete(command).await
     }
 }

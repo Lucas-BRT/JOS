@@ -1,87 +1,78 @@
-use axum::{
-    Json,
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
 use log::error;
-use serde_json::json;
-use validator::ValidationErrors;
+use uuid::Uuid;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Persistence error: {0}")]
-    Persistence(PersistenceError),
     #[error("Application error: {0}")]
     Application(ApplicationError),
     #[error("Domain error: {0}")]
     Domain(DomainError),
-    #[error("Setup error: {0}")]
-    Setup(SetupError),
-    #[error("Internal server error")]
-    InternalServerError,
-    #[error("Validation error: {0}")]
-    Validation(#[from] ValidationErrors),
+    #[error("Infrastructure error: {0}")]
+    Infrastructure(InfrastructureError),
+    #[error("Internal server error: {0}")]
+    InternalServerError(String),
 }
 
-impl IntoResponse for Error {
-    fn into_response(self) -> Response {
-        match self {
-            Error::Persistence(error) => error.into_response(),
-            Error::Application(error) => error.into_response(),
-            Error::Domain(error) => error.into_response(),
-            Error::Setup(error) => error.into_response(),
-            Error::InternalServerError => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "Internal server error".to_string(),
-            )
-                .into_response(),
-            Error::Validation(error) => {
-                (StatusCode::BAD_REQUEST, error.to_string()).into_response()
-            }
-        }
-    }
+#[derive(Debug, PartialEq, thiserror::Error)]
+pub enum DomainError {
+    // --- Table Errors ---
+    #[error("Table not found")]
+    TableNotFound,
+    #[error("Title cannot be empty")]
+    EmptyTitle,
+    #[error("Description cannot be empty")]
+    EmptyDescription,
+    #[error("Table slots must be greater than zero")]
+    ZeroSlots,
+    #[error("Only the table's Game Master can perform this action")]
+    UserNotTableGameMaster,
+    #[error("The table is full")]
+    TableIsFull,
+    #[error("The user is already a member of this table")]
+    UserIsAlreadyMember,
+    #[error("The table must be 'Active' to start a session")]
+    TableNotActive,
+    #[error("The user is not a member of this table")]
+    UserNotTableMember,
+
+    // --- TableRequest Errors ---
+    #[error("The request is not in a pending state")]
+    RequestNotPending,
+    #[error("A user cannot submit more than one request to the same table")]
+    DuplicateTableRequest,
+
+    // --- Session Errors ---
+    #[error("A session cannot be scheduled in the past")]
+    SessionScheduledInPast,
+    #[error("The session must be in 'Scheduled' state for this action")]
+    SessionNotScheduled,
+
+    // --- Session Checkin Errors ---
+    #[error("The session checkin must be in 'Pending' state for this action")]
+    SessionCheckinNotPending,
+    #[error("The session checkin must be in 'Scheduled' state for this action")]
+    SessionCheckinNotScheduled,
+    #[error("The session checkin must be in 'CheckedIn' state for this action")]
+    SessionCheckinNotCheckedIn,
+
+    // --- User Errors ---
+    #[error("The user was not found")]
+    UserNotFound,
+
+    // --- GameSystem Errors ---
+    #[error("Game system name cannot be empty")]
+    EmptyName,
+    #[error("Game system name cannot exceed 100 characters")]
+    NameTooLong,
+    #[error("Game system name must be at least 2 characters long")]
+    NameTooShort,
+
+    // --- Builder Errors ---
+    #[error("Missing required field: {0}")]
+    MissingField(String),
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum PersistenceError {
-    #[error("Database error")]
-    DatabaseError(#[source] Box<dyn std::error::Error + Send + Sync>),
-    #[error("Connection error")]
-    ConnectionError(#[source] Box<dyn std::error::Error + Send + Sync>),
-    #[error("Migration error")]
-    MigrationError(#[source] Box<dyn std::error::Error + Send + Sync>),
-    #[error("Not found: {entity}[id={id}]")]
-    NotFound { entity: &'static str, id: String },
-    #[error("Constraint violation: {constraint}")]
-    ConstraintViolation { constraint: String },
-}
-
-impl IntoResponse for PersistenceError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            PersistenceError::NotFound { entity, id } => (
-                StatusCode::NOT_FOUND,
-                format!("Entity '{}' with id {} not found", entity, id),
-            ),
-            PersistenceError::ConstraintViolation { constraint } => (
-                StatusCode::CONFLICT,
-                format!("Conflict due to constraint: {}", constraint),
-            ),
-            _ => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "An internal persistence error occurred".to_string(),
-            ),
-        };
-
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, PartialEq, thiserror::Error)]
 pub enum ApplicationError {
     #[error("Invalid credentials")]
     InvalidCredentials,
@@ -93,78 +84,13 @@ pub enum ApplicationError {
     InvalidInput { message: String },
     #[error("Service unavailable: {service}")]
     ServiceUnavailable { service: String },
+    #[error("Invalid token")]
+    InvalidToken,
 }
 
-impl IntoResponse for ApplicationError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            ApplicationError::InvalidCredentials => {
-                (StatusCode::UNAUTHORIZED, "Invalid credentials".to_string())
-            }
-
-            ApplicationError::IncorrectPassword => {
-                (StatusCode::FORBIDDEN, "Incorrect password".to_string())
-            }
-
-            ApplicationError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden".to_string()),
-
-            ApplicationError::InvalidInput { message } => (StatusCode::BAD_REQUEST, message),
-
-            ApplicationError::ServiceUnavailable { service } => {
-                (StatusCode::SERVICE_UNAVAILABLE, service)
-            }
-        };
-
-        let body = Json(json!({
-
-            "error": error_message,
-
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum DomainError {
-    #[error("Business rule violation: {message}")]
-    BusinessRuleViolation { message: String },
-    #[error("Entity not found: {entity_type}[id={entity_id}]")]
-    EntityNotFound {
-        entity_type: &'static str,
-        entity_id: String,
-    },
-    #[error("Invalid state transition from {from} to {to}")]
-    InvalidStateTransition { from: String, to: String },
-}
-
-impl IntoResponse for DomainError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            DomainError::BusinessRuleViolation { message } => (StatusCode::BAD_REQUEST, message),
-            DomainError::EntityNotFound {
-                entity_type,
-                entity_id,
-            } => (
-                StatusCode::NOT_FOUND,
-                format!("Entity '{}' with id {} not found", entity_type, entity_id),
-            ),
-            DomainError::InvalidStateTransition { from, to } => (
-                StatusCode::UNPROCESSABLE_ENTITY,
-                format!("Invalid state transition from '{}' to '{}'", from, to),
-            ),
-        };
-
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum SetupError {
+#[derive(Debug, PartialEq, thiserror::Error)]
+pub enum InfrastructureError {
+    // --- Setup Errors ---
     #[error("Failed to get environment variable: {0}")]
     FailedToGetEnvironmentVariable(String),
     #[error("Failed to bind address: {0}")]
@@ -185,39 +111,52 @@ pub enum SetupError {
     InvalidConfiguration(String),
     #[error("Environment validation failed: {0}")]
     EnvironmentValidationFailed(String),
-}
+    #[error("Attempted to launch server without setup")]
+    LaunchWithoutSetup,
 
-impl IntoResponse for SetupError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            SetupError::FailedToGetEnvironmentVariable(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-            SetupError::FailedToBindAddress(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
-            SetupError::FailedToLaunchServer(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
-            SetupError::FailedToParsePort(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
-            SetupError::FailedToEstablishDatabaseConnection(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-            SetupError::FailedToRunDBMigrations(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-            SetupError::DatabaseHealthCheckFailed(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-            SetupError::FailedToSetupServerAddress(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-            SetupError::InvalidConfiguration(error) => (StatusCode::INTERNAL_SERVER_ERROR, error),
-            SetupError::EnvironmentValidationFailed(error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, error)
-            }
-        };
+    // --- Database Errors ---
+    #[error("Username already taken")]
+    UsernameAlreadyTaken,
+    #[error("Email already taken")]
+    EmailAlreadyTaken,
+    #[error("Game system name already taken")]
+    GameSystemNameAlreadyTaken,
+    #[error("User session intent already exists")]
+    UserSessionIntentAlreadyExists,
+    #[error("User already member of table")]
+    UserAlreadyMemberOfTable,
+    #[error("User not found")]
+    UserNotFound(Uuid),
+    #[error("Foreign key violation in table {table} on field {field}")]
+    ForeignKeyViolation { table: String, field: String },
+    #[error("Game system not found")]
+    GameSystemNotFound(Uuid),
+    #[error("RPG table not found")]
+    RpgTableNotFound(Uuid),
+    #[error("Session not found")]
+    SessionNotFound(Uuid),
+    #[error("Session intent not found")]
+    SessionIntentNotFound(Uuid),
+    #[error("Unknown constraint")]
+    UnknownConstraint(String),
+    #[error("Not found")]
+    NotFound,
+    #[error("Validation error")]
+    ValidationError(String),
+    #[error("Invalid input")]
+    InvalidInput(String),
+    #[error("Database error: {0}")]
+    Database(String),
+    #[error("Database error: {0}")]
+    DatabaseError(String),
+    #[error("Nothing to update")]
+    NothingToUpdate,
 
-        let body = Json(json!({
-            "error": error_message,
-        }));
-
-        (status, body).into_response()
-    }
+    // --- Hashing Errors ---
+    #[error("Failed to encode JWT: {0}")]
+    FailedToEncodeJwt(String),
+    #[error("Failed to decode JWT: {0}")]
+    FailedToDecodeJwt(String),
+    #[error("Hashing failed: {0}")]
+    HashingFailed(String),
 }

@@ -1,8 +1,7 @@
 use chrono::Duration;
-use domain::auth::{Claims, TokenProvider};
+use domain::{auth::Claims, repositories::TokenProvider};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use shared::Result;
-use shared::error::Error;
+use shared::error::{Error, InfrastructureError};
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -22,24 +21,28 @@ impl JwtTokenProvider {
 
 #[async_trait::async_trait]
 impl TokenProvider for JwtTokenProvider {
-    async fn generate_token(&self, user_id: &Uuid) -> Result<String> {
-        let claims = Claims::new(*user_id, self.expiration_duration);
+    async fn generate_token(&self, user_id: Uuid) -> Result<String, Error> {
+        let claims = Claims::new(user_id, self.expiration_duration);
 
         encode(
             &Header::default(),
             &claims,
             &EncodingKey::from_secret(self.secret.as_ref()),
         )
-        .map_err(|_| Error::InternalServerError)
+        .map_err(|error| {
+            Error::Infrastructure(InfrastructureError::FailedToEncodeJwt(error.to_string()))
+        })
     }
 
-    async fn decode_token(&self, token: &str) -> Result<Claims> {
+    async fn decode_token(&self, token: &str) -> Result<Claims, Error> {
         let token_data = decode::<Claims>(
             token,
             &DecodingKey::from_secret(self.secret.as_ref()),
             &Validation::default(),
         )
-        .map_err(|_| Error::InternalServerError)?;
+        .map_err(|error| {
+            Error::Infrastructure(InfrastructureError::FailedToDecodeJwt(error.to_string()))
+        })?;
 
         Ok(token_data.claims)
     }

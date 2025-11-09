@@ -1,9 +1,6 @@
-use crate::constants::*;
-use crate::setup::environment::Environment;
+use crate::{constants::*, setup::environment::Environment};
 use chrono::Duration;
-use shared::Result;
-use shared::error::Error;
-use shared::error::SetupError;
+use shared::{Error, error::InfrastructureError};
 use std::{net::SocketAddr, str::FromStr};
 use tracing::{info, warn};
 
@@ -29,14 +26,14 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
-    pub fn from_env() -> Result<Self> {
+    pub fn from_env() -> Result<Self, Error> {
         match dotenvy::dotenv() {
             Ok(_) => info!("✅ Environment variables loaded from .env file"),
             Err(_) => warn!("⚠️  No .env file found, using system environment variables"),
         }
 
         let database_url = std::env::var("DATABASE_URL").map_err(|_| {
-            Error::Setup(SetupError::FailedToGetEnvironmentVariable(
+            Error::Infrastructure(InfrastructureError::FailedToGetEnvironmentVariable(
                 "DATABASE_URL".into(),
             ))
         })?;
@@ -58,11 +55,15 @@ impl AppConfig {
             }
         };
 
-        let addr = SocketAddr::from_str(&format!("{DEFAULT_HOST}:{server_port}"))
-            .map_err(|err| Error::Setup(SetupError::FailedToSetupServerAddress(err.to_string())))?;
+        let addr =
+            SocketAddr::from_str(&format!("{DEFAULT_HOST}:{server_port}")).map_err(|err| {
+                Error::Infrastructure(InfrastructureError::FailedToSetupServerAddress(
+                    err.to_string(),
+                ))
+            })?;
 
         let environment = std::env::var("ENVIRONMENT")
-            .map_err(|e| SetupError::FailedToGetEnvironmentVariable(e.to_string()))
+            .map_err(|e| InfrastructureError::FailedToGetEnvironmentVariable(e.to_string()))
             .map(|value| match value.to_ascii_lowercase().as_str() {
                 "production" => Environment::Production,
                 _ => Environment::Development,
@@ -77,9 +78,9 @@ impl AppConfig {
             Environment::Production => match jwt_secret_env {
                 Ok(secret) => secret,
                 Err(_) => {
-                    return Err(Error::Setup(SetupError::FailedToGetEnvironmentVariable(
-                        "JWT_SECRET".into(),
-                    )));
+                    return Err(Error::Infrastructure(
+                        InfrastructureError::FailedToGetEnvironmentVariable("JWT_SECRET".into()),
+                    ));
                 }
             },
             Environment::Development => jwt_secret_env.unwrap_or_else(|_| {

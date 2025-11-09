@@ -1,12 +1,11 @@
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableModel;
 use domain::entities::commands::*;
-use domain::entities::{Table, TableStatus, Update};
+use domain::entities::{Table, TableStatus};
 use domain::repositories::TableRepository;
-use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableRepository {
@@ -21,9 +20,7 @@ impl PostgresTableRepository {
 
 #[async_trait::async_trait]
 impl TableRepository for PostgresTableRepository {
-    async fn create(&self, command: &CreateTableCommand) -> Result<Table> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+    async fn create(&self, command: &CreateTableCommand) -> Result<Table, Error> {
         let created_table = sqlx::query_as!(
             TableModel,
             r#"INSERT INTO tables
@@ -50,7 +47,7 @@ impl TableRepository for PostgresTableRepository {
                 created_at,
                 updated_at
             "#,
-            uuid,
+            command.id,
             command.gm_id,
             command.title,
             command.description,
@@ -62,10 +59,10 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(created_table.into())
+        Ok(todo!())
     }
 
-    async fn read(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
+    async fn read(&self, command: &GetTableCommand) -> Result<Vec<Table>, Error> {
         let search_pattern = command.search_term.as_ref().map(|s| format!("%{}%", s));
 
         let tables = sqlx::query_as!(
@@ -100,15 +97,15 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(tables.into_iter().map(|m| m.into()).collect())
+        Ok(todo!())
     }
 
-    async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
-        let has_title_update = matches!(command.title, Update::Change(_));
-        let has_description_update = matches!(command.description, Update::Change(_));
-        let has_slots_update = matches!(command.slots, Update::Change(_));
-        let has_game_system_update = matches!(command.game_system_id, Update::Change(_));
-        let has_status_update = matches!(command.status, Update::Change(_));
+    async fn update(&self, command: &UpdateTableCommand) -> Result<Table, Error> {
+        let has_title_update = matches!(command.title, Some(_));
+        let has_description_update = matches!(command.description, Some(_));
+        let has_slots_update = matches!(command.slots, Some(_));
+        let has_game_system_update = matches!(command.game_system_id, Some(_));
+        let has_status_update = matches!(command.status, Some(_));
 
         if !has_title_update
             && !has_description_update
@@ -122,28 +119,28 @@ impl TableRepository for PostgresTableRepository {
         }
 
         let title_value = match &command.title {
-            Update::Change(title) => Some(title.as_str()),
-            Update::Keep => None,
+            Some(title) => Some(title),
+            None => None,
         };
 
         let description_value = match &command.description {
-            Update::Change(description) => Some(description.as_str()),
-            Update::Keep => None,
+            Some(description) => Some(description),
+            None => None,
         };
 
         let slots_value = match command.slots {
-            Update::Change(slots) => Some(slots as i32),
-            Update::Keep => None,
+            Some(slots) => Some(slots as i32),
+            None => None,
         };
 
         let game_system_id_value = match &command.game_system_id {
-            Update::Change(game_system_id) => Some(*game_system_id),
-            Update::Keep => None,
+            Some(game_system_id) => Some(*game_system_id),
+            None => None,
         };
 
         let status_value = match &command.status {
-            Update::Change(status) => Some(status.to_string()),
-            Update::Keep => None,
+            Some(status) => Some(status.to_string()),
+            None => None,
         };
 
         let updated_table = sqlx::query_as!(
@@ -180,10 +177,10 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(updated_table.into())
+        Ok(todo!())
     }
 
-    async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
+    async fn delete(&self, command: &DeleteTableCommand) -> Result<Table, Error> {
         let table = sqlx::query_as!(
             TableModel,
             r#"DELETE FROM tables
@@ -205,10 +202,10 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(table.into())
+        Ok(todo!())
     }
 
-    async fn find_by_id(&self, id: &Uuid) -> Result<Option<Table>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Table>, Error> {
         let table = sqlx::query_as!(
             TableModel,
             r#"
@@ -231,36 +228,10 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(table.map(|model| model.into()))
+        Ok(todo!())
     }
 
-    async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<Table>> {
-        let tables = sqlx::query_as!(
-            TableModel,
-            r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status,
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE id = $1
-            "#,
-            table_id
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(tables.into_iter().map(|model| model.into()).collect())
-    }
-
-    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<Table>> {
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<Table>, Error> {
         let tables = sqlx::query_as!(
             TableModel,
             r#"
@@ -283,6 +254,6 @@ impl TableRepository for PostgresTableRepository {
         .await
         .map_err(constraint_mapper::map_database_error)?;
 
-        Ok(tables.into_iter().map(|model| model.into()).collect())
+        Ok(todo!())
     }
 }

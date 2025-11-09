@@ -1,12 +1,11 @@
 use crate::http::dtos::*;
+use crate::http::error::HttpError;
 use crate::http::middleware::auth::ClaimsExtractor;
 use axum::{extract::*, routing::*};
+use domain::services::ITableRequestService;
 use infrastructure::state::AppState;
-use shared::Result;
-use shared::error::Error;
 use std::sync::Arc;
 use uuid::Uuid;
-use validator::Validate;
 
 #[utoipa::path(
     get,
@@ -21,11 +20,14 @@ use validator::Validate;
 #[axum::debug_handler]
 pub async fn get_sent_requests(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<SentRequestItem>>> {
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
+) -> Result<Json<Vec<SentRequestItem>>, HttpError> {
+    /*
     // TODO: Implement sent requests retrieval
     // For now, return empty list
     Ok(Json(vec![]))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -41,11 +43,15 @@ pub async fn get_sent_requests(
 #[axum::debug_handler]
 pub async fn get_received_requests(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<ReceivedRequestItem>>> {
+
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
+) -> Result<Json<Vec<ReceivedRequestItem>>, HttpError> {
+    /*
     // TODO: Implement received requests retrieval
     // For now, return empty list
     Ok(Json(vec![]))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -68,10 +74,12 @@ pub async fn get_received_requests(
 #[axum::debug_handler]
 pub async fn create_table_request(
     claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
     Path(table_id): Path<Uuid>,
     Json(payload): Json<CreateTableRequestRequest>,
-) -> Result<Json<TableRequestResponse>> {
+) -> Result<Json<TableRequestResponse>, HttpError> {
+    /*
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
@@ -86,6 +94,8 @@ pub async fn create_table_request(
         status: "pending".to_string(),
         request_date: chrono::Utc::now(),
     }))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -106,13 +116,17 @@ pub async fn create_table_request(
 #[axum::debug_handler]
 pub async fn accept_request(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
     Path(request_id): Path<Uuid>,
-) -> Result<Json<AcceptRequestResponse>> {
+) -> Result<Json<AcceptRequestResponse>, HttpError> {
+    /*
     // TODO: Implement request acceptance logic
     Ok(Json(AcceptRequestResponse {
         message: format!("Request {} accepted successfully", request_id),
     }))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -133,13 +147,17 @@ pub async fn accept_request(
 #[axum::debug_handler]
 pub async fn reject_request(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
     Path(request_id): Path<Uuid>,
-) -> Result<Json<RejectRequestResponse>> {
+) -> Result<Json<RejectRequestResponse>, HttpError> {
+    /*
     // TODO: Implement request rejection logic
     Ok(Json(RejectRequestResponse {
         message: format!("Request {} rejected successfully", request_id),
     }))
+    */
+    todo!()
 }
 
 #[utoipa::path(
@@ -160,16 +178,20 @@ pub async fn reject_request(
 #[axum::debug_handler]
 pub async fn cancel_request(
     _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
+
+    State(table_request_service): State<Arc<dyn ITableRequestService>>,
     Path(request_id): Path<Uuid>,
-) -> Result<Json<CancelRequestResponse>> {
+) -> Result<Json<CancelRequestResponse>, HttpError> {
+    /*
     // TODO: Implement request cancellation logic
     Ok(Json(CancelRequestResponse {
         message: format!("Request {} cancelled successfully", request_id),
     }))
+    */
+    todo!()
 }
 
-pub fn table_request_routes(state: Arc<AppState>) -> Router {
+pub fn table_request_routes(state: AppState) -> Router {
     Router::new()
         .nest(
             "/requests",
@@ -180,5 +202,5 @@ pub fn table_request_routes(state: Arc<AppState>) -> Router {
                 .route("/{id}/reject", post(reject_request))
                 .route("/{id}", delete(cancel_request)),
         )
-        .with_state(state)
+        .with_state(state.clone())
 }

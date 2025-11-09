@@ -1,6 +1,6 @@
 use axum::response::IntoResponse;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -11,6 +11,15 @@ pub struct LoginRequest {
     pub email: String,
     #[validate(length(min = 6))]
     pub password: String,
+}
+
+impl LoginRequest {
+    pub fn new(email: String, password: String) -> Self {
+        Self {
+            email: email.trim().to_string(),
+            password: password.trim().to_string(),
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
@@ -32,7 +41,7 @@ pub struct RefreshTokenRequest {
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
-    pub joined_at: Date,
+    pub joined_at: DateTime<Utc>,
     pub email: String,
 }
 

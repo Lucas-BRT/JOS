@@ -2,30 +2,40 @@ use base64::Engine;
 use chrono::Utc;
 use domain::auth::*;
 use domain::entities::*;
-use domain::repositories::{RefreshTokenRepository, UserRepository};
-use log::warn;
+use domain::repositories::*;
+use domain::services::IAuthService;
 use rand::RngCore;
-use shared::Result;
+use shared::Error;
 use shared::error::ApplicationError;
 use shared::error::DomainError;
-use shared::error::Error;
-use std::sync::Arc;
 use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
-pub struct AuthService {
-    pub user_repository: Arc<dyn UserRepository>,
-    pub password_provider: Arc<dyn PasswordProvider>,
-    pub jwt_provider: Arc<dyn TokenProvider>,
-    pub refresh_token_repository: Arc<dyn RefreshTokenRepository>,
+pub struct AuthService<T, U, V, W>
+where
+    T: UserRepository,
+    U: PasswordProvider,
+    V: TokenProvider,
+    W: RefreshTokenRepository,
+{
+    pub user_repository: T,
+    pub password_provider: U,
+    pub jwt_provider: V,
+    pub refresh_token_repository: W,
 }
 
-impl AuthService {
+impl<T, U, V, W> AuthService<T, U, V, W>
+where
+    T: UserRepository,
+    U: PasswordProvider,
+    V: TokenProvider,
+    W: RefreshTokenRepository,
+{
     pub fn new(
-        user_repository: Arc<dyn UserRepository>,
-        password_provider: Arc<dyn PasswordProvider>,
-        jwt_provider: Arc<dyn TokenProvider>,
-        refresh_token_repository: Arc<dyn RefreshTokenRepository>,
+        user_repository: T,
+        password_provider: U,
+        jwt_provider: V,
+        refresh_token_repository: W,
     ) -> Self {
         Self {
             user_repository,
@@ -34,8 +44,21 @@ impl AuthService {
             refresh_token_repository,
         }
     }
+}
 
-    pub async fn issue_refresh_token(&self, user_id: &Uuid) -> Result<String> {
+#[async_trait::async_trait]
+impl<T, U, V, W> IAuthService for AuthService<T, U, V, W>
+where
+    T: UserRepository,
+    U: PasswordProvider,
+    V: TokenProvider,
+    W: RefreshTokenRepository,
+{
+    async fn decode_access_token(&self, token: &str) -> Result<Claims, Error> {
+        self.jwt_provider.decode_token(token).await
+    }
+
+    async fn issue_refresh_token(&self, user_id: Uuid) -> Result<String, Error> {
         self.refresh_token_repository
             .delete_by_user(user_id)
             .await?;
@@ -46,7 +69,7 @@ impl AuthService {
 
         let rt = RefreshToken {
             id: Uuid::new_v7(uuid::Timestamp::now(NoContext)),
-            user_id: *user_id,
+            user_id,
             token: token_str.clone(),
             expires_at: Utc::now() + chrono::Duration::days(7),
             created_at: Utc::now(),
@@ -56,7 +79,7 @@ impl AuthService {
         Ok(token_str)
     }
 
-    pub async fn rotate_refresh_token(&self, old_token: &str) -> Result<(String, Uuid)> {
+    async fn rotate_refresh_token(&self, old_token: &str) -> Result<(String, Uuid), Error> {
         let existing = self
             .refresh_token_repository
             .find_by_token(old_token)
@@ -65,15 +88,11 @@ impl AuthService {
         let record = match existing {
             Some(r) => r,
             None => {
-                warn!("Invalid refresh token");
-                return Err(Error::Application(
-                    shared::error::ApplicationError::InvalidCredentials,
-                ));
+                return Err(Error::Application(ApplicationError::InvalidCredentials));
             }
         };
 
         if record.expires_at < Utc::now() {
-            // delete expired token
             self.refresh_token_repository
                 .delete_by_token(old_token)
                 .await?;
@@ -81,69 +100,58 @@ impl AuthService {
             return Err(Error::Application(ApplicationError::InvalidCredentials));
         }
 
-        // rotate: delete old and issue new for same user
         self.refresh_token_repository
             .delete_by_token(old_token)
             .await?;
 
-        let new_token = self.issue_refresh_token(&record.user_id).await?;
+        let new_token = self.issue_refresh_token(record.user_id).await?;
         Ok((new_token, record.user_id))
     }
-}
 
-#[async_trait::async_trait]
-impl Authenticator for AuthService {
-    async fn authenticate(&self, payload: &mut LoginUserCommand) -> Result<String> {
-        let user = match self.user_repository.find_by_email(&payload.email).await? {
-            Some(user) => user,
+    async fn authenticate(&self, payload: &LoginUserCommand) -> Result<String, Error> {
+        let (id, password) = match self.user_repository.find_by_email(payload.email).await? {
+            Some(user) => (user.id, user.password),
             None => {
-                return Err(Error::Application(
-                    shared::error::ApplicationError::InvalidCredentials,
-                ));
+                return Err(Error::Application(ApplicationError::InvalidCredentials));
             }
         };
 
         if !self
             .password_provider
-            .verify_hash(payload.password.clone(), user.password.clone())
+            .verify_hash(payload.password, &password)
             .await?
         {
-            return Err(Error::Application(
-                shared::error::ApplicationError::InvalidCredentials,
-            ));
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
         }
 
-        let jwt_token = self.jwt_provider.generate_token(&user.id).await?;
+        let jwt_token = self.jwt_provider.generate_token(id).await?;
 
         Ok(jwt_token)
     }
 
-    async fn register(&self, payload: &mut CreateUserCommand) -> Result<User> {
+    async fn register(&self, payload: &CreateUserCommand) -> Result<User, Error> {
+        let payload = &mut payload.clone();
         payload.password = self
             .password_provider
-            .generate_hash(payload.password.clone())
-            .await?;
+            .generate_hash(&payload.password)
+            .await?
+            .to_string();
 
         let created_user = self.user_repository.create(payload).await?;
 
         Ok(created_user)
     }
 
-    async fn update_password(&self, payload: &mut UpdatePasswordCommand) -> Result<()> {
+    async fn update_password(&self, payload: &UpdatePasswordCommand) -> Result<(), Error> {
         let user = self
             .user_repository
-            .find_by_id(&payload.user_id)
+            .find_by_id(payload.user_id)
             .await?
-            .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound {
-                    entity_type: "User",
-                    entity_id: payload.user_id.to_string(),
-                })
-            })?;
+            .ok_or(Error::Domain(DomainError::UserNotFound))?;
 
         if !self
             .password_provider
-            .verify_hash(payload.current_password.clone(), user.password.clone())
+            .verify_hash(payload.current_password, &user.password)
             .await?
         {
             return Err(Error::Application(ApplicationError::IncorrectPassword));
@@ -151,47 +159,43 @@ impl Authenticator for AuthService {
 
         let new_password_hash = self
             .password_provider
-            .generate_hash(payload.new_password.clone())
+            .generate_hash(payload.new_password)
             .await?;
 
-        let mut command = UpdateUserCommand {
+        let command = UpdateUserCommand {
             user_id: payload.user_id,
-            password: Update::Change(new_password_hash),
+            password: Some(&new_password_hash),
             ..Default::default()
         };
 
-        self.user_repository.update(&mut command).await?;
+        self.user_repository.update(&command).await?;
 
         Ok(())
     }
-    async fn logout(&self, user_id: &Uuid) -> Result<()> {
+
+    async fn logout(&self, user_id: Uuid) -> Result<(), Error> {
         Ok(self
             .refresh_token_repository
             .delete_by_user(user_id)
             .await?)
     }
 
-    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()> {
+    async fn delete_account(&self, command: &DeleteAccountCommand) -> Result<(), Error> {
         let user = self
             .user_repository
-            .find_by_id(&command.user_id)
+            .find_by_id(command.user_id)
             .await?
-            .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound {
-                    entity_type: "User",
-                    entity_id: command.user_id.to_string(),
-                })
-            })?;
+            .ok_or(Error::Domain(DomainError::UserNotFound))?;
 
         if !self
             .password_provider
-            .verify_hash(command.password.clone(), user.password.clone())
+            .verify_hash(command.password, &user.password)
             .await?
         {
             return Err(Error::Application(ApplicationError::IncorrectPassword));
         }
 
-        self.user_repository.delete_by_id(&command.user_id).await?;
+        self.user_repository.delete_by_id(command.user_id).await?;
 
         Ok(())
     }

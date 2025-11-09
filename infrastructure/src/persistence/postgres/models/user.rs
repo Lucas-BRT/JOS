@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::User;
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
@@ -8,8 +8,8 @@ pub struct UserModel {
     pub username: String,
     pub email: String,
     pub password: String,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<UserModel> for User {

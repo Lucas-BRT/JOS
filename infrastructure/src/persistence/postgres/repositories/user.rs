@@ -2,11 +2,10 @@ use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::UserModel;
 use domain::entities::*;
 use domain::repositories::UserRepository;
-use shared::Result;
 use shared::error::ApplicationError;
 use shared::error::Error;
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresUserRepository {
@@ -21,9 +20,7 @@ impl PostgresUserRepository {
 
 #[async_trait::async_trait]
 impl UserRepository for PostgresUserRepository {
-    async fn create(&self, user: &mut CreateUserCommand) -> Result<User> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+    async fn create(&self, user: &CreateUserCommand) -> Result<User, Error> {
         let created_user = sqlx::query_as!(
             UserModel,
             r#"INSERT INTO users
@@ -39,10 +36,10 @@ impl UserRepository for PostgresUserRepository {
             RETURNING
                 *
             "#,
-            uuid,
-            &user.username,
-            &user.email,
-            &user.password,
+            user.id,
+            user.username,
+            user.email,
+            user.password,
         )
         .fetch_one(&self.pool)
         .await
@@ -51,10 +48,10 @@ impl UserRepository for PostgresUserRepository {
         Ok(created_user.into())
     }
 
-    async fn update(&self, data: &mut UpdateUserCommand) -> Result<User> {
-        let has_username_update = matches!(data.username, Update::Change(_));
-        let has_email_update = matches!(data.email, Update::Change(_));
-        let has_password_update = matches!(data.password, Update::Change(_));
+    async fn update(&self, data: &UpdateUserCommand) -> Result<User, Error> {
+        let has_username_update = matches!(data.username, Some(_));
+        let has_email_update = matches!(data.email, Some(_));
+        let has_password_update = matches!(data.password, Some(_));
 
         if !has_username_update && !has_email_update && !has_password_update {
             return Err(Error::Application(ApplicationError::InvalidInput {
@@ -63,18 +60,18 @@ impl UserRepository for PostgresUserRepository {
         }
 
         let username_value = match &data.username {
-            Update::Change(username) => Some(username.as_str()),
-            Update::Keep => None,
+            Some(username) => Some(username),
+            None => None,
         };
 
         let email_value = match &data.email {
-            Update::Change(email) => Some(email.as_str()),
-            Update::Keep => None,
+            Some(email) => Some(email),
+            None => None,
         };
 
         let password_value = match &data.password {
-            Update::Change(password) => Some(password.as_str()),
-            Update::Keep => None,
+            Some(password) => Some(password),
+            None => None,
         };
 
         let updated_user = sqlx::query_as!(
@@ -101,7 +98,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(updated_user.into())
     }
 
-    async fn read(&self, command: &mut GetUserCommand) -> Result<Vec<User>> {
+    async fn read(&self, command: &GetUserCommand) -> Result<Vec<User>, Error> {
         let mut query = sqlx::QueryBuilder::new("SELECT * FROM users");
         let mut conditions = Vec::new();
 
@@ -139,7 +136,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(users.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
+    async fn find_by_email(&self, email: &str) -> Result<Option<User>, Error> {
         let user = sqlx::query_as!(
             UserModel,
             r#"SELECT
@@ -161,7 +158,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(user.map(|model| model.into()))
     }
 
-    async fn find_by_id(&self, id: &Uuid) -> Result<Option<User>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<User>, Error> {
         let user = sqlx::query_as!(
             UserModel,
             r#"SELECT *
@@ -177,7 +174,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(user.map(|model| model.into()))
     }
 
-    async fn delete(&self, command: &mut DeleteUserCommand) -> Result<User> {
+    async fn delete(&self, command: &DeleteUserCommand) -> Result<User, Error> {
         let user = sqlx::query_as!(
             UserModel,
             r#"DELETE FROM users
@@ -194,7 +191,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(user.into())
     }
 
-    async fn delete_by_id(&self, id: &Uuid) -> Result<()> {
+    async fn delete_by_id(&self, id: Uuid) -> Result<(), Error> {
         sqlx::query!(
             r#"DELETE FROM users
             WHERE id = $1
@@ -208,7 +205,7 @@ impl UserRepository for PostgresUserRepository {
         Ok(())
     }
 
-    async fn search(&self, query: &str) -> Result<Vec<User>> {
+    async fn search(&self, query: &str) -> Result<Vec<User>, Error> {
         let search_pattern = format!("%{}%", query);
         let users = sqlx::query_as!(
             UserModel,
