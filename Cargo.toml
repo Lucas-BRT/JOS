@@ -10,6 +10,7 @@ application = { path = "./application" }
 infrastructure = { path = "./infrastructure" }
 api = { path = "./api" }
 tokio = { version = "1.44.2", features = ["full"] }
+mockall = "0.13.1"
 
 [dev-dependencies]
 sqlx = { workspace = true }
