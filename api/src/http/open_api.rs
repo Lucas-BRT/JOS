@@ -43,6 +43,7 @@ impl Modify for SecurityAddon {
         crate::http::handlers::table_request::reject_request,
         crate::http::handlers::table_request::cancel_request,
         crate::http::handlers::game_system::create_game_system,
+        crate::http::handlers::game_system::get_game_systems,
         crate::http::handlers::health::health_check
     ),
     modifiers(&SecurityAddon),

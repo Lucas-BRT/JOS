@@ -84,9 +84,8 @@ impl From<&GameSystem> for GameSystemResponse {
     get,
     path = "/v1/game_systems",
     tag = "game_systems",
-    request_body = CreateGameSystemRequest,
     responses(
-        (status = 200, description = "", body = Vec<String>),
+        (status = 200, description = "", body = Vec<GameSystemResponse>),
     )
 )]
 #[axum::debug_handler]
@@ -107,14 +106,10 @@ async fn get_game_systems(
 pub fn game_system_routes(state: Arc<AppState>) -> Router {
     let protected = Router::new()
         .route("/", post(create_game_system))
+        .route("/", get(get_game_systems))
         .layer(from_fn_with_state(state.clone(), auth_middleware));
 
-    let public = Router::new().route("/", get(get_game_systems));
-
     Router::new()
-        .nest(
-            "/game_systems",
-            Router::new().merge(protected).merge(public),
-        )
+        .nest("/game_systems", Router::new().merge(protected))
         .with_state(state)
 }

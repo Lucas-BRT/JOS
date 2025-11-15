@@ -1,9 +1,9 @@
-use crate::http::handlers::tracing::trace_middleware;
+use crate::http::handlers::{cors::cors_layer, tracing::trace_middleware};
 pub use crate::http::{
     middleware::{cors, tracing},
     open_api::ApiDoc,
 };
-use axum::{Router, routing::get};
+use axum::{Router, middleware::from_fn, routing::get};
 use infrastructure::state::AppState;
 use std::sync::Arc;
 use utoipa::OpenApi;
@@ -16,6 +16,7 @@ pub mod game_system;
 pub mod health;
 pub mod session;
 pub mod table;
+pub mod table_members;
 pub mod table_request;
 pub mod user;
 
@@ -42,8 +43,8 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
     Router::new()
         .merge(build_system_routes(openapi_spec))
         .nest("/v1", api.into())
-        .layer(cors::cors_layer())
-        .layer(axum::middleware::from_fn(trace_middleware))
+        .layer(cors_layer())
+        .layer(from_fn(trace_middleware))
 }
 
 fn build_system_routes(openapi_spec: utoipa::openapi::OpenApi) -> Router {
