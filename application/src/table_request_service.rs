@@ -1,5 +1,5 @@
-use domain::entities::*;
 use crate::TableMemberService;
+use domain::entities::*;
 use domain::repositories::{TableMemberRepository, TableRepository, TableRequestRepository};
 use shared::Result;
 use shared::error::{DomainError, Error};
@@ -50,8 +50,14 @@ impl TableRequestService {
             }));
         }
 
-        let existing_requests = self.table_request_repository.find_by_user_and_table(command.user_id, command.table_id).await?;
-        if existing_requests.iter().any(|req| req.status == domain::entities::TableRequestStatus::Pending) {
+        let existing_requests = self
+            .table_request_repository
+            .find_by_user_and_table(command.user_id, command.table_id)
+            .await?;
+        if existing_requests
+            .iter()
+            .any(|req| req.status == domain::entities::TableRequestStatus::Pending)
+        {
             return Err(Error::Domain(DomainError::BusinessRuleViolation {
                 message: "A pending request for this table already exists".to_string(),
             }));

@@ -2,13 +2,13 @@ use crate::config::AppConfig;
 use crate::persistence::Db;
 use crate::persistence::postgres::repositories::{
     PostgresGameSystemRepository, PostgresRefreshTokenRepository, PostgresSessionRepository,
-    PostgresTableRepository, PostgresTableMemberRepository, PostgresTableRequestRepository, PostgresUserRepository,
+    PostgresTableMemberRepository, PostgresTableRepository, PostgresTableRequestRepository,
+    PostgresUserRepository,
 };
 use crate::security::{BcryptPasswordProvider, JwtTokenProvider};
 use application::auth_service::AuthService;
 use application::game_system_service::GameSystemService;
 use application::password_service::PasswordService;
-use application::search_service::SearchService;
 use application::session_service::SessionService;
 use application::table_member_service::TableMemberService;
 use application::table_request_service::TableRequestService;
@@ -26,7 +26,6 @@ pub struct AppState {
     pub table_service: TableService,
     pub table_request_service: TableRequestService,
     pub session_service: SessionService,
-    pub search_service: SearchService,
     pub auth_service: AuthService,
     pub password_service: PasswordService,
     pub game_system_service: GameSystemService,
@@ -60,12 +59,6 @@ impl FromRef<AppState> for TableRequestService {
 impl FromRef<AppState> for SessionService {
     fn from_ref(input: &AppState) -> Self {
         input.session_service.clone()
-    }
-}
-
-impl FromRef<AppState> for SearchService {
-    fn from_ref(input: &AppState) -> Self {
-        input.search_service.clone()
     }
 }
 
@@ -115,7 +108,8 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
 
     // Table request service
     let table_member_repo_for_req = Arc::new(PostgresTableMemberRepository::new(database.clone()));
-    let table_member_service_for_req = Arc::new(TableMemberService::new(table_member_repo_for_req.clone()));
+    let table_member_service_for_req =
+        Arc::new(TableMemberService::new(table_member_repo_for_req.clone()));
     let table_request_repo = Arc::new(PostgresTableRequestRepository::new(database.clone()));
     let table_request_service = TableRequestService::new(
         table_request_repo.clone(),
@@ -129,10 +123,6 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
     let session_repo = Arc::new(PostgresSessionRepository::new(database.clone()));
     let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
     info!("✅ Session service initialized");
-
-    // Search service
-    let search_service = SearchService::new(user_repo.clone(), table_repo.clone());
-    info!("✅ Search service initialized");
 
     // Auth service
     let jwt_provider = Arc::new(JwtTokenProvider::new(
@@ -165,7 +155,6 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         table_service,
         table_request_service,
         session_service,
-        search_service,
         auth_service,
         password_service,
         game_system_service,

@@ -153,8 +153,6 @@ impl TestEnvironmentBuilder {
         let session_repo = Arc::new(PostgresSessionRepository::new(self.pool.clone()));
         let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
 
-        let search_service = SearchService::new(user_repo.clone(), table_repo.clone());
-
         let jwt_provider = Arc::new(JwtTokenProvider::new(
             config.jwt_secret.clone(),
             config.jwt_expiration_duration,
@@ -180,7 +178,6 @@ impl TestEnvironmentBuilder {
             table_service: table_service.clone(),
             table_request_service,
             session_service: session_service.clone(),
-            search_service,
             auth_service: auth_service.clone(),
             password_service,
             game_system_service: game_system_service.clone(),

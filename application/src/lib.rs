@@ -1,7 +1,6 @@
 pub mod auth_service;
 pub mod game_system_service;
 pub mod password_service;
-pub mod search_service;
 pub mod session_checkin_service;
 pub mod session_intent_service;
 pub mod session_service;
@@ -13,7 +12,6 @@ pub mod user_service;
 pub use auth_service::*;
 pub use game_system_service::*;
 pub use password_service::*;
-pub use search_service::*;
 pub use session_checkin_service::*;
 pub use session_intent_service::*;
 pub use session_service::*;
