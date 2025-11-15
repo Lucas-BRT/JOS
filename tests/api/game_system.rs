@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use crate::utils::{
     DEFAULT_USER_PASSWORD, TestEnvironment, TestEnvironmentBuilder, register_and_login,
 };
