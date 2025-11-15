@@ -1,17 +1,12 @@
 use crate::http::{dtos::CreateTableResponse, middleware::auth::auth_middleware};
-use axum::{
-    Json, Router,
-    extract::State,
-    middleware::from_fn_with_state,
-    response::IntoResponse,
-    routing::{get, post},
-};
+use axum::{Json, extract::State, middleware::from_fn_with_state, response::IntoResponse};
 use domain::entities::{CreateGameSystemCommand, GameSystem, GetGameSystemCommand};
 use infrastructure::state::AppState;
 use serde::*;
 use shared::{Error, Result};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 use validator::Validate;
 
@@ -40,7 +35,7 @@ impl From<CreateGameSystemRequest> for CreateGameSystemCommand {
 
 #[utoipa::path(
     post,
-    path = "/v1/game_systems",
+    path = "/",
     tag = "game_systems",
     request_body = CreateGameSystemRequest,
     responses(
@@ -82,7 +77,7 @@ impl From<&GameSystem> for GameSystemResponse {
 
 #[utoipa::path(
     get,
-    path = "/v1/game_systems",
+    path = "/",
     tag = "game_systems",
     responses(
         (status = 200, description = "", body = Vec<GameSystemResponse>),
@@ -103,13 +98,13 @@ async fn get_game_systems(
     Ok(Json(systems))
 }
 
-pub fn game_system_routes(state: Arc<AppState>) -> Router {
-    let protected = Router::new()
-        .route("/", post(create_game_system))
-        .route("/", get(get_game_systems))
+pub fn game_system_routes(state: Arc<AppState>) -> OpenApiRouter {
+    let protected = OpenApiRouter::new()
+        .routes(routes!(create_game_system))
+        .routes(routes!(get_game_systems))
         .layer(from_fn_with_state(state.clone(), auth_middleware));
 
-    Router::new()
-        .nest("/game_systems", Router::new().merge(protected))
+    OpenApiRouter::new()
+        .nest("/game_systems", OpenApiRouter::new().merge(protected))
         .with_state(state)
 }

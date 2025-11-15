@@ -2,7 +2,7 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::ClaimsExtractor;
 use crate::http::middleware::auth::auth_middleware;
 use axum::middleware::from_fn_with_state;
-use axum::{extract::State, http::StatusCode, routing::*, *};
+use axum::{extract::State, http::StatusCode, *};
 use domain::auth::Authenticator;
 use domain::entities::UpdateUserCommand;
 use domain::entities::commands::*;
@@ -11,6 +11,8 @@ use shared::Error;
 use shared::error::ApplicationError;
 use shared::*;
 use std::sync::Arc;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use validator::Validate;
 
 // Conversion implementations
@@ -35,7 +37,7 @@ impl From<RegisterRequest> for CreateUserCommand {
 
 #[utoipa::path(
     post,
-    path = "/v1/auth/login",
+    path = "/login",
     tag = "auth",
     request_body = LoginRequest,
     responses(
@@ -85,7 +87,7 @@ async fn login(
 
 #[utoipa::path(
     post,
-    path = "/v1/auth/register",
+    path = "/register",
     tag = "auth",
     request_body = RegisterRequest,
     responses(
@@ -123,7 +125,7 @@ async fn register(
 
 #[utoipa::path(
     post,
-    path = "/v1/auth/logout",
+    path = "/logout",
     tag = "auth",
     security(("auth" = [])),
     responses(
@@ -145,7 +147,7 @@ async fn logout(
 
 #[utoipa::path(
     post,
-    path = "/v1/auth/refresh",
+    path = "/refresh",
     tag = "auth",
     request_body = RefreshTokenRequest,
     responses(
@@ -178,7 +180,7 @@ async fn refresh(
 
 #[utoipa::path(
     get,
-    path = "/v1/auth/me",
+    path = "/me",
     tag = "auth",
     security(("auth" = [])),
     responses(
@@ -203,7 +205,7 @@ async fn me(
 
 #[utoipa::path(
     put,
-    path = "/v1/auth/profile",
+    path = "/profile",
     tag = "auth",
     security(("auth" = [])),
     request_body = UpdateProfileRequest,
@@ -242,7 +244,7 @@ pub async fn update_profile(
 
 #[utoipa::path(
     put,
-    path = "/v1/auth/password",
+    path = "/password",
     tag = "auth",
     security(("auth" = [])),
     request_body = ChangePasswordRequest,
@@ -286,7 +288,7 @@ pub async fn change_password(
 
 #[utoipa::path(
     delete,
-    path = "/v1/auth/account",
+    path = "/account",
     tag = "auth",
     security(("auth" = [])),
     request_body = DeleteAccountRequest,
@@ -319,21 +321,21 @@ pub async fn delete_account(
     }))
 }
 
-pub fn auth_routes(state: Arc<AppState>) -> Router {
-    let public = Router::new()
-        .route("/register", post(register))
-        .route("/login", post(login))
-        .route("/refresh", post(refresh));
+pub fn auth_routes(state: Arc<AppState>) -> OpenApiRouter {
+    let public = OpenApiRouter::new()
+        .routes(routes!(register))
+        .routes(routes!(login))
+        .routes(routes!(refresh));
 
-    let protected = Router::new()
-        .route("/logout", post(logout))
-        .route("/me", get(me))
-        .route("/profile", put(update_profile))
-        .route("/password", put(change_password))
-        .route("/account", delete(delete_account))
+    let protected = OpenApiRouter::new()
+        .routes(routes!(logout))
+        .routes(routes!(me))
+        .routes(routes!(update_profile))
+        .routes(routes!(change_password))
+        .routes(routes!(delete_account))
         .layer(from_fn_with_state(state.clone(), auth_middleware));
 
-    Router::new()
-        .nest("/auth", Router::new().merge(public).merge(protected))
+    OpenApiRouter::new()
+        .nest("/auth", OpenApiRouter::new().merge(public).merge(protected))
         .with_state(state)
 }

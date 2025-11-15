@@ -1,7 +1,8 @@
 use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
+use axum::extract::*;
 use axum::http::StatusCode;
-use axum::{extract::*, routing::*};
+use axum::middleware::from_fn_with_state;
 use domain::entities::commands::session_commands::*;
 use domain::entities::commands::table_commands::*;
 use domain::entities::*;
@@ -10,12 +11,14 @@ use shared::Result;
 use shared::error::*;
 use std::str::FromStr;
 use std::sync::Arc;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use uuid::Uuid;
 use validator::Validate;
 
 #[utoipa::path(
     post,
-    path = "/v1/tables",
+    path = "/",
     tag = "tables",
     security(("auth" = [])),
     request_body = CreateTableRequest,
@@ -52,7 +55,7 @@ pub async fn create_table(
 
 #[utoipa::path(
     get,
-    path = "/v1/tables",
+    path = "/",
     tag = "tables",
     security(("auth" = [])),
     responses(
@@ -64,16 +67,15 @@ pub async fn create_table(
 pub async fn get_tables(
     _claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
-    Query(search): Query<SearchTablesQuery>,
 ) -> Result<(StatusCode, Json<Vec<Table>>)> {
-    let response = app_state.table_service.get(&search.into()).await?;
+    let response = app_state.table_service.get_all().await?;
 
     Ok((StatusCode::OK, Json(response)))
 }
 
 #[utoipa::path(
     get,
-    path = "/v1/tables/{id}",
+    path = "/{id}",
     tag = "tables",
     security(("auth" = [])),
     params(
@@ -151,7 +153,7 @@ pub async fn get_table_details(
 
 #[utoipa::path(
     put,
-    path = "/v1/tables/{id}",
+    path = "/{id}",
     tag = "tables",
     security(("auth" = [])),
     params(
@@ -280,7 +282,7 @@ pub async fn update_table(
 
 #[utoipa::path(
     delete,
-    path = "/v1/tables/{id}",
+    path = "/{id}",
     tag = "tables",
     params(
         ("id" = Uuid, Path, description = "Table ID")
@@ -310,20 +312,149 @@ pub async fn delete_table(
     }))
 }
 
-pub fn table_routes(state: Arc<AppState>) -> Router {
-    Router::new()
+#[utoipa::path(
+    get,
+    path = "/{table_id}/sessions",
+    tag = "sessions",
+    security(("auth" = [])),
+    responses(
+        (status = 200, description = "Sessions retrieved successfully", body = Vec<SessionListItem>),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+pub async fn get_sessions(
+    Path(table_id): Path<Uuid>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<GetSessionsResponse>>> {
+    let user_id = claims.0.sub;
+
+    let table = app_state.table_service.find_by_id(&table_id).await?;
+
+    if table.gm_id != user_id {
+        return Err(Error::Application(ApplicationError::InvalidCredentials));
+    }
+
+    let sessions = app_state
+        .session_service
+        .get(GetSessionCommand {
+            table_id: Some(table_id),
+            ..Default::default()
+        })
+        .await?
+        .iter()
+        .map(GetSessionsResponse::from)
+        .collect();
+
+    Ok(Json(sessions))
+}
+
+#[utoipa::path(
+    post,
+    path = "/{table_id}/sessions",
+    tag = "sessions",
+    security(("auth" = [])),
+    request_body = CreateSessionRequest,
+    responses(
+        (status = 201, description = "Session created successfully", body = SessionDetails),
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 403, description = "Not authorized to create session for this table", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+pub async fn create_session(
+    claims: ClaimsExtractor,
+    Path(table_id): Path<Uuid>,
+    State(app_state): State<Arc<AppState>>,
+    Json(payload): Json<CreateSessionRequest>,
+) -> Result<Json<CreateSessionResponse>> {
+    if let Err(validation_error) = payload.validate() {
+        return Err(Error::Validation(validation_error));
+    }
+
+    let user_id = claims.0.sub;
+
+    let table = app_state.table_service.find_by_id(&table_id).await?;
+
+    if table.gm_id != user_id {
+        return Err(Error::Application(ApplicationError::InvalidCredentials));
+    }
+
+    let session = app_state
+        .session_service
+        .create(
+            user_id,
+            CreateSessionCommand {
+                table_id,
+                title: payload.title,
+                description: payload.description,
+                scheduled_for: payload.scheduled_for,
+                status: payload.status.unwrap_or_default(),
+            },
+        )
+        .await?;
+
+    Ok(Json(CreateSessionResponse { id: session.id }))
+}
+
+#[utoipa::path(
+    get,
+    path = "/{table_id}/requests/received",
+    tag = "table-requests",
+    security(("auth" = [])),
+    responses(
+        (status = 200, description = "Received requests retrieved successfully", body = Vec<ReceivedRequestItem>),
+        (status = 401, description = "Authentication required", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+pub async fn get_received_requests(
+    claims: ClaimsExtractor,
+    Path(table_id): Path<Uuid>,
+    State(app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<ReceivedRequestItem>>> {
+    let table = app_state.table_service.find_by_id(&table_id).await?;
+
+    if table.gm_id != claims.0.sub {
+        return Err(Error::Domain(DomainError::BusinessRuleViolation {
+            message: "invalid credentials".to_owned(),
+        }));
+    }
+
+    let requests = app_state
+        .table_request_service
+        .find_by_table_id(&table_id)
+        .await?;
+
+    let requests = requests
+        .into_iter()
+        .map(|request| ReceivedRequestItem {
+            id: request.id,
+            player_id: request.user_id,
+            table_id: request.table_id,
+            request_date: request.created_at,
+            message: request.message,
+        })
+        .collect::<Vec<ReceivedRequestItem>>();
+    Ok(Json(requests))
+}
+
+pub fn table_routes(state: Arc<AppState>) -> OpenApiRouter {
+    OpenApiRouter::new()
         .nest(
             "/tables",
-            Router::new()
-                .route("/", get(get_tables))
-                .route("/", post(create_table))
-                .route("/{id}", get(get_table_details))
-                .route("/{id}", put(update_table))
-                .route("/{id}", delete(delete_table))
-                .layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    auth_middleware,
-                )),
+            OpenApiRouter::new()
+                .routes(routes!(get_tables))
+                .routes(routes!(create_table))
+                .routes(routes!(get_table_details))
+                .routes(routes!(update_table))
+                .routes(routes!(delete_table))
+                .routes(routes!(create_session))
+                .routes(routes!(get_sessions))
+                .routes(routes!(get_received_requests))
+                .layer(from_fn_with_state(state.clone(), auth_middleware)),
         )
         .with_state(state)
 }

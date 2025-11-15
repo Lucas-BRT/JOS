@@ -1,7 +1,6 @@
 use axum::{
-    Json, Router,
+    Json,
     extract::{Path, State},
-    routing::*,
 };
 use chrono::{DateTime, Utc};
 use domain::entities::TableMember;
@@ -10,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use shared::Result;
 use std::sync::Arc;
 use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, ToSchema)]
@@ -29,6 +29,13 @@ impl From<TableMember> for TableMemberResponse {
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/tables/{table_id}/members",
+    responses(
+        (status = 200, description = "List of table members", body = Vec<TableMemberResponse>)
+    )
+)]
 async fn get_table_members(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
@@ -46,8 +53,8 @@ async fn get_table_members(
     Ok(Json(members))
 }
 
-pub fn table_members_routes(app_state: Arc<AppState>) -> Router {
-    Router::new()
-        .route("tables/{id}/members", get(get_table_members))
+pub fn table_members_routes(app_state: Arc<AppState>) -> OpenApiRouter {
+    OpenApiRouter::new()
+        .routes(routes!(get_table_members))
         .with_state(app_state)
 }

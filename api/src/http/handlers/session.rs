@@ -1,18 +1,20 @@
 use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
+use axum::extract::*;
 use axum::middleware::from_fn_with_state;
-use axum::{extract::*, routing::*};
 use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 use uuid::Uuid;
 use validator::Validate;
 
 #[utoipa::path(
     get,
-    path = "/v1/tables/{table_id}/sessions",
+    path = "/{table_id}/sessions",
     tag = "sessions",
     security(("auth" = [])),
     responses(
@@ -50,7 +52,7 @@ pub async fn get_sessions(
 
 #[utoipa::path(
     post,
-    path = "/v1/tables/{table_id}/sessions",
+    path = "/{table_id}/sessions",
     tag = "sessions",
     security(("auth" = [])),
     request_body = CreateSessionRequest,
@@ -99,7 +101,7 @@ pub async fn create_session(
 
 #[utoipa::path(
     put,
-    path = "/v1/tables/{table_id}/sessions/{id}",
+    path = "/{table_id}/sessions/{id}",
     tag = "sessions",
     security(("auth" = [])),
     params(
@@ -152,7 +154,7 @@ pub async fn update_session(
 
 #[utoipa::path(
     delete,
-    path = "/v1/tables/{table_id}/sessions/{id}",
+    path = "/{id}",
     tag = "sessions",
     security(("auth" = [])),
     params(
@@ -170,9 +172,12 @@ pub async fn update_session(
 pub async fn delete_session(
     claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
-    Path((table_id, session_id)): Path<(Uuid, Uuid)>,
+    Path(session_id): Path<Uuid>,
 ) -> Result<Json<DeleteSessionResponse>> {
-    let table = app_state.table_service.find_by_id(&table_id).await?;
+    let table = app_state
+        .table_service
+        .find_by_session_id(&session_id)
+        .await?;
 
     if claims.0.sub != table.gm_id {
         return Err(Error::Application(ApplicationError::InvalidCredentials));
@@ -188,22 +193,15 @@ pub async fn delete_session(
     }))
 }
 
-pub fn session_routes(state: Arc<AppState>) -> Router {
-    Router::new()
-        .nest(
-            "/tables/{table_id}/sessions",
-            Router::new()
-                .route("/", post(create_session))
-                .route("/", get(get_sessions))
-                .route("/{session_id}", delete(delete_session))
-                .route("/{session_id}", put(update_session)),
-        )
+pub fn session_routes(state: Arc<AppState>) -> OpenApiRouter {
+    OpenApiRouter::new()
+        .nest("/tables/{table_id}/sessions", OpenApiRouter::new())
         .nest(
             "/sessions",
-            Router::new()
-                .route("/", get(get_sessions))
-                .route("/{id}", put(update_session))
-                .route("/{id}", delete(delete_session)),
+            OpenApiRouter::new()
+                .routes(routes!(get_sessions))
+                .routes(routes!(update_session))
+                .routes(routes!(delete_session)),
         )
         .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)

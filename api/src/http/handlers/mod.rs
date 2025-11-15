@@ -7,6 +7,7 @@ use axum::{Router, middleware::from_fn, routing::get};
 use infrastructure::state::AppState;
 use std::sync::Arc;
 use utoipa::OpenApi;
+use utoipa::openapi::OpenApi as OpenApiSpec;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -29,25 +30,26 @@ pub use table_request::table_request_routes;
 pub use user::user_routes;
 
 pub fn create_router(app_state: Arc<AppState>) -> Router {
-    let openapi_spec = ApiDoc::openapi();
-    let mut api = OpenApiRouter::new();
+    let open_api_router = OpenApiRouter::with_openapi(ApiDoc::openapi()).nest(
+        "/v1",
+        OpenApiRouter::new()
+            .merge(auth_routes(app_state.clone()))
+            .merge(table_routes(app_state.clone()))
+            .merge(session_routes(app_state.clone()))
+            .merge(table_request_routes(app_state.clone()))
+            .merge(user_routes(app_state.clone()))
+            .merge(game_system_routes(app_state.clone())),
+    );
 
-    api = api
-        .merge(auth_routes(app_state.clone()).into())
-        .merge(table_routes(app_state.clone()).into())
-        .merge(session_routes(app_state.clone()).into())
-        .merge(table_request_routes(app_state.clone()).into())
-        .merge(user_routes(app_state.clone()).into())
-        .merge(game_system_routes(app_state.clone()).into());
+    let (router, api_doc) = open_api_router.split_for_parts();
 
-    Router::new()
-        .merge(build_system_routes(openapi_spec))
-        .nest("/v1", api.into())
+    router
+        .merge(build_system_routes(api_doc))
         .layer(cors_layer())
         .layer(from_fn(trace_middleware))
 }
 
-fn build_system_routes(openapi_spec: utoipa::openapi::OpenApi) -> Router {
+fn build_system_routes(openapi_spec: OpenApiSpec) -> Router {
     let swagger_ui = SwaggerUi::new("/docs").url("/api-docs/openapi.json", openapi_spec);
 
     Router::new()
