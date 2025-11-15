@@ -3,43 +3,43 @@ CREATE TYPE intent_status AS ENUM ('confirmed', 'unsure', 'declined');
 CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
 
 CREATE TABLE users (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "username" TEXT NOT NULL UNIQUE,
     "email" TEXT NOT NULL UNIQUE,
     "password" TEXT NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id")
 );
 
 CREATE TABLE game_systems (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "name" TEXT NOT NULL UNIQUE,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id")
 );
 
 CREATE TABLE tables (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "gm_id" UUID NOT NULL,
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "slots" INTEGER NOT NULL CHECK ("slots" >= 0),
     "game_system_id" UUID NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("gm_id") REFERENCES users("id") ON DELETE CASCADE,
     FOREIGN KEY("game_system_id") REFERENCES game_systems("id") ON DELETE CASCADE
 );
 
 CREATE TABLE table_members (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "table_id" UUID NOT NULL,
     "user_id" UUID NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("table_id") REFERENCES tables("id") ON DELETE CASCADE,
     FOREIGN KEY("user_id") REFERENCES users("id") ON DELETE CASCADE,
@@ -47,25 +47,25 @@ CREATE TABLE table_members (
 );
 
 CREATE TABLE sessions (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "table_id" UUID NOT NULL,
     "scheduled_for" TIMESTAMPTZ,
     "status" session_status NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("table_id") REFERENCES tables("id") ON DELETE CASCADE
 );
 
 CREATE TABLE session_intents (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "user_id" UUID NOT NULL,
     "session_id" UUID NOT NULL,
     "intent_status" intent_status NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("user_id") REFERENCES users("id") ON DELETE CASCADE,
     FOREIGN KEY("session_id") REFERENCES sessions("id") ON DELETE CASCADE,
@@ -73,25 +73,25 @@ CREATE TABLE session_intents (
 );
 
 CREATE TABLE session_checkins (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "session_intent_id" UUID NOT NULL,
     "attendance" BOOLEAN NOT NULL,
     "notes" TEXT,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("session_intent_id") REFERENCES session_intents("id") ON DELETE CASCADE,
     UNIQUE("session_intent_id")
 );
 
 CREATE TABLE table_requests (
-    "id" UUID NOT NULL,
+    "id" UUID NOT NULL DEFAULT uuidv7(),
     "user_id" UUID NOT NULL,
     "table_id" UUID NOT NULL,
     "message" TEXT,
     "status" request_status NOT NULL,
-    "created_at" TIMESTAMPTZ NOT NULL,
-    "updated_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     PRIMARY KEY("id"),
     FOREIGN KEY("user_id") REFERENCES users("id") ON DELETE CASCADE,
     FOREIGN KEY("table_id") REFERENCES tables("id") ON DELETE CASCADE

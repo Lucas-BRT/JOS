@@ -30,8 +30,8 @@ pub struct DeleteTableCommand {
 pub struct GetTableCommand {
     pub id: Option<Uuid>,
     pub gm_id: Option<Uuid>,
+    pub session_id: Option<Uuid>,
     pub title: Option<String>,
     pub game_system_id: Option<Uuid>,
     pub slots: Option<u32>,
-    pub search_term: Option<String>,
 }

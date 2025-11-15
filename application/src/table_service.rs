@@ -30,12 +30,7 @@ impl TableService {
     }
 
     pub async fn find_by_id(&self, table_id: &Uuid) -> Result<Table> {
-        let command = GetTableCommand {
-            id: Some(*table_id),
-            ..Default::default()
-        };
-
-        let tables = self.table_repository.read(&command).await?;
+        let tables = self.table_repository.find_by_id(table_id).await?;
         tables.into_iter().next().ok_or_else(|| {
             Error::Domain(DomainError::EntityNotFound {
                 entity_type: "Table",
@@ -44,14 +39,14 @@ impl TableService {
         })
     }
 
-    pub async fn get_all(&self) -> Result<Vec<Table>> {
-        self.table_repository
-            .read(&GetTableCommand::default())
-            .await
+    pub async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Table> {
+        let tables = self.table_repository.find_by_session_id(session_id).await?;
+
+        todo!()
     }
 
-    pub async fn get(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
-        self.table_repository.read(command).await
+    pub async fn get_all(&self) -> Result<Vec<Table>> {
+        self.table_repository.get_all().await
     }
 
     pub async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {

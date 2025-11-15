@@ -65,44 +65,6 @@ impl TableRepository for PostgresTableRepository {
         Ok(created_table.into())
     }
 
-    async fn read(&self, command: &GetTableCommand) -> Result<Vec<Table>> {
-        let search_pattern = command.search_term.as_ref().map(|s| format!("%{}%", s));
-
-        let tables = sqlx::query_as!(
-            TableModel,
-            r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status,
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::uuid IS NULL OR gm_id = $2)
-              AND ($3::text IS NULL OR title ILIKE $3)
-              AND ($4::uuid IS NULL OR game_system_id = $4)
-              AND ($5::int4 IS NULL OR slots = $5)
-              AND ($6::text IS NULL OR title ILIKE $6 OR description ILIKE $6)
-            "#,
-            command.id,
-            command.gm_id,
-            command.title,
-            command.game_system_id,
-            command.slots.map(|s| s as i32),
-            search_pattern
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(tables.into_iter().map(|m| m.into()).collect())
-    }
-
     async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
         let has_title_update = matches!(command.title, Update::Change(_));
         let has_description_update = matches!(command.description, Update::Change(_));
@@ -278,6 +240,24 @@ impl TableRepository for PostgresTableRepository {
             WHERE gm_id = $1
             "#,
             user_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(tables.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Table> {
+        todo!()
+    }
+
+    async fn get_all(&self) -> Result<Vec<Table>> {
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT * FROM tables
+            "#,
         )
         .fetch_all(&self.pool)
         .await
