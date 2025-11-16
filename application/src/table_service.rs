@@ -39,10 +39,10 @@ impl TableService {
         })
     }
 
-    pub async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Table> {
-        let tables = self.table_repository.find_by_session_id(session_id).await?;
+    pub async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Option<Table>> {
+        let table = self.table_repository.find_by_session_id(session_id).await?;
 
-        todo!()
+        Ok(table)
     }
 
     pub async fn get_all(&self) -> Result<Vec<Table>> {

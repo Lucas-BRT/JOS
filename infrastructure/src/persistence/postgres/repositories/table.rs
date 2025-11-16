@@ -248,8 +248,30 @@ impl TableRepository for PostgresTableRepository {
         Ok(tables.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Table> {
-        todo!()
+    async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Option<Table>> {
+        let table = sqlx::query_as!(
+            TableModel,
+            "SELECT
+                tables.id,
+                tables.gm_id,
+                tables.title,
+                tables.description,
+                tables.slots,
+                tables.status,
+                tables.game_system_id,
+                tables.created_at,
+                tables.updated_at
+            FROM tables
+            INNER JOIN sessions
+            ON tables.id = sessions.table_id
+            WHERE sessions.id = $1",
+            session_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(table.map(|model| model.into()))
     }
 
     async fn get_all(&self) -> Result<Vec<Table>> {

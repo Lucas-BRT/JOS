@@ -1,4 +1,3 @@
-use crate::TableMemberService;
 use domain::entities::*;
 use domain::repositories::{TableMemberRepository, TableRepository, TableRequestRepository};
 use shared::Result;
@@ -11,7 +10,6 @@ pub struct TableRequestService {
     table_request_repository: Arc<dyn TableRequestRepository>,
     table_repository: Arc<dyn TableRepository>,
     table_member_repository: Arc<dyn TableMemberRepository>,
-    table_member_service: Arc<TableMemberService>,
 }
 
 impl TableRequestService {
@@ -19,13 +17,11 @@ impl TableRequestService {
         table_request_repository: Arc<dyn TableRequestRepository>,
         table_repository: Arc<dyn TableRepository>,
         table_member_repository: Arc<dyn TableMemberRepository>,
-        table_member_service: Arc<TableMemberService>,
     ) -> Self {
         Self {
             table_request_repository,
             table_repository,
             table_member_repository,
-            table_member_service,
         }
     }
 

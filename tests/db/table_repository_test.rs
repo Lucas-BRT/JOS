@@ -57,18 +57,10 @@ async fn test_find_by_id(pool: PgPool) {
         .await;
     let repo = PostgresTableRepository::new(pool.clone());
 
-    let table1 = env.seeded.tables.get("table1").unwrap();
+    let table1 = env.seeded.tables.get("table1").unwrap().clone();
+    let found_table = repo.find_by_id(&table1.id).await.unwrap().unwrap();
 
-    let get_command = GetTableCommand {
-        id: Some(table1.id),
-        ..Default::default()
-    };
-    let found_tables = repo.read(&get_command).await.unwrap();
-
-    assert_eq!(found_tables.len(), 1);
-    let found_table = &found_tables[0];
-    assert_eq!(found_table.id, table1.id);
-    assert_eq!(found_table.title, table1.title);
+    assert!(table1 == found_table);
 }
 
 #[sqlx::test]
@@ -76,15 +68,11 @@ async fn test_find_by_id_not_found(pool: PgPool) {
     let repo = PostgresTableRepository::new(pool);
 
     let random_id = Uuid::new_v4();
-    let get_command = GetTableCommand {
-        id: Some(random_id),
-        ..Default::default()
-    };
-    let result = repo.read(&get_command).await;
+    let result = repo.find_by_id(&random_id).await;
 
     assert!(result.is_ok());
-    let found_tables = result.unwrap();
-    assert!(found_tables.is_empty());
+    let result = result.unwrap();
+    assert!(result.is_none())
 }
 
 #[sqlx::test]
@@ -100,12 +88,7 @@ async fn test_find_by_gm_id(pool: PgPool) {
     let repo = PostgresTableRepository::new(pool.clone());
 
     let gm = env.seeded.users.get(GM_ID).unwrap();
-
-    let get_command = GetTableCommand {
-        gm_id: Some(gm.id),
-        ..Default::default()
-    };
-    let found_tables = repo.read(&get_command).await.unwrap();
+    let found_tables = repo.find_by_gm_id(&gm.id).await.unwrap();
     assert_eq!(found_tables.len(), 2);
 }
 

@@ -174,10 +174,19 @@ pub async fn delete_session(
     State(app_state): State<Arc<AppState>>,
     Path(session_id): Path<Uuid>,
 ) -> Result<Json<DeleteSessionResponse>> {
-    let table = app_state
+    let table = match app_state
         .table_service
         .find_by_session_id(&session_id)
-        .await?;
+        .await?
+    {
+        Some(table) => table,
+        None => {
+            return Err(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "session",
+                entity_id: session_id.to_string(),
+            }));
+        }
+    };
 
     if claims.0.sub != table.gm_id {
         return Err(Error::Application(ApplicationError::InvalidCredentials));
