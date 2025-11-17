@@ -4,18 +4,51 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-argon2 = { version = "0.5.3", features = ["simple"] }
-async-trait = "0.1.88"
-axum = { version = "0.8.4", features = ["macros", "multipart"] }
-axum-extra = { version = "0.10.1", features = ["typed-header"] }
-chrono = { version = "0.4.41", features = ["serde"] }
-dotenvy = "0.15.7"
-jsonwebtoken = "9.3.1"
-utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+shared = { path = "./shared" }
+domain = { path = "./domain" }
+application = { path = "./application" }
+infrastructure = { path = "./infrastructure" }
+api = { path = "./api" }
+tokio = { version = "1.44.2", features = ["full"] }
+mockall = "0.13.1"
+
+[dev-dependencies]
+sqlx = { workspace = true }
+futures = { workspace = true }
+uuid = { workspace = true }
+axum-test = { workspace = true }
+wiremock = { workspace = true }
+serde_json = { workspace = true }
+axum = { workspace = true, features = ["http2"] }
+dotenvy = { workspace = true }
+test-context = { workspace = true }
+async-trait = { workspace = true }
+chrono = { workspace = true }
+
+[workspace]
+members = ["api", "application", "domain", "infrastructure", "shared"]
+
+[workspace.dependencies]
+tokio = { version = "1.44.2", features = ["full"] }
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = { version = "1.0.140" }
-serde_with = "3.12.0"
+serde_json = "1.0.140"
+chrono = { version = "0.4.42", features = ["serde"] }
+uuid = { version = "1.16.0", features = ["serde", "v4", "v7"] }
+log = "0.4.27"
+thiserror = "2.0.17"
+async-trait = "0.1.88"
+validator = { version = "0.20.0", features = ["derive"] }
+rand = "0.8"
+base64 = "0.22"
+dotenvy = "0.15.7"
+futures = "0.3"
+
+# Web API (Axum)
+axum = { version = "0.8.4", features = ["macros", "multipart"] }
+axum-extra = { version = "0.10.3", features = ["typed-header"] }
+tower-http = { version = "0.6.6", features = ["cors"] }
+
+# Banco de Dados (SQLx)
 sqlx = { version = "0.8.5", features = [
     "runtime-tokio",
     "tls-rustls",
@@ -24,29 +57,28 @@ sqlx = { version = "0.8.5", features = [
     "chrono",
     "migrate",
 ] }
-thiserror = "2.0.12"
-tokio = { version = "1.44.2", features = ["full"] }
+
+# Auth and Sec
+jsonwebtoken = "9.3.1"
+bcrypt = "0.17.1"
+
+# OpenAPI Docs
+utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+utoipa-axum = { version = "0.2" }
+
+# Tracing and Logging
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = [
-    "fmt",
-    "env-filter",
-    "json",
-] }
-uuid = { version = "1.16.0", features = ["serde", "v4"] }
-validator = { version = "0.20.0", features = ["derive"] }
-futures = "0.3"
-tower-http = { version = "0.5", features = ["cors"] }
+tracing-subscriber = { version = "0.3.19", features = ["fmt", "env-filter", "json"] }
 
-
-[dev-dependencies]
-rand = "0.9.2"
-
-
-[workspace]
-members = [
-    ".",
-    "jos-cli",
-]
+# Development Dependencies
+axum-test = "18.0.0"
+wiremock = "0.6.0"
+test-context = "0.1.4"
 
 [profile.release]
 opt-level = 3
+
+[toolchain]
+channel = "1.90"
+componentes = ["rustfmt", "clippy"]

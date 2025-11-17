@@ -1,12 +1,12 @@
-DROP TABLE IF EXISTS t_table_requests;
-DROP TABLE IF EXISTS t_session_checkins;
-DROP TABLE IF EXISTS t_session_intents;
-DROP TABLE IF EXISTS t_sessions;
-DROP TABLE IF EXISTS t_rpg_tables;
-DROP TABLE IF EXISTS t_game_system;
-DROP TABLE IF EXISTS t_users;
+DROP TABLE IF EXISTS session_checkins CASCADE;
+DROP TABLE IF EXISTS session_intents CASCADE;
+DROP TABLE IF EXISTS table_requests CASCADE;
+DROP TABLE IF EXISTS table_members CASCADE;
+DROP TABLE IF EXISTS sessions CASCADE;
+DROP TABLE IF EXISTS tables CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS game_systems CASCADE;
 
-DROP TYPE IF EXISTS e_intent_status;
-DROP TYPE IF EXISTS e_table_visibility;
-DROP TYPE IF EXISTS e_roles;
-DROP TYPE IF EXISTS e_table_request_status;
+DROP TYPE IF EXISTS session_status;
+DROP TYPE IF EXISTS intent_status;
+DROP TYPE IF EXISTS request_status;

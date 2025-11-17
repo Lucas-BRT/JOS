@@ -1,50 +1,53 @@
-FROM rust:1.85-alpine AS builder
+# ----------------- Development Stage -----------------
+FROM rust:1.90-slim as development
 
-# Install system dependencies
-RUN apk add --no-cache build-base jpeg-dev libpng-dev
+# Install development tools
+RUN apt-get update && apt-get install -y netcat-openbsd curl && rm -rf /var/lib/apt/lists/*
+RUN cargo install cargo-watch && \
+    cargo install sqlx-cli --no-default-features --features postgres && \
+    cargo install cargo-nextest
 
 WORKDIR /app
 
-# Copy dependency files
-COPY Cargo.toml Cargo.lock ./
-COPY jos-cli/Cargo.toml ./jos-cli/
+# Copy entrypoint for local setup
+COPY ./.local/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# Create dummy source files for dependency resolution
-RUN mkdir -p src jos-cli/src && \
-    echo "fn main() {}" > src/main.rs && \
-    echo "fn main() {}" > jos-cli/src/main.rs
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["cargo", "watch", "-q", "-c", "-w", "api/src", "-w", "application/src", "-w", "domain/src", "-w", "infrastructure/src", "-w", "shared/src", "-w", "src", "-x", "run --bin jos"]
 
-# Build dependencies only (this layer will be cached)
-RUN cargo build --release
+# ----------------- Builder Stage -----------------
+FROM rust:1.90-slim as builder
 
-# Copy source code
+WORKDIR /app
+
+# Install sqlx-cli for query preparation
+RUN cargo install sqlx-cli --no-default-features --features postgres
+
+# Copy the entire project
 COPY . .
 
-# Build the application
-RUN cargo build --release
+# Prepare sqlx queries
+RUN cargo sqlx prepare --workspace
 
-# Production stage
-FROM alpine:latest
+# Build the application binary
+RUN cargo build --release --bin jos
+
+# ----------------- Production Stage -----------------
+FROM ubuntu:22.04 as production
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates postgresql-client
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN addgroup -g 1001 -S jos && \
-    adduser -S jos -u 1001
+WORKDIR /app
 
-# Copy binary from builder
-COPY --from=builder /app/target/release/jos /usr/local/bin/
+# Copy the built binary from the builder stage
+COPY --from=builder /app/target/release/jos .
 
-# Switch to non-root user
-USER jos
+# Make binary executable
+RUN chmod +x ./jos
 
-# Expose port
 EXPOSE 3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
-
 # Run the application
-CMD ["jos"]
+CMD ["./jos"]
