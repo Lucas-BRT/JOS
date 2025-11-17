@@ -150,6 +150,7 @@ async fn logout(
     path = "/refresh",
     tag = "auth",
     request_body = RefreshTokenRequest,
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Token refreshed successfully", body = RefreshTokenResponse),
         (status = 401, description = "Invalid refresh token", body = serde_json::Value)
@@ -324,11 +325,11 @@ pub async fn delete_account(
 pub fn auth_routes(state: Arc<AppState>) -> OpenApiRouter {
     let public = OpenApiRouter::new()
         .routes(routes!(register))
-        .routes(routes!(login))
-        .routes(routes!(refresh));
+        .routes(routes!(login));
 
     let protected = OpenApiRouter::new()
         .routes(routes!(logout))
+        .routes(routes!(refresh))
         .routes(routes!(me))
         .routes(routes!(update_profile))
         .routes(routes!(change_password))

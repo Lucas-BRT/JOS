@@ -287,6 +287,7 @@ pub async fn update_table(
     params(
         ("id" = Uuid, Path, description = "Table ID")
     ),
+    security(("auth" = [])),
     responses(
         (status = 200, description = "Table deleted successfully", body = DeleteTableResponse),
         (status = 401, description = "Authentication required", body = ErrorResponse),

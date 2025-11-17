@@ -38,6 +38,7 @@ impl From<CreateGameSystemRequest> for CreateGameSystemCommand {
     path = "/",
     tag = "game_systems",
     request_body = CreateGameSystemRequest,
+    security(("auth" = [])),
     responses(
         (status = 200, description = "", body = CreateGameSystemRespose),
     )
@@ -79,6 +80,7 @@ impl From<&GameSystem> for GameSystemResponse {
     get,
     path = "/",
     tag = "game_systems",
+    security(("auth" = [])),
     responses(
         (status = 200, description = "", body = Vec<GameSystemResponse>),
     )
