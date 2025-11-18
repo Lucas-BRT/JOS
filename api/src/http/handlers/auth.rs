@@ -15,26 +15,6 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-// Conversion implementations
-impl From<LoginRequest> for LoginUserCommand {
-    fn from(req: LoginRequest) -> Self {
-        LoginUserCommand {
-            email: req.email,
-            password: req.password,
-        }
-    }
-}
-
-impl From<RegisterRequest> for CreateUserCommand {
-    fn from(req: RegisterRequest) -> Self {
-        CreateUserCommand {
-            username: req.username,
-            email: req.email,
-            password: req.password,
-        }
-    }
-}
-
 #[utoipa::path(
     post,
     path = "/login",

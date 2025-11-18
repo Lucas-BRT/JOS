@@ -43,7 +43,7 @@ pub async fn get_sessions(
             ..Default::default()
         })
         .await?
-        .iter()
+        .into_iter()
         .map(GetSessionsResponse::from)
         .collect();
 

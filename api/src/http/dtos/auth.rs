@@ -1,4 +1,8 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
+use domain::entities::{CreateUserCommand, LoginUserCommand, User};
 use serde::{Deserialize, Serialize};
 use shared::prelude::Date;
 use utoipa::ToSchema;
@@ -65,44 +69,63 @@ pub struct LogoutResponse {
 
 // IntoResponse implementations
 impl IntoResponse for LoginResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RegisterResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for LogoutResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RefreshTokenResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for UserResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 // Conversion implementations
-impl From<domain::entities::User> for UserResponse {
-    fn from(user: domain::entities::User) -> Self {
+impl From<User> for UserResponse {
+    fn from(user: User) -> Self {
         let username = user.username.clone();
         UserResponse {
             id: user.id,
             username: username.clone(),
             joined_at: user.created_at,
             email: user.email,
+        }
+    }
+}
+
+impl From<LoginRequest> for LoginUserCommand {
+    fn from(req: LoginRequest) -> Self {
+        LoginUserCommand {
+            email: req.email,
+            password: req.password,
+        }
+    }
+}
+
+impl From<RegisterRequest> for CreateUserCommand {
+    fn from(req: RegisterRequest) -> Self {
+        CreateUserCommand {
+            username: req.username,
+            email: req.email,
+            password: req.password,
         }
     }
 }

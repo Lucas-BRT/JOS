@@ -1,4 +1,7 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
 use chrono::{DateTime, Utc};
 use domain::entities::{TableRequest, TableRequestStatus};
 use serde::{Deserialize, Serialize};
@@ -111,25 +114,25 @@ pub struct CancelRequestResponse {
 
 // IntoResponse implementations
 impl IntoResponse for TableRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for AcceptRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RejectRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for CancelRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }

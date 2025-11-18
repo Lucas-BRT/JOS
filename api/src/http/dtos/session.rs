@@ -1,4 +1,7 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
 use chrono::{DateTime, Utc};
 use domain::entities::{Session, SessionStatus};
 use serde::{Deserialize, Serialize};
@@ -91,8 +94,8 @@ pub struct GetSessionsResponse {
     pub scheduled_for: Option<Date>,
 }
 
-impl From<&Session> for GetSessionsResponse {
-    fn from(session: &Session) -> Self {
+impl From<Session> for GetSessionsResponse {
+    fn from(session: Session) -> Self {
         Self {
             id: session.id,
             title: session.title.clone(),
@@ -123,13 +126,13 @@ pub struct DeleteSessionResponse {
 
 // IntoResponse implementations
 impl IntoResponse for SessionDetails {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for DeleteSessionResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }

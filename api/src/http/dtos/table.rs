@@ -1,4 +1,7 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
 use chrono::{DateTime, Utc};
 use domain::entities::Table;
 use serde::{Deserialize, Serialize};
@@ -96,13 +99,13 @@ pub struct DeleteTableResponse {
 
 // IntoResponse implementations
 impl IntoResponse for TableDetails {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for DeleteTableResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
