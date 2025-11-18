@@ -5,6 +5,7 @@ pub mod request;
 pub mod session;
 pub mod table;
 pub mod table_member;
+pub mod table_request;
 pub mod user;
 
 pub use auth::*;
@@ -14,4 +15,5 @@ pub use request::*;
 pub use session::*;
 pub use table::*;
 pub use table_member::*;
+pub use table_request::*;
 pub use user::*;

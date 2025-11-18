@@ -1,7 +1,12 @@
+use crate::http::dtos::table_request::CreateTableRequestRequest;
 use crate::http::dtos::*;
-use crate::http::middleware::auth::ClaimsExtractor;
+use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
-use domain::entities::{TableRequestStatus, Update, UpdateTableRequestCommand};
+use axum::middleware::from_fn_with_state;
+use domain::entities::{
+    CreateTableMemberCommand, CreateTableRequestCommand, TableRequestStatus, Update,
+    UpdateTableRequestCommand,
+};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{DomainError, Error};
@@ -60,17 +65,32 @@ pub async fn accept_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
 ) -> Result<Json<AcceptRequestResponse>> {
+    let requester_id = claims.0.sub;
+
     let session = app_state.session_service.find_by_id(&request_id).await?;
     let table = app_state
         .table_service
         .find_by_id(&session.table_id)
         .await?;
 
-    if table.gm_id != claims.0.sub {
+    if table.gm_id != requester_id {
         return Err(Error::Domain(DomainError::BusinessRuleViolation {
             message: "invalid credentials".to_owned(),
         }));
     }
+
+    let requested_member_id = app_state
+        .table_request_service
+        .find_by_id(&request_id)
+        .await?
+        .user_id;
+
+    let command = CreateTableMemberCommand {
+        table_id: table.id,
+        user_id: requested_member_id,
+    };
+
+    app_state.table_member_service.create(command).await?;
 
     let command = UpdateTableRequestCommand {
         id: request_id,
@@ -169,6 +189,40 @@ pub async fn cancel_request(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/tables/{table_id}/requests",
+    tag = "table-requests",
+    security(("auth" = [])),
+    request_body = CreateTableRequestRequest,
+    responses(
+        (status = 200, description = "Table request created successfully", body = CreateTableRequestResponse),
+        (status = 401, description = "Authentication required", body = ErrorResponse),
+        (status = 404, description = "Table not found", body = ErrorResponse)
+    )
+)]
+#[axum::debug_handler]
+async fn create_request(
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(payload): Json<CreateTableRequestRequest>,
+) -> Result<Json<CreateTableRequestResponse>> {
+    let requester_id = claims.0.sub;
+
+    let command = CreateTableRequestCommand {
+        table_id,
+        user_id: requester_id,
+        message: payload.message,
+    };
+
+    let table_request = app_state.table_request_service.create(command).await?;
+
+    Ok(Json(CreateTableRequestResponse {
+        id: table_request.id,
+    }))
+}
+
 pub fn table_request_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
@@ -177,7 +231,9 @@ pub fn table_request_routes(state: Arc<AppState>) -> OpenApiRouter {
                 .routes(routes!(get_sent_requests))
                 .routes(routes!(accept_request))
                 .routes(routes!(reject_request))
-                .routes(routes!(cancel_request)),
+                .routes(routes!(cancel_request))
+                .routes(routes!(create_request)),
         )
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)
 }
