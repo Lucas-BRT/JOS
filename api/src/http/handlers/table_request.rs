@@ -1,4 +1,3 @@
-use crate::http::dtos::table_request::CreateTableRequestRequest;
 use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;

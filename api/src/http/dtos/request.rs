@@ -10,10 +10,15 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema, Validate)]
 pub struct CreateTableRequestRequest {
     #[validate(length(max = 500))]
-    pub message: String,
+    pub message: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct CreateTableRequestResponse {
+    pub id: Uuid,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
