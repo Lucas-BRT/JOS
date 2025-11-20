@@ -3,14 +3,7 @@ use chrono::Utc;
 use serde_json::Value;
 use serde_json::json;
 
-#[utoipa::path(
-    get,
-    path = "/health",
-    tag = "health",
-    responses(
-        (status = 200, description = "Service is healthy", body = Value)
-    )
-)]
+#[utoipa::path(get, path = "/health", summary = "Get API status", tag = "Health")]
 pub async fn health_check() -> Json<Value> {
     Json(json!({
         "status": "healthy",

@@ -1,7 +1,5 @@
 use crate::http::{
-    dtos::{
-        CreateGameSystemRequest, CreateGameSystemRespose, CreateTableResponse, GameSystemResponse,
-    },
+    dtos::{CreateGameSystemRequest, CreateTableResponse, GameSystemResponse},
     middleware::auth::auth_middleware,
 };
 use axum::{Json, extract::State, middleware::from_fn_with_state};
@@ -15,12 +13,9 @@ use validator::Validate;
 #[utoipa::path(
     post,
     path = "/",
-    tag = "game_systems",
-    request_body = CreateGameSystemRequest,
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "", body = CreateGameSystemRespose),
-    )
+    tag = "GameSystem",
+    summary = "Create a new RPG System",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 async fn create_game_system(
@@ -43,11 +38,9 @@ async fn create_game_system(
 #[utoipa::path(
     get,
     path = "/",
-    tag = "game_systems",
+    tag = "GameSystem",
+    summary = "Get supported RPG Systems",
     security(("auth" = [])),
-    responses(
-        (status = 200, description = "", body = Vec<GameSystemResponse>),
-    )
 )]
 #[axum::debug_handler]
 async fn get_game_systems(

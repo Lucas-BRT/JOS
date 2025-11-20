@@ -1,4 +1,6 @@
-use crate::http::handlers::{cors::cors_layer, tracing::trace_middleware};
+use crate::http::handlers::{
+    cors::cors_layer, table_members::table_members_routes, tracing::trace_middleware,
+};
 pub use crate::http::{
     middleware::{cors, tracing},
     open_api::ApiDoc,
@@ -37,6 +39,7 @@ pub fn create_router(app_state: Arc<AppState>) -> Router {
             .merge(table_routes(app_state.clone()))
             .merge(session_routes(app_state.clone()))
             .merge(table_request_routes(app_state.clone()))
+            .merge(table_members_routes(app_state.clone()))
             .merge(user_routes(app_state.clone()))
             .merge(game_system_routes(app_state.clone())),
     );

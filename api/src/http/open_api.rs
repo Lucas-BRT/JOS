@@ -18,15 +18,6 @@ impl Modify for SecurityAddon {
 #[derive(utoipa::OpenApi)]
 #[openapi(
     modifiers(&SecurityAddon),
-    tags(
-        (name = "auth", description = "Authentication endpoints"),
-        (name = "users", description = "User management endpoints"),
-        (name = "tables", description = "RPG table management endpoints"),
-        (name = "sessions", description = "Session management endpoints"),
-        (name = "table-requests", description = "Table request management endpoints"),
-        (name = "health", description = "Health check endpoints"),
-        (name = "game_systems", description = "GameSystems endpoints")
-    ),
     info(
         title = "JOS",
         description = "Join Our Session (JOS) - API for managing RPG tables and sessions",
