@@ -9,12 +9,10 @@ use std::sync::Arc;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use uuid::Uuid;
 
-#[utoipa::path(
-    get,
+#[utoipa::path(get,
     path = "/tables/{table_id}/members",
-    responses(
-        (status = 200, description = "List of table members", body = Vec<TableMemberResponse>)
-    )
+    tags = ["Tables", "TableMembers"],
+    security(("auth" = [])),
 )]
 async fn get_table_members(
     State(app_state): State<Arc<AppState>>,

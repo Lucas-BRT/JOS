@@ -1,4 +1,4 @@
-use crate::http::dtos::{ErrorResponse, UserResponse};
+use crate::http::dtos::UserResponse;
 use crate::http::middleware::auth::auth_middleware;
 use axum::{
     Json,
@@ -17,17 +17,9 @@ use uuid::Uuid;
 #[utoipa::path(
     get,
     path = "/{id}",
-    tag = "users",
-    responses(
-        (status = 200, description = "User found", body = UserResponse),
-        (status = 404, description = "User not found", body = ErrorResponse)
-    ),
-    params(
-        ("id" = String, Path, description = "User ID")
-    ),
-    security(
-        ("auth" = [])
-    )
+    security(("auth" = [])),
+    summary = "Get details about a existing user",
+    tags = ["Users"],
 )]
 pub async fn get_user_by_id(
     State(app_state): State<Arc<AppState>>,

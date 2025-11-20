@@ -64,7 +64,7 @@ bcrypt = "0.17.1"
 
 # OpenAPI Docs
 utoipa = { version = "5.4.0", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum", "vendored"] }
 utoipa-axum = { version = "0.2" }
 
 # Tracing and Logging

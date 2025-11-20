@@ -19,14 +19,9 @@ use validator::Validate;
 #[utoipa::path(
     post,
     path = "/",
-    tag = "tables",
+    tags = ["Table"],
     security(("auth" = [])),
-    request_body = CreateTableRequest,
-    responses(
-        (status = 201, description = "Table created successfully", body = TableDetails),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
+    summary = "Create a new Table"
 )]
 #[axum::debug_handler]
 pub async fn create_table(
@@ -56,12 +51,9 @@ pub async fn create_table(
 #[utoipa::path(
     get,
     path = "/",
-    tag = "tables",
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Tables retrieved successfully", body = Vec<TableListItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
+    summary = "Get list of tables",
+    tags = ["Table"],
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn get_tables(
@@ -76,16 +68,9 @@ pub async fn get_tables(
 #[utoipa::path(
     get,
     path = "/{id}",
-    tag = "tables",
-    security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    responses(
-        (status = 200, description = "Table details retrieved", body = TableDetails),
-        (status = 404, description = "Table not found", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
+    tags = ["Table"],
+    summary = "Get details from a specific table",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn get_table_details(
@@ -154,19 +139,9 @@ pub async fn get_table_details(
 #[utoipa::path(
     put,
     path = "/{id}",
-    tag = "tables",
-    security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    request_body = UpdateTableRequest,
-    responses(
-        (status = 200, description = "Table updated successfully", body = TableDetails),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to update this table", body = ErrorResponse),
-        (status = 404, description = "Table not found", body = ErrorResponse)
-    )
+    tags = ["Table"],
+    summary = "Update a existing Table",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn update_table(
@@ -283,17 +258,9 @@ pub async fn update_table(
 #[utoipa::path(
     delete,
     path = "/{id}",
-    tag = "tables",
-    params(
-        ("id" = Uuid, Path, description = "Table ID")
-    ),
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Table deleted successfully", body = DeleteTableResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to delete this table", body = ErrorResponse),
-        (status = 404, description = "Table not found", body = ErrorResponse)
-    )
+    summary = "Delete a existing Table",
+    tags = ["Table"],
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn delete_table(
@@ -316,12 +283,9 @@ pub async fn delete_table(
 #[utoipa::path(
     get,
     path = "/{table_id}/sessions",
-    tag = "sessions",
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Sessions retrieved successfully", body = Vec<SessionListItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
+    tags = ["Table", "Session"],
+    summary = "Get a list of sessions of a specific table",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn get_sessions(
@@ -354,15 +318,9 @@ pub async fn get_sessions(
 #[utoipa::path(
     post,
     path = "/{table_id}/sessions",
-    tag = "sessions",
-    security(("auth" = [])),
-    request_body = CreateSessionRequest,
-    responses(
-        (status = 201, description = "Session created successfully", body = SessionDetails),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to create session for this table", body = ErrorResponse)
-    )
+    tags = ["Table", "Session"],
+    summary = "Create a new session in a existing Table",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn create_session(
@@ -403,12 +361,9 @@ pub async fn create_session(
 #[utoipa::path(
     get,
     path = "/{table_id}/requests/received",
-    tag = "table-requests",
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Received requests retrieved successfully", body = Vec<ReceivedRequestItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
+    summary = "Get all the requests recived in a existing Table",
+    tags = ["Requests", "Tables"],
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn get_received_requests(
@@ -442,6 +397,35 @@ pub async fn get_received_requests(
     Ok(Json(requests))
 }
 
+#[utoipa::path(
+    post,
+    path = "/{table_id}/requests",
+    tags = ["Requests", "Tables"],
+    security(("auth" = [])),
+    summary = "Create a table join request"
+)]
+#[axum::debug_handler]
+async fn create_request(
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+    Json(payload): Json<CreateTableRequestRequest>,
+) -> Result<Json<CreateTableRequestResponse>> {
+    let requester_id = claims.0.sub;
+
+    let command = CreateTableRequestCommand {
+        table_id,
+        user_id: requester_id,
+        message: payload.message,
+    };
+
+    let table_request = app_state.table_request_service.create(command).await?;
+
+    Ok(Json(CreateTableRequestResponse {
+        id: table_request.id,
+    }))
+}
+
 pub fn table_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
@@ -453,6 +437,7 @@ pub fn table_routes(state: Arc<AppState>) -> OpenApiRouter {
                 .routes(routes!(update_table))
                 .routes(routes!(delete_table))
                 .routes(routes!(create_session))
+                .routes(routes!(create_request))
                 .routes(routes!(get_sessions))
                 .routes(routes!(get_received_requests))
                 .layer(from_fn_with_state(state.clone(), auth_middleware)),

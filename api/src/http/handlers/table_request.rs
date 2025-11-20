@@ -3,8 +3,7 @@ use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
 use domain::entities::{
-    CreateTableMemberCommand, CreateTableRequestCommand, TableRequestStatus, Update,
-    UpdateTableRequestCommand,
+    CreateTableMemberCommand, TableRequestStatus, Update, UpdateTableRequestCommand,
 };
 use infrastructure::state::AppState;
 use shared::Result;
@@ -17,12 +16,8 @@ use uuid::Uuid;
 #[utoipa::path(
     get,
     path = "/sent",
-    tag = "table-requests",
+    tags = ["Requests"],
     security(("auth" = [])),
-    responses(
-        (status = 200, description = "Sent requests retrieved successfully", body = Vec<SentRequestItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
 )]
 #[axum::debug_handler]
 pub async fn get_sent_requests(
@@ -45,18 +40,10 @@ pub async fn get_sent_requests(
 
 #[utoipa::path(
     post,
-    path = "/{id}/accept",
-    tag = "table-requests",
+    path = "/{request_id}/accept",
+    tags = ["Requests"],
+    summary = "Accepts a player request",
     security(("auth" = [])),
-    params(
-        ("table_id" = Uuid, Path, description = "Table ID")
-    ),
-    responses(
-        (status = 200, description = "Requests for the table retrieved successfully", body = Vec<TableRequestResponse>),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to view requests for this table", body = ErrorResponse),
-        (status = 404, description = "Table not found", body = ErrorResponse)
-    )
 )]
 #[axum::debug_handler]
 pub async fn accept_request(
@@ -106,18 +93,10 @@ pub async fn accept_request(
 
 #[utoipa::path(
     post,
-    path = "/{id}/reject",
-    tag = "table-requests",
+    path = "/{request_id}/reject",
+    tags = ["Requests"],
     security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Request ID")
-    ),
-    responses(
-        (status = 200, description = "Request rejected successfully", body = RejectRequestResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to reject this request", body = ErrorResponse),
-        (status = 404, description = "Request not found", body = ErrorResponse)
-    )
+    summary = "Rejects a player request"
 )]
 #[axum::debug_handler]
 pub async fn reject_request(
@@ -152,18 +131,10 @@ pub async fn reject_request(
 
 #[utoipa::path(
     delete,
-    path = "/{id}",
-    tag = "table-requests",
+    path = "/{request_id}",
+    tags = ["Requests"],
     security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Request ID")
-    ),
-    responses(
-        (status = 200, description = "Request cancelled successfully", body = CancelRequestResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to cancel this request", body = ErrorResponse),
-        (status = 404, description = "Request not found", body = ErrorResponse)
-    )
+    summary = "Delete a request"
 )]
 #[axum::debug_handler]
 pub async fn cancel_request(
@@ -188,50 +159,14 @@ pub async fn cancel_request(
     }))
 }
 
-#[utoipa::path(
-    post,
-    path = "/tables/{table_id}/requests",
-    tag = "table-requests",
-    security(("auth" = [])),
-    request_body = CreateTableRequestRequest,
-    responses(
-        (status = 200, description = "Table request created successfully", body = CreateTableRequestResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 404, description = "Table not found", body = ErrorResponse)
-    )
-)]
-#[axum::debug_handler]
-async fn create_request(
-    claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
-    Json(payload): Json<CreateTableRequestRequest>,
-) -> Result<Json<CreateTableRequestResponse>> {
-    let requester_id = claims.0.sub;
-
-    let command = CreateTableRequestCommand {
-        table_id,
-        user_id: requester_id,
-        message: payload.message,
-    };
-
-    let table_request = app_state.table_request_service.create(command).await?;
-
-    Ok(Json(CreateTableRequestResponse {
-        id: table_request.id,
-    }))
-}
-
 pub fn table_request_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
             "/requests",
             OpenApiRouter::new()
-                .routes(routes!(get_sent_requests))
                 .routes(routes!(accept_request))
                 .routes(routes!(reject_request))
-                .routes(routes!(cancel_request))
-                .routes(routes!(create_request)),
+                .routes(routes!(cancel_request)),
         )
         .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)

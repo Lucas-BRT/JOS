@@ -15,17 +15,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-#[utoipa::path(
-    post,
-    path = "/login",
-    tag = "auth",
-    request_body = LoginRequest,
-    responses(
-        (status = 200, description = "Login successful", body = LoginResponse),
-        (status = 401, description = "Invalid credentials", body = serde_json::Value),
-        (status = 400, description = "Missing required fields", body = serde_json::Value)
-    )
-)]
+#[utoipa::path(post, path = "/login", summary = "User login", tag = "Authentication")]
 #[axum::debug_handler]
 async fn login(
     State(app_state): State<Arc<AppState>>,
@@ -68,13 +58,8 @@ async fn login(
 #[utoipa::path(
     post,
     path = "/register",
-    tag = "auth",
-    request_body = RegisterRequest,
-    responses(
-        (status = 201, description = "User created successfully", body = RegisterResponse),
-        (status = 400, description = "Validation error", body = serde_json::Value),
-        (status = 409, description = "Email or username already exists", body = serde_json::Value)
-    )
+    summary = "User registration",
+    tag = "Authentication"
 )]
 #[axum::debug_handler]
 async fn register(
@@ -106,12 +91,9 @@ async fn register(
 #[utoipa::path(
     post,
     path = "/logout",
-    tag = "auth",
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Logout successful", body = LogoutResponse),
-        (status = 401, description = "Invalid token", body = serde_json::Value)
-    )
+    tag = "Authentication",
+    summary = "User logout",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 async fn logout(
@@ -128,13 +110,9 @@ async fn logout(
 #[utoipa::path(
     post,
     path = "/refresh",
-    tag = "auth",
-    request_body = RefreshTokenRequest,
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "Token refreshed successfully", body = RefreshTokenResponse),
-        (status = 401, description = "Invalid refresh token", body = serde_json::Value)
-    )
+    tag = "Authentication",
+    summary = "Get new JWT token",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 async fn refresh(
@@ -162,12 +140,9 @@ async fn refresh(
 #[utoipa::path(
     get,
     path = "/me",
-    tag = "auth",
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "User data retrieved", body = UserResponse),
-        (status = 401, description = "Invalid token", body = serde_json::Value)
-    )
+    tag = "Authentication",
+    summary = "Get current user profile",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 async fn me(
@@ -187,15 +162,9 @@ async fn me(
 #[utoipa::path(
     put,
     path = "/profile",
-    tag = "auth",
-    security(("auth" = [])),
-    request_body = UpdateProfileRequest,
-    responses(
-        (status = 200, description = "Profile updated successfully", body = UpdateProfileResponse),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 409, description = "Username or email already exists", body = ErrorResponse)
-    )
+    tag = "Authentication",
+    summary = "Update user profile",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn update_profile(
@@ -226,15 +195,9 @@ pub async fn update_profile(
 #[utoipa::path(
     put,
     path = "/password",
-    tag = "auth",
-    security(("auth" = [])),
-    request_body = ChangePasswordRequest,
-    responses(
-        (status = 200, description = "Password changed successfully", body = ChangePasswordResponse),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Current password is incorrect", body = ErrorResponse)
-    )
+    tag = "Authentication",
+    summary = "Change user password",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn change_password(
@@ -270,15 +233,9 @@ pub async fn change_password(
 #[utoipa::path(
     delete,
     path = "/account",
-    tag = "auth",
-    security(("auth" = [])),
-    request_body = DeleteAccountRequest,
-    responses(
-        (status = 200, description = "Account deleted successfully", body = DeleteAccountResponse),
-        (status = 400, description = "Validation error", body = ErrorResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Password is incorrect", body = ErrorResponse)
-    )
+    tag = "Authentication",
+    summary = "Delete user account",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 pub async fn delete_account(
