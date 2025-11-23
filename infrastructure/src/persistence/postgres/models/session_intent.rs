@@ -14,7 +14,7 @@ impl From<EIntentStatus> for IntentStatus {
     fn from(status: EIntentStatus) -> Self {
         match status {
             EIntentStatus::Confirmed => IntentStatus::Confirmed,
-            EIntentStatus::Unsure => IntentStatus::Tentative,
+            EIntentStatus::Unsure => IntentStatus::Unsure,
             EIntentStatus::Declined => IntentStatus::Declined,
         }
     }
@@ -24,7 +24,7 @@ impl From<IntentStatus> for EIntentStatus {
     fn from(status: IntentStatus) -> Self {
         match status {
             IntentStatus::Confirmed => EIntentStatus::Confirmed,
-            IntentStatus::Tentative => EIntentStatus::Unsure,
+            IntentStatus::Unsure => EIntentStatus::Unsure,
             IntentStatus::Declined => EIntentStatus::Declined,
         }
     }
