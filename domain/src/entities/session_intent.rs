@@ -13,7 +13,7 @@ pub struct SessionIntent {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum IntentStatus {
+    Unsure,
     Confirmed,
-    Tentative,
     Declined,
 }

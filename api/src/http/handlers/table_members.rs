@@ -1,7 +1,9 @@
 use crate::http::dtos::TableMemberResponse;
+use crate::http::middleware::auth::auth_middleware;
 use axum::{
     Json,
     extract::{Path, State},
+    middleware::from_fn_with_state,
 };
 use infrastructure::state::AppState;
 use shared::Result;
@@ -31,8 +33,9 @@ async fn get_table_members(
     Ok(Json(members))
 }
 
-pub fn table_members_routes(app_state: Arc<AppState>) -> OpenApiRouter {
+pub fn table_members_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .routes(routes!(get_table_members))
-        .with_state(app_state)
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
+        .with_state(state)
 }
