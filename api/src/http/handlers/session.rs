@@ -17,7 +17,7 @@ use validator::Validate;
     path = "/{session_id}",
     security(("auth" = [])),
     summary = "Update a session",
-    tags = ["Session"],
+    tag = "session",
 )]
 #[axum::debug_handler]
 pub async fn update_session(
@@ -71,7 +71,7 @@ pub async fn update_session(
     delete,
     path = "/{session_id}",
     security(("auth" = [])),
-    tags = ["Session"],
+    tag = "session",
     summary = "Delete a session"
 )]
 #[axum::debug_handler]

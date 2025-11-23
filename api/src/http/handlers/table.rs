@@ -19,7 +19,7 @@ use validator::Validate;
 #[utoipa::path(
     post,
     path = "/",
-    tags = ["Table"],
+    tag = "table",
     security(("auth" = [])),
     summary = "Create a new Table"
 )]
@@ -52,7 +52,7 @@ pub async fn create_table(
     get,
     path = "/",
     summary = "Get list of tables",
-    tags = ["Table"],
+    tag = "table",
     security(("auth" = []))
 )]
 #[axum::debug_handler]
@@ -68,7 +68,7 @@ pub async fn get_tables(
 #[utoipa::path(
     get,
     path = "/{id}",
-    tags = ["Table"],
+    tag = "table",
     summary = "Get details from a specific table",
     security(("auth" = []))
 )]
@@ -139,7 +139,7 @@ pub async fn get_table_details(
 #[utoipa::path(
     put,
     path = "/{id}",
-    tags = ["Table"],
+    tag = "table",
     summary = "Update a existing Table",
     security(("auth" = []))
 )]
@@ -259,7 +259,7 @@ pub async fn update_table(
     delete,
     path = "/{id}",
     summary = "Delete a existing Table",
-    tags = ["Table"],
+    tag = "table",
     security(("auth" = []))
 )]
 #[axum::debug_handler]
@@ -283,7 +283,7 @@ pub async fn delete_table(
 #[utoipa::path(
     get,
     path = "/{table_id}/sessions",
-    tags = ["Table", "Session"],
+    tag = "session",
     summary = "Get a list of sessions of a specific table",
     security(("auth" = []))
 )]
@@ -318,7 +318,7 @@ pub async fn get_sessions(
 #[utoipa::path(
     post,
     path = "/{table_id}/sessions",
-    tags = ["Table", "Session"],
+    tag = "session",
     summary = "Create a new session in a existing Table",
     security(("auth" = []))
 )]
@@ -360,9 +360,9 @@ pub async fn create_session(
 
 #[utoipa::path(
     get,
-    path = "/{table_id}/requests/received",
+    path = "/{table_id}/requests",
     summary = "Get all the requests recived in a existing Table",
-    tags = ["Requests", "Tables"],
+    tag = "table-request",
     security(("auth" = []))
 )]
 #[axum::debug_handler]
@@ -400,7 +400,7 @@ pub async fn get_received_requests(
 #[utoipa::path(
     post,
     path = "/{table_id}/requests",
-    tags = ["Requests", "Tables"],
+    tag = "table-request",
     security(("auth" = [])),
     summary = "Create a table join request"
 )]
@@ -426,6 +426,29 @@ async fn create_request(
     }))
 }
 
+#[utoipa::path(get,
+    path = "/{table_id}/members",
+    tag = "table",
+    security(("auth" = [])),
+    summary = "Get all members of a specific table"
+)]
+async fn get_table_members(
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
+) -> Result<Json<Vec<TableMemberResponse>>> {
+    let members = app_state
+        .table_member_service
+        .find_by_table_id(&table_id)
+        .await?;
+
+    let members = members
+        .into_iter()
+        .map(TableMemberResponse::from)
+        .collect::<Vec<TableMemberResponse>>();
+
+    Ok(Json(members))
+}
+
 pub fn table_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
@@ -440,6 +463,7 @@ pub fn table_routes(state: Arc<AppState>) -> OpenApiRouter {
                 .routes(routes!(create_request))
                 .routes(routes!(get_sessions))
                 .routes(routes!(get_received_requests))
+                .routes(routes!(get_table_members))
                 .layer(from_fn_with_state(state.clone(), auth_middleware)),
         )
         .with_state(state)
