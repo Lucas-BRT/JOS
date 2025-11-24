@@ -3,7 +3,7 @@ use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::Json;
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
-use domain::entities::CreateSessionIntentCommand;
+use domain::entities::{CreateSessionIntentCommand, GetSessionIntentCommand};
 use infrastructure::state::AppState;
 use shared::error::DomainError;
 use shared::{Error, Result};
@@ -78,7 +78,51 @@ pub async fn get_session_intents(
     Path(session_id): Path<Uuid>,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<SessionIntentResponse>>> {
-    todo!()
+    let user = app_state
+        .user_service
+        .find_by_id(&claims.get_user_id())
+        .await?;
+
+    let table = match app_state
+        .table_service
+        .find_by_session_id(&session_id)
+        .await?
+    {
+        Some(table) => table,
+        None => {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "Can only get session intents in a table that already present".to_string(),
+            }));
+        }
+    };
+
+    let users = app_state
+        .table_member_service
+        .find_by_table_id(&table.id)
+        .await?;
+
+    if !users.iter().any(|u| u.user_id == user.id) {
+        return Err(Error::Domain(DomainError::BusinessRuleViolation {
+            message: "User must be a member of the table to create a session intent".to_string(),
+        }));
+    }
+
+    let command = GetSessionIntentCommand {
+        session_id: Some(session_id),
+        ..Default::default()
+    };
+
+    let intents = app_state
+        .session_service
+        .get_session_intents(command)
+        .await?;
+
+    Ok(Json(
+        intents
+            .into_iter()
+            .map(SessionIntentResponse::from)
+            .collect(),
+    ))
 }
 
 #[utoipa::path(

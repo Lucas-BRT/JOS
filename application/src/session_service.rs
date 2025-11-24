@@ -52,6 +52,13 @@ impl SessionService {
         Ok(())
     }
 
+    pub async fn get_session_intents(
+        &self,
+        command: GetSessionIntentCommand,
+    ) -> Result<Vec<SessionIntent>> {
+        self.session_intent_repository.read(command).await
+    }
+
     pub async fn get(&self, command: GetSessionCommand) -> Result<Vec<Session>> {
         self.session_repository.read(command).await
     }
