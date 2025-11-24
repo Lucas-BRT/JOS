@@ -3,8 +3,10 @@ use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::Json;
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
+use domain::entities::CreateSessionIntentCommand;
 use infrastructure::state::AppState;
-use shared::Result;
+use shared::error::DomainError;
+use shared::{Error, Result};
 use std::sync::Arc;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -24,7 +26,43 @@ pub async fn create_session_intent(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateSessionIntentRequest>,
 ) -> Result<Json<CreateSessionIntentResponse>> {
-    todo!()
+    let user = claims.get_user_id();
+
+    let user = app_state.user_service.find_by_id(&user).await?;
+    let table = match app_state
+        .table_service
+        .find_by_session_id(&session_id)
+        .await?
+    {
+        Some(table) => table,
+        None => {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "Can only create session intent in a table that already present"
+                    .to_string(),
+            }));
+        }
+    };
+    let users = app_state
+        .table_member_service
+        .find_by_table_id(&table.id)
+        .await?;
+
+    if !users.iter().any(|u| u.user_id == user.id) {
+        return Err(Error::Domain(DomainError::BusinessRuleViolation {
+            message: "User must be a member of the table to create a session intent".to_string(),
+        }));
+    }
+
+    app_state
+        .session_service
+        .submit_session_intent(CreateSessionIntentCommand {
+            player_id: user.id,
+            session_id,
+            status: payload.intent.into(),
+        })
+        .await?;
+
+    Ok(Json(CreateSessionIntentResponse {}))
 }
 
 #[utoipa::path(

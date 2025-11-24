@@ -343,7 +343,7 @@ pub async fn create_session(
 
     let session = app_state
         .session_service
-        .create(
+        .schedule_session(
             user_id,
             CreateSessionCommand {
                 table_id,

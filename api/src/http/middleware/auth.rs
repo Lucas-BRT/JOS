@@ -11,9 +11,16 @@ use axum_extra::{
 use domain::auth::Claims;
 use infrastructure::state::AppState;
 use std::sync::Arc;
+use uuid::Uuid;
 
 // Wrapper to implement FromRequestParts locally
 pub struct ClaimsExtractor(pub Claims);
+
+impl ClaimsExtractor {
+    pub fn get_user_id(&self) -> Uuid {
+        self.0.sub
+    }
+}
 
 impl<S> FromRequestParts<S> for ClaimsExtractor
 where

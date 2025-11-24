@@ -11,13 +11,11 @@ use validator::Validate;
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateSessionIntentRequest {
-    pub session_id: Uuid,
+    pub intent: IIntentStatus,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
-pub struct CreateSessionIntentResponse {
-    pub id: Uuid,
-}
+pub struct CreateSessionIntentResponse {}
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionIntentResponse {
@@ -51,6 +49,16 @@ pub enum IIntentStatus {
     Unsure,
     Confirmed,
     Declined,
+}
+
+impl From<IIntentStatus> for IntentStatus {
+    fn from(value: IIntentStatus) -> Self {
+        match value {
+            IIntentStatus::Unsure => IntentStatus::Unsure,
+            IIntentStatus::Confirmed => IntentStatus::Confirmed,
+            IIntentStatus::Declined => IntentStatus::Declined,
+        }
+    }
 }
 
 impl From<IntentStatus> for IIntentStatus {
