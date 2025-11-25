@@ -59,6 +59,16 @@ impl SessionService {
         self.session_intent_repository.read(command).await
     }
 
+    pub async fn update_session_intent(&self, command: UpdateSessionIntentCommand) -> Result<()> {
+        self.session_intent_repository.update(command).await?;
+
+        Ok(())
+    }
+
+    pub async fn find_intent_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>> {
+        self.session_intent_repository.find_by_id(id).await
+    }
+
     pub async fn get(&self, command: GetSessionCommand) -> Result<Vec<Session>> {
         self.session_repository.read(command).await
     }

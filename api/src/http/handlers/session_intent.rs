@@ -3,7 +3,9 @@ use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::Json;
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
-use domain::entities::{CreateSessionIntentCommand, GetSessionIntentCommand};
+use domain::entities::{
+    CreateSessionIntentCommand, GetSessionIntentCommand, IntentStatus, UpdateSessionIntentCommand,
+};
 use infrastructure::state::AppState;
 use shared::error::DomainError;
 use shared::{Error, Result};
@@ -126,22 +128,6 @@ pub async fn get_session_intents(
 }
 
 #[utoipa::path(
-    get,
-    path = "/users/{user_id}/intents",
-    tag = "session-intent",
-    security(("auth" = [])),
-    summary = "Get intents created by a specific user"
-)]
-#[axum::debug_handler]
-pub async fn get_user_intents(
-    claims: ClaimsExtractor,
-    Path(user_id): Path<Uuid>,
-    State(app_state): State<Arc<AppState>>,
-) -> Result<Json<Vec<SessionIntentResponse>>> {
-    todo!()
-}
-
-#[utoipa::path(
     put,
     path = "/intents/{intent_id}",
     tag = "session-intent",
@@ -154,24 +140,42 @@ pub async fn update_session_intent(
     Path(intent_id): Path<Uuid>,
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<UpdateSessionIntentRequest>,
-) -> Result<Json<SessionIntentResponse>> {
-    todo!()
-}
+) -> Result<Json<()>> {
+    let user = app_state
+        .user_service
+        .find_by_id(&claims.get_user_id())
+        .await?;
 
-#[utoipa::path(
-    delete,
-    path = "/intents/{intent_id}",
-    tag = "session-intent",
-    security(("auth" = [])),
-    summary = "Delete/cancel a session intent"
-)]
-#[axum::debug_handler]
-pub async fn delete_session_intent(
-    claims: ClaimsExtractor,
-    Path(intent_id): Path<Uuid>,
-    State(app_state): State<Arc<AppState>>,
-) -> Result<Json<DeleteSessionIntentResponse>> {
-    todo!()
+    match app_state
+        .session_service
+        .find_intent_by_id(intent_id)
+        .await?
+    {
+        Some(intent) => {
+            if intent.user_id != user.id {
+                return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                    message: "can only update session intent from self".into(),
+                }));
+            }
+        }
+        None => {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "session intent not found".into(),
+            }));
+        }
+    };
+
+    let command = UpdateSessionIntentCommand {
+        id: intent_id,
+        status: payload.status.map(IntentStatus::from),
+    };
+
+    app_state
+        .session_service
+        .update_session_intent(command)
+        .await?;
+
+    Ok(Json(()))
 }
 
 pub fn session_intent_routes(state: Arc<AppState>) -> OpenApiRouter {
@@ -181,8 +185,7 @@ pub fn session_intent_routes(state: Arc<AppState>) -> OpenApiRouter {
             OpenApiRouter::new()
                 .routes(routes!(create_session_intent))
                 .routes(routes!(get_session_intents))
-                .routes(routes!(update_session_intent))
-                .routes(routes!(delete_session_intent)),
+                .routes(routes!(update_session_intent)),
         )
         .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)
