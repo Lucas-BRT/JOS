@@ -5,6 +5,7 @@ use crate::persistence::postgres::repositories::{
     PostgresTableMemberRepository, PostgresTableRepository, PostgresTableRequestRepository,
     PostgresUserRepository,
 };
+use crate::persistence::repositories::PostgresSessionIntentRepository;
 use crate::security::{BcryptPasswordProvider, JwtTokenProvider};
 use application::auth_service::AuthService;
 use application::game_system_service::GameSystemService;
@@ -118,7 +119,13 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
 
     // Session service
     let session_repo = Arc::new(PostgresSessionRepository::new(database.clone()));
-    let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
+    let session_intent_repository =
+        Arc::new(PostgresSessionIntentRepository::new(database.clone()));
+    let session_service = SessionService::new(
+        session_repo.clone(),
+        session_intent_repository,
+        table_repo.clone(),
+    );
     info!("✅ Session service initialized");
 
     // Auth service

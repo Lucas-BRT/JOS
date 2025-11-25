@@ -13,7 +13,7 @@ use validator::Validate;
 #[utoipa::path(
     post,
     path = "/",
-    tag = "GameSystem",
+    tag = "game-system",
     summary = "Create a new RPG System",
     security(("auth" = []))
 )]
@@ -38,7 +38,7 @@ async fn create_game_system(
 #[utoipa::path(
     get,
     path = "/",
-    tag = "GameSystem",
+    tag = "game-system",
     summary = "Get supported RPG Systems",
     security(("auth" = [])),
 )]

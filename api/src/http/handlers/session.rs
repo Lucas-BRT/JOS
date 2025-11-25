@@ -13,54 +13,11 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[utoipa::path(
-    post,
-    path = "/{table_id}/sessions",
-    security(("auth" = [])),
-    tags = ["Session"],
-    summary = "Create a session"
-)]
-#[axum::debug_handler]
-pub async fn create_session(
-    claims: ClaimsExtractor,
-    Path(table_id): Path<Uuid>,
-    State(app_state): State<Arc<AppState>>,
-    Json(payload): Json<CreateSessionRequest>,
-) -> Result<Json<CreateSessionResponse>> {
-    if let Err(validation_error) = payload.validate() {
-        return Err(Error::Validation(validation_error));
-    }
-
-    let user_id = claims.0.sub;
-
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.gm_id != user_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
-
-    let session = app_state
-        .session_service
-        .create(
-            user_id,
-            CreateSessionCommand {
-                table_id,
-                title: payload.title,
-                description: payload.description,
-                scheduled_for: payload.scheduled_for,
-                status: payload.status.unwrap_or_default(),
-            },
-        )
-        .await?;
-
-    Ok(Json(CreateSessionResponse { id: session.id }))
-}
-
-#[utoipa::path(
     put,
     path = "/{session_id}",
     security(("auth" = [])),
     summary = "Update a session",
-    tags = ["Session"],
+    tag = "session",
 )]
 #[axum::debug_handler]
 pub async fn update_session(
@@ -114,7 +71,7 @@ pub async fn update_session(
     delete,
     path = "/{session_id}",
     security(("auth" = [])),
-    tags = ["Session"],
+    tag = "session",
     summary = "Delete a session"
 )]
 #[axum::debug_handler]

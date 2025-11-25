@@ -5,7 +5,7 @@ use crate::persistence::postgres::{
 use domain::{
     entities::{
         CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
-        SessionIntent, Update, UpdateSessionIntentCommand,
+        SessionIntent, UpdateSessionIntentCommand,
     },
     repositories::SessionIntentRepository,
 };
@@ -13,6 +13,7 @@ use shared::Result;
 use shared::error::DomainError;
 use shared::error::Error;
 use sqlx::PgPool;
+use tracing::info;
 use uuid::{NoContext, Uuid};
 
 #[derive(Clone)]
@@ -64,9 +65,9 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
     }
 
     async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
-        let status_to_update = matches!(command.status, Update::Change(_));
+        if !command.status.is_some() {
+            info!("should only update if has some value");
 
-        if !status_to_update {
             let session_intent = self.find_by_id(command.id).await?;
 
             return match session_intent {
@@ -78,10 +79,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
             };
         }
 
-        let new_status: Option<EIntentStatus> = match command.status {
-            Update::Change(status) => Some(status.into()),
-            Update::Keep => None,
-        };
+        let new_status = command.status.map(EIntentStatus::from);
 
         let updated_model = sqlx::query_as!(
             SessionIntentModel,

@@ -15,7 +15,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 use validator::Validate;
 
-#[utoipa::path(post, path = "/login", summary = "User login", tag = "Authentication")]
+#[utoipa::path(post, path = "/login", summary = "User login", tag = "auth")]
 #[axum::debug_handler]
 async fn login(
     State(app_state): State<Arc<AppState>>,
@@ -55,12 +55,7 @@ async fn login(
     ))
 }
 
-#[utoipa::path(
-    post,
-    path = "/register",
-    summary = "User registration",
-    tag = "Authentication"
-)]
+#[utoipa::path(post, path = "/register", summary = "User registration", tag = "auth")]
 #[axum::debug_handler]
 async fn register(
     State(app_state): State<Arc<AppState>>,
@@ -91,7 +86,7 @@ async fn register(
 #[utoipa::path(
     post,
     path = "/logout",
-    tag = "Authentication",
+    tag = "auth",
     summary = "User logout",
     security(("auth" = []))
 )]
@@ -110,7 +105,7 @@ async fn logout(
 #[utoipa::path(
     post,
     path = "/refresh",
-    tag = "Authentication",
+    tag = "auth",
     summary = "Get new JWT token",
     security(("auth" = []))
 )]
@@ -140,7 +135,7 @@ async fn refresh(
 #[utoipa::path(
     get,
     path = "/me",
-    tag = "Authentication",
+    tag = "auth",
     summary = "Get current user profile",
     security(("auth" = []))
 )]
@@ -162,7 +157,7 @@ async fn me(
 #[utoipa::path(
     put,
     path = "/profile",
-    tag = "Authentication",
+    tag = "auth",
     summary = "Update user profile",
     security(("auth" = []))
 )]
@@ -195,7 +190,7 @@ pub async fn update_profile(
 #[utoipa::path(
     put,
     path = "/password",
-    tag = "Authentication",
+    tag = "auth",
     summary = "Change user password",
     security(("auth" = []))
 )]
@@ -233,7 +228,7 @@ pub async fn change_password(
 #[utoipa::path(
     delete,
     path = "/account",
-    tag = "Authentication",
+    tag = "auth",
     summary = "Delete user account",
     security(("auth" = []))
 )]

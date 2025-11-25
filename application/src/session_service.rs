@@ -1,5 +1,5 @@
 use domain::entities::*;
-use domain::repositories::{SessionRepository, TableRepository};
+use domain::repositories::{SessionIntentRepository, SessionRepository, TableRepository};
 use shared::Result;
 use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
@@ -8,15 +8,28 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct SessionService {
     session_repository: Arc<dyn SessionRepository>,
+    session_intent_repository: Arc<dyn SessionIntentRepository>,
     table_repository: Arc<dyn TableRepository>,
 }
 
 impl SessionService {
-    pub fn new(session_repository: Arc<dyn SessionRepository>, table_repository: Arc<dyn TableRepository>) -> Self {
-        Self { session_repository, table_repository }
+    pub fn new(
+        session_repository: Arc<dyn SessionRepository>,
+        session_intent_repository: Arc<dyn SessionIntentRepository>,
+        table_repository: Arc<dyn TableRepository>,
+    ) -> Self {
+        Self {
+            session_repository,
+            session_intent_repository,
+            table_repository,
+        }
     }
 
-    pub async fn create(&self, gm_id: Uuid, command: CreateSessionCommand) -> Result<Session> {
+    pub async fn schedule_session(
+        &self,
+        gm_id: Uuid,
+        command: CreateSessionCommand,
+    ) -> Result<Session> {
         let table = self.table_repository.find_by_id(&command.table_id).await?;
 
         if let Some(table) = table {
@@ -31,6 +44,29 @@ impl SessionService {
         }
 
         self.session_repository.create(command).await
+    }
+
+    pub async fn submit_session_intent(&self, command: CreateSessionIntentCommand) -> Result<()> {
+        self.session_intent_repository.create(command).await?;
+
+        Ok(())
+    }
+
+    pub async fn get_session_intents(
+        &self,
+        command: GetSessionIntentCommand,
+    ) -> Result<Vec<SessionIntent>> {
+        self.session_intent_repository.read(command).await
+    }
+
+    pub async fn update_session_intent(&self, command: UpdateSessionIntentCommand) -> Result<()> {
+        self.session_intent_repository.update(command).await?;
+
+        Ok(())
+    }
+
+    pub async fn find_intent_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>> {
+        self.session_intent_repository.find_by_id(id).await
     }
 
     pub async fn get(&self, command: GetSessionCommand) -> Result<Vec<Session>> {

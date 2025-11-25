@@ -16,7 +16,7 @@ use uuid::Uuid;
 #[utoipa::path(
     get,
     path = "/sent",
-    tags = ["Requests"],
+    tag = "table-request",
     security(("auth" = [])),
 )]
 #[axum::debug_handler]
@@ -41,7 +41,7 @@ pub async fn get_sent_requests(
 #[utoipa::path(
     post,
     path = "/{request_id}/accept",
-    tags = ["Requests"],
+    tag = "table-request",
     summary = "Accepts a player request",
     security(("auth" = [])),
 )]
@@ -94,7 +94,7 @@ pub async fn accept_request(
 #[utoipa::path(
     post,
     path = "/{request_id}/reject",
-    tags = ["Requests"],
+    tag = "table-request",
     security(("auth" = [])),
     summary = "Rejects a player request"
 )]
@@ -132,7 +132,7 @@ pub async fn reject_request(
 #[utoipa::path(
     delete,
     path = "/{request_id}",
-    tags = ["Requests"],
+    tag = "table-request",
     security(("auth" = [])),
     summary = "Delete a request"
 )]

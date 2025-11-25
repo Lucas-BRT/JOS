@@ -19,7 +19,7 @@ use uuid::Uuid;
     path = "/{id}",
     security(("auth" = [])),
     summary = "Get details about a existing user",
-    tags = ["Users"],
+    tag = "user",
 )]
 pub async fn get_user_by_id(
     State(app_state): State<Arc<AppState>>,
