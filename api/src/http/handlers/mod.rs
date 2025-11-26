@@ -16,6 +16,7 @@ pub mod docs;
 pub mod game_system;
 pub mod health;
 pub mod session;
+pub mod session_checkin;
 pub mod session_intent;
 pub mod table;
 pub mod table_request;
