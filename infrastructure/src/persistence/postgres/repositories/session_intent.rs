@@ -65,7 +65,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
     }
 
     async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
-        if !command.status.is_some() {
+        if command.status.is_none() {
             info!("should only update if has some value");
 
             let session_intent = self.find_by_id(command.id).await?;
