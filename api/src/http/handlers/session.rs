@@ -108,6 +108,28 @@ pub async fn delete_session(
     }))
 }
 
+#[utoipa::path(
+    post,
+    path = "/{session_id}/start",
+    security(("auth" = [])),
+    tag = "session",
+    summary = "Start a session (GM only)"
+)]
+pub async fn start_session(
+    claims: ClaimsExtractor,
+    Path(session_id): Path<Uuid>,
+    State(app_state): State<Arc<AppState>>,
+) -> Result<Json<()>> {
+    let gm_id = claims.get_user_id();
+
+    app_state
+        .session_service
+        .start_session(gm_id, session_id)
+        .await?;
+
+    Ok(Json(()))
+}
+
 pub fn session_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(

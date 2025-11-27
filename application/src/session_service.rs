@@ -1,5 +1,7 @@
 use domain::entities::*;
-use domain::repositories::{SessionIntentRepository, SessionRepository, TableRepository};
+use domain::repositories::{
+    SessionCheckinRepository, SessionIntentRepository, SessionRepository, TableRepository,
+};
 use shared::Result;
 use shared::error::{ApplicationError, DomainError, Error};
 use std::sync::Arc;
@@ -9,6 +11,7 @@ use uuid::Uuid;
 pub struct SessionService {
     session_repository: Arc<dyn SessionRepository>,
     session_intent_repository: Arc<dyn SessionIntentRepository>,
+    session_checkin_repository: Arc<dyn SessionCheckinRepository>,
     table_repository: Arc<dyn TableRepository>,
 }
 
@@ -16,11 +19,13 @@ impl SessionService {
     pub fn new(
         session_repository: Arc<dyn SessionRepository>,
         session_intent_repository: Arc<dyn SessionIntentRepository>,
+        session_checkin_repository: Arc<dyn SessionCheckinRepository>,
         table_repository: Arc<dyn TableRepository>,
     ) -> Self {
         Self {
             session_repository,
             session_intent_repository,
+            session_checkin_repository,
             table_repository,
         }
     }
@@ -93,5 +98,45 @@ impl SessionService {
 
     pub async fn delete(&self, command: DeleteSessionCommand) -> Result<Session> {
         self.session_repository.delete(command).await
+    }
+
+    pub async fn start_session(&self, gm_id: Uuid, session_id: Uuid) -> Result<Session> {
+        let table = match self
+            .table_repository
+            .find_by_session_id(&session_id)
+            .await?
+        {
+            Some(table) => table,
+            None => {
+                return Err(Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "table",
+                    entity_id: session_id.to_string(),
+                }));
+            }
+        };
+
+        if gm_id != table.gm_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        if self
+            .session_repository
+            .find_by_id(session_id)
+            .await?
+            .is_none()
+        {
+            return Err(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "session",
+                entity_id: session_id.to_string(),
+            }));
+        };
+
+        let update_command = UpdateSessionCommand {
+            id: session_id,
+            status: Update::Change(SessionStatus::InProgress),
+            ..Default::default()
+        };
+
+        self.session_repository.update(update_command).await
     }
 }
