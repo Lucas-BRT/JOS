@@ -33,6 +33,13 @@ pub struct RefreshTokenRequest {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+pub struct RefreshResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
@@ -59,7 +66,7 @@ pub struct RegisterResponse {
 pub struct RefreshTokenResponse {
     pub token: String,
     pub refresh_token: String,
-    pub expires_in: i64,
+    pub expires_in: u64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

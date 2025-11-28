@@ -1,24 +1,25 @@
 use base64::Engine;
-use chrono::Duration;
 use chrono::Utc;
 use domain::auth::*;
 use domain::entities::*;
 use domain::repositories::{RefreshTokenRepository, UserRepository};
 use log::warn;
+use rand::Rng;
 use rand::RngCore;
 use shared::Result;
 use shared::error::ApplicationError;
-use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
+use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AuthService {
-    pub user_repository: Arc<dyn UserRepository>,
-    pub password_provider: Arc<dyn PasswordProvider>,
-    pub jwt_provider: Arc<dyn TokenProvider>,
-    pub refresh_token_repository: Arc<dyn RefreshTokenRepository>,
+    user_repository: Arc<dyn UserRepository>,
+    password_provider: Arc<dyn PasswordProvider>,
+    jwt_provider: Arc<dyn TokenProvider>,
+    refresh_token_repository: Arc<dyn RefreshTokenRepository>,
+    jwt_expiration_duration: Duration,
 }
 
 impl AuthService {
@@ -27,16 +28,18 @@ impl AuthService {
         password_provider: Arc<dyn PasswordProvider>,
         jwt_provider: Arc<dyn TokenProvider>,
         refresh_token_repository: Arc<dyn RefreshTokenRepository>,
+        jwt_expiration_duration: Duration,
     ) -> Self {
         Self {
             user_repository,
             password_provider,
             jwt_provider,
             refresh_token_repository,
+            jwt_expiration_duration,
         }
     }
 
-    pub async fn issue_refresh_token(&self, user_id: Uuid, expiration: Duration) -> Result<String> {
+    async fn issue_refresh_token(&self, user_id: Uuid) -> Result<String> {
         self.refresh_token_repository
             .delete_by_user(user_id)
             .await?;
@@ -49,109 +52,113 @@ impl AuthService {
             id: Uuid::now_v7(),
             user_id,
             token: token.clone(),
-            expires_at: Utc::now() + expiration,
+            expires_at: Utc::now() + self.jwt_expiration_duration,
         };
 
         self.refresh_token_repository.create(command).await?;
         Ok(token)
     }
 
-    pub async fn rotate_refresh_token(
-        &self,
-        old_token: &str,
-        refresh_token_duration: Duration,
-    ) -> Result<(String, Uuid)> {
-        let existing = self
-            .refresh_token_repository
-            .find_by_token(old_token)
-            .await?;
+    async fn validate_credentials(&self, email: &str, password: &str) -> Result<Option<User>> {
+        let user = self.user_repository.find_by_email(email).await?;
 
-        let record = match existing {
-            Some(r) => r,
-            None => {
-                warn!("Invalid refresh token");
-                return Err(Error::Application(
-                    shared::error::ApplicationError::InvalidCredentials,
-                ));
+        match user {
+            Some(user) => {
+                let is_valid = self
+                    .password_provider
+                    .verify_hash(password.to_string(), user.password.clone())
+                    .await?;
+
+                if is_valid {
+                    Ok(Some(user))
+                } else {
+                    let time_to_sleep = rand::thread_rng()
+                        .gen_range(DEFAULT_MIN_DELAY_MILIS..DEFAULT_MAX_DELAY_MILIS);
+                    std::thread::sleep(Duration::from_millis(time_to_sleep));
+                    Ok(None)
+                }
             }
-        };
-
-        if record.expires_at < Utc::now() {
-            // delete expired token
-            self.refresh_token_repository
-                .delete_by_token(old_token)
-                .await?;
-
-            return Err(Error::Application(ApplicationError::InvalidCredentials));
+            None => {
+                let time_to_sleep =
+                    rand::thread_rng().gen_range(DEFAULT_MIN_DELAY_MILIS..DEFAULT_MAX_DELAY_MILIS);
+                std::thread::sleep(Duration::from_millis(time_to_sleep));
+                Ok(None)
+            }
         }
-
-        // rotate: delete old and issue new for same user
-        self.refresh_token_repository
-            .delete_by_token(old_token)
-            .await?;
-
-        let new_token = self
-            .issue_refresh_token(record.user_id, refresh_token_duration)
-            .await?;
-        Ok((new_token, record.user_id))
     }
 }
 
 #[async_trait::async_trait]
-impl Authenticator for AuthService {
-    async fn authenticate(&self, payload: LoginUserCommand) -> Result<String> {
-        let user = match self.user_repository.find_by_email(&payload.email).await? {
-            Some(user) => user,
-            None => {
-                return Err(Error::Application(
-                    shared::error::ApplicationError::InvalidCredentials,
-                ));
-            }
-        };
-
-        if !self
-            .password_provider
-            .verify_hash(payload.password.clone(), user.password.clone())
+impl AuthenticationService for AuthService {
+    async fn login(&self, command: LoginCommand) -> Result<LoginResponse> {
+        let user = self
+            .validate_credentials(&command.email, &command.password)
             .await?
-        {
-            return Err(Error::Application(
-                shared::error::ApplicationError::InvalidCredentials,
-            ));
-        }
+            .ok_or_else(|| Error::Application(ApplicationError::InvalidCredentials))?;
 
-        let jwt_token = self.jwt_provider.generate_token(&user.id).await?;
+        let access_token = self.jwt_provider.generate_token(user.id).await?;
+        let refresh_token = self.issue_refresh_token(user.id).await?;
+        let expires_in = (Utc::now() + self.jwt_expiration_duration).timestamp_millis();
 
-        Ok(jwt_token)
+        Ok(LoginResponse {
+            user,
+            access_token,
+            refresh_token,
+            expires_in,
+        })
     }
 
-    async fn register(&self, payload: CreateUserCommand) -> Result<User> {
-        let mut payload = payload;
-
-        payload.password = self
+    async fn register(&self, command: RegisterCommand) -> Result<LoginResponse> {
+        let hashed_password = self
             .password_provider
-            .generate_hash(payload.password.clone())
+            .generate_hash(command.password.clone())
             .await?;
 
-        let created_user = self.user_repository.create(payload.clone()).await?;
+        let create_command = CreateUserCommand {
+            id: Uuid::now_v7(),
+            username: command.username,
+            email: command.email.clone(),
+            password: hashed_password,
+        };
 
-        Ok(created_user)
+        self.user_repository.create(create_command).await?;
+
+        let login_command = LoginCommand {
+            email: command.email,
+            password: command.password,
+        };
+
+        self.login(login_command).await
     }
 
-    async fn update_password(&self, payload: UpdatePasswordCommand) -> Result<()> {
+    async fn change_password(&self, user_id: Uuid, command: ChangePasswordCommand) -> Result<()> {
+        if command.new_password != command.confirm_password {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        let update_command = UpdatePasswordCommand {
+            user_id,
+            current_password: command.current_password,
+            new_password: command.new_password,
+        };
+
         let user = self
             .user_repository
-            .find_by_id(payload.user_id)
+            .find_by_id(user_id)
             .await?
             .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound {
+                Error::Domain(shared::error::DomainError::EntityNotFound {
                     entity_type: "User",
-                    entity_id: payload.user_id.to_string(),
+                    entity_id: user_id.to_string(),
                 })
             })?;
 
         if !self
             .password_provider
-            .verify_hash(payload.current_password.clone(), user.password.clone())
+            .verify_hash(
+                update_command.current_password.clone(),
+                user.password.clone(),
+            )
             .await?
         {
             return Err(Error::Application(ApplicationError::IncorrectPassword));
@@ -159,51 +166,61 @@ impl Authenticator for AuthService {
 
         let new_password_hash = self
             .password_provider
-            .generate_hash(payload.new_password.clone())
+            .generate_hash(update_command.new_password.clone())
             .await?;
 
-        let command = UpdateUserCommand {
-            user_id: payload.user_id,
+        let user_update_command = UpdateUserCommand {
+            user_id,
             username: None,
             email: None,
             password: Some(new_password_hash),
         };
 
-        self.user_repository.update(command).await?;
+        self.user_repository.update(user_update_command).await?;
 
         Ok(())
     }
 
-    async fn logout(&self, user_id: Uuid) -> Result<()> {
-        self.refresh_token_repository
-            .delete_by_user(user_id)
+    async fn refresh_token(&self, command: RefreshTokenCommand) -> Result<RefreshResponse> {
+        let existing = self
+            .refresh_token_repository
+            .find_by_token(&command.token)
             .await?;
 
+        let record = existing.ok_or_else(|| {
+            warn!("Invalid refresh token");
+            Error::Application(ApplicationError::InvalidCredentials)
+        })?;
+
+        if record.expires_at < Utc::now() {
+            self.refresh_token_repository
+                .delete_by_token(&command.token)
+                .await?;
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        self.refresh_token_repository
+            .delete_by_token(&command.token)
+            .await?;
+
+        let access_token = self.jwt_provider.generate_token(record.user_id).await?;
+        let new_refresh_token = self.issue_refresh_token(record.user_id).await?;
+
+        Ok(RefreshResponse {
+            access_token,
+            refresh_token: new_refresh_token,
+            expires_in: self.jwt_expiration_duration.as_secs(),
+        })
+    }
+
+    async fn logout(&self, command: LogoutCommand) -> Result<()> {
+        self.refresh_token_repository
+            .delete_by_user(command.user_id)
+            .await?;
         Ok(())
     }
 
-    async fn delete_account(&self, command: DeleteAccountCommand) -> Result<()> {
-        let user = self
-            .user_repository
-            .find_by_id(command.user_id)
-            .await?
-            .ok_or_else(|| {
-                Error::Domain(DomainError::EntityNotFound {
-                    entity_type: "User",
-                    entity_id: command.user_id.to_string(),
-                })
-            })?;
-
-        if !self
-            .password_provider
-            .verify_hash(command.password.clone(), user.password.clone())
-            .await?
-        {
-            return Err(Error::Application(ApplicationError::IncorrectPassword));
-        }
-
-        self.user_repository.delete_by_id(&command.user_id).await?;
-
-        Ok(())
+    async fn validate_token(&self, token: &str) -> Result<Claims> {
+        self.jwt_provider.decode_token(token).await
     }
 }

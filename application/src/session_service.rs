@@ -230,4 +230,28 @@ impl SessionService {
 
         Ok(result)
     }
+
+    pub async fn get_table_sessions(&self, table_id: Uuid, user_id: Uuid) -> Result<Vec<Session>> {
+        let table = self
+            .table_repository
+            .find_by_id(table_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Table",
+                    entity_id: table_id.to_string(),
+                })
+            })?;
+
+        if table.gm_id != user_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        let command = GetSessionCommand {
+            table_id: Some(table_id),
+            ..Default::default()
+        };
+
+        self.session_repository.read(command).await
+    }
 }

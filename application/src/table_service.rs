@@ -1,8 +1,8 @@
 use domain::entities::*;
 use domain::repositories::TableRepository;
 use shared::Result;
-use shared::error::DomainError;
 use shared::error::Error;
+use shared::error::{ApplicationError, DomainError};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -44,5 +44,31 @@ impl TableService {
 
     pub async fn update(&self, command: UpdateTableCommand) -> Result<Table> {
         self.table_repository.update(command).await
+    }
+
+    pub async fn get_table_sessions(&self, table_id: Uuid, user_id: Uuid) -> Result<Vec<Session>> {
+        let table = self.find_by_id(&table_id).await?;
+
+        if table.gm_id != user_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        // This would need to be injected or called through SessionService
+        // For now, return empty vec as placeholder
+        Ok(Vec::new())
+    }
+
+    pub async fn verify_table_ownership(&self, table_id: Uuid, user_id: Uuid) -> Result<Table> {
+        let table = self.find_by_id(&table_id).await?;
+
+        if table.gm_id != user_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        Ok(table)
+    }
+
+    pub async fn get_table_requests(&self, table_id: Uuid, user_id: Uuid) -> Result<Table> {
+        self.verify_table_ownership(table_id, user_id).await
     }
 }

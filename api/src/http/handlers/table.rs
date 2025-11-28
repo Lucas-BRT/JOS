@@ -32,15 +32,13 @@ pub async fn create_table(
         return Err(Error::Validation(validation_error));
     }
 
-    let command = CreateTableCommand {
-        id: Uuid::now_v7(),
-        title: payload.title,
-        description: payload.description,
-        slots: payload.max_players as u32,
-        status: TableStatus::Active,
-        game_system_id: payload.system_id,
-        gm_id: claims.0.sub,
-    };
+    let command = CreateTableCommand::new(
+        claims.get_user_id(),
+        payload.title,
+        payload.description,
+        payload.max_players as u32,
+        payload.system_id,
+    );
 
     let table = app_state.table_service.create(command).await?;
 
@@ -59,7 +57,7 @@ pub async fn create_table(
 #[axum::debug_handler]
 pub async fn get_tables(
     _claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
+    State(_app_state): State<Arc<AppState>>,
 ) -> Result<(StatusCode, Json<Vec<Table>>)> {
     todo!()
 }
@@ -74,8 +72,8 @@ pub async fn get_tables(
 #[axum::debug_handler]
 pub async fn get_table_details(
     _claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
+    State(_app_state): State<Arc<AppState>>,
+    Path(_table_id): Path<Uuid>,
 ) -> Result<Json<TableDetails>> {
     todo!()
 }
@@ -89,9 +87,9 @@ pub async fn get_table_details(
 )]
 #[axum::debug_handler]
 pub async fn update_table(
-    claims: ClaimsExtractor,
-    State(app_state): State<Arc<AppState>>,
-    Path(table_id): Path<Uuid>,
+    _claims: ClaimsExtractor,
+    State(_app_state): State<Arc<AppState>>,
+    Path(_table_id): Path<Uuid>,
     Json(payload): Json<UpdateTableRequest>,
 ) -> Result<Json<TableDetails>> {
     if let Err(validation_error) = payload.validate() {
@@ -141,18 +139,9 @@ pub async fn get_sessions(
 ) -> Result<Json<Vec<GetSessionsResponse>>> {
     let user_id = claims.0.sub;
 
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.gm_id != user_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
-
     let sessions = app_state
         .session_service
-        .get(GetSessionCommand {
-            table_id: Some(table_id),
-            ..Default::default()
-        })
+        .get_table_sessions(table_id, user_id)
         .await?
         .into_iter()
         .map(GetSessionsResponse::from)
@@ -180,12 +169,6 @@ pub async fn create_session(
     }
 
     let user_id = claims.0.sub;
-
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.gm_id != user_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
 
     let session = app_state
         .session_service
@@ -218,13 +201,10 @@ pub async fn get_received_requests(
     Path(table_id): Path<Uuid>,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ReceivedRequestItem>>> {
-    let table = app_state.table_service.find_by_id(&table_id).await?;
-
-    if table.gm_id != claims.0.sub {
-        return Err(Error::Domain(DomainError::BusinessRuleViolation {
-            message: "invalid credentials".to_owned(),
-        }));
-    }
+    app_state
+        .table_service
+        .verify_table_ownership(table_id, claims.0.sub)
+        .await?;
 
     let requests = app_state
         .table_request_service

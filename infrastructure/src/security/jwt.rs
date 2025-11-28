@@ -1,8 +1,8 @@
-use chrono::Duration;
 use domain::auth::{Claims, TokenProvider};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use shared::Result;
 use shared::error::Error;
+use std::time::Duration;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -22,8 +22,8 @@ impl JwtTokenProvider {
 
 #[async_trait::async_trait]
 impl TokenProvider for JwtTokenProvider {
-    async fn generate_token(&self, user_id: &Uuid) -> Result<String> {
-        let claims = Claims::new(*user_id, self.expiration_duration);
+    async fn generate_token(&self, user_id: Uuid) -> Result<String> {
+        let claims = Claims::new(user_id, self.expiration_duration);
 
         encode(
             &Header::default(),

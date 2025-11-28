@@ -13,6 +13,26 @@ pub struct CreateTableCommand {
     pub game_system_id: Uuid,
 }
 
+impl CreateTableCommand {
+    pub fn new(
+        gm_id: Uuid,
+        title: String,
+        description: String,
+        slots: u32,
+        game_system_id: Uuid,
+    ) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            gm_id,
+            title,
+            description,
+            slots,
+            status: TableStatus::default(),
+            game_system_id,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateTableCommand {
     pub id: Uuid,

@@ -30,12 +30,6 @@ pub struct DeleteUserCommand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LoginUserCommand {
-    pub email: String,
-    pub password: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdatePasswordCommand {
     pub user_id: Uuid,
     pub current_password: String,

@@ -1,15 +1,10 @@
 use crate::config::AppConfig;
 use crate::persistence::Db;
-use crate::persistence::postgres::repositories::{
-    PostgresGameSystemRepository, PostgresRefreshTokenRepository, PostgresSessionRepository,
-    PostgresTableMemberRepository, PostgresTableRepository, PostgresTableRequestRepository,
-    PostgresUserRepository,
-};
+use crate::persistence::postgres::repositories::*;
 use crate::persistence::repositories::{
     PostgresSessionCheckinRepository, PostgresSessionIntentRepository,
 };
 use crate::security::{BcryptPasswordProvider, JwtTokenProvider};
-
 use application::auth_service::AuthService;
 use application::game_system_service::GameSystemService;
 use application::password_service::PasswordService;
@@ -113,12 +108,12 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
 
     // User service
     let user_repo = Arc::new(PostgresUserRepository::new(database.clone()));
-    let user_service = UserService::new(user_repo.clone());
+    let password_repo = Arc::new(BcryptPasswordProvider);
+    let user_service = UserService::new(user_repo.clone(), password_repo.clone());
     info!("✅ User service initialized");
 
     // Password service
-    let password_repo = Arc::new(BcryptPasswordProvider);
-    let password_service = PasswordService::new(password_repo.clone());
+    let password_service = PasswordService::new(password_repo.clone(), user_repo.clone());
     info!("✅ Password service initialized");
 
     // Table service
@@ -169,6 +164,7 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         password_repo.clone(),
         jwt_provider.clone(),
         refresh_token_repo.clone(),
+        config.jwt_expiration_duration,
     );
     info!("✅ Auth service initialized");
 
