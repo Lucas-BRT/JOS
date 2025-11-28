@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::{Session, SessionStatus};
+use domain::entities::{Session, SessionStatus, session_checkin::SessionCheckinData};
 use serde::{Deserialize, Serialize};
 use shared::prelude::Date;
 use utoipa::ToSchema;
@@ -123,6 +123,31 @@ pub struct SessionDetails {
 pub struct DeleteSessionResponse {
     pub message: String,
 }
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct FinalizeSessionRequest {
+    pub checkins: Vec<ISessionCheckinData>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct ISessionCheckinData {
+    pub user_id: Uuid,
+    pub attended: bool,
+    pub notes: Option<String>,
+}
+
+impl From<ISessionCheckinData> for SessionCheckinData {
+    fn from(value: ISessionCheckinData) -> Self {
+        Self {
+            user_id: value.user_id,
+            attended: value.attended,
+            notes: value.notes,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct SessionFinalizationResponse {}
 
 // IntoResponse implementations
 impl IntoResponse for SessionDetails {

@@ -9,9 +9,12 @@ use crate::persistence::repositories::{
     PostgresSessionCheckinRepository, PostgresSessionIntentRepository,
 };
 use crate::security::{BcryptPasswordProvider, JwtTokenProvider};
+
 use application::auth_service::AuthService;
 use application::game_system_service::GameSystemService;
 use application::password_service::PasswordService;
+use application::session_checkin_service::SessionCheckinService;
+use application::session_intent_service::SessionIntentService;
 use application::session_service::SessionService;
 use application::table_member_service::TableMemberService;
 use application::table_request_service::TableRequestService;
@@ -29,6 +32,8 @@ pub struct AppState {
     pub table_service: TableService,
     pub table_request_service: TableRequestService,
     pub session_service: SessionService,
+    pub session_intent_service: SessionIntentService,
+    pub session_checkin_service: SessionCheckinService,
     pub auth_service: AuthService,
     pub password_service: PasswordService,
     pub game_system_service: GameSystemService,
@@ -74,6 +79,18 @@ impl FromRef<AppState> for AuthService {
 impl FromRef<AppState> for PasswordService {
     fn from_ref(input: &AppState) -> Self {
         input.password_service.clone()
+    }
+}
+
+impl FromRef<AppState> for SessionIntentService {
+    fn from_ref(input: &AppState) -> Self {
+        input.session_intent_service.clone()
+    }
+}
+
+impl FromRef<AppState> for SessionCheckinService {
+    fn from_ref(input: &AppState) -> Self {
+        input.session_checkin_service.clone()
     }
 }
 
@@ -125,13 +142,21 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         Arc::new(PostgresSessionIntentRepository::new(database.clone()));
     let session_checkin_repository =
         Arc::new(PostgresSessionCheckinRepository::new(database.clone()));
-    let session_service = SessionService::new(
-        session_repo.clone(),
-        session_intent_repository,
-        session_checkin_repository,
-        table_repo.clone(),
-    );
+    let session_service = SessionService::new(session_repo.clone(), table_repo.clone());
     info!("✅ Session service initialized");
+
+    // Session Intent service
+    let session_intent_service = SessionIntentService::new(
+        session_intent_repository.clone(),
+        user_repo.clone(),
+        table_repo.clone(),
+        table_member_repo_for_req.clone(),
+    );
+    info!("✅ Session Intent service initialized");
+
+    // Session Checkin service
+    let session_checkin_service = SessionCheckinService::new(session_checkin_repository);
+    info!("✅ Session Checkin service initialized");
 
     // Auth service
     let jwt_provider = Arc::new(JwtTokenProvider::new(
@@ -164,6 +189,8 @@ pub async fn setup_services(database: &Db, config: &AppConfig) -> Result<AppStat
         table_service,
         table_request_service,
         session_service,
+        session_intent_service,
+        session_checkin_service,
         auth_service,
         password_service,
         game_system_service,

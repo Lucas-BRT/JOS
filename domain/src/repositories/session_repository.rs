@@ -1,3 +1,4 @@
+use crate::entities::session_checkin::{SessionFinalizationData, SessionFinalizationResult};
 pub use crate::entities::*;
 use shared::Result;
 use uuid::Uuid;
@@ -10,4 +11,8 @@ pub trait SessionRepository: Send + Sync {
     async fn delete(&self, command: DeleteSessionCommand) -> Result<Session>;
     async fn find_by_id(&self, id: Uuid) -> Result<Option<Session>>;
     async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Session>>;
+    async fn finalize_session_with_checkins(
+        &self,
+        finalization_data: SessionFinalizationData,
+    ) -> Result<SessionFinalizationResult>;
 }

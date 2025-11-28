@@ -2,10 +2,11 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
+use domain::entities::session_checkin::SessionCheckinData;
 use domain::entities::*;
 use infrastructure::state::AppState;
 use shared::Result;
-use shared::error::{ApplicationError, DomainError, Error};
+use shared::error::Error;
 use std::sync::Arc;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -30,39 +31,19 @@ pub async fn update_session(
         return Err(Error::Validation(validation_error));
     }
 
-    let table = match app_state
-        .table_service
-        .find_by_session_id(&session_id)
-        .await?
-    {
-        Some(table) => table,
-        None => {
-            return Err(Error::Domain(DomainError::EntityNotFound {
-                entity_type: "session",
-                entity_id: session_id.to_string(),
-            }));
-        }
-    };
+    let gm_id = claims.get_user_id();
 
-    if table.gm_id != claims.0.sub {
-        return Err(Error::Domain(DomainError::BusinessRuleViolation {
-            message: "User is not the GM of the table".to_string(),
-        }));
-    }
-
-    let session = app_state.session_service.find_by_id(&session_id).await?;
-
-    let status = Update::from(payload.status.map(SessionStatus::from));
-
-    let command = UpdateSessionCommand {
-        id: session.id,
-        title: payload.title.into(),
-        description: payload.description.into(),
-        scheduled_for: payload.scheduled_for.into(),
-        status,
-    };
-
-    let updated_session = app_state.session_service.update(command).await?;
+    let updated_session = app_state
+        .session_service
+        .update_session_with_validation(
+            gm_id,
+            session_id,
+            payload.title,
+            payload.description,
+            payload.scheduled_for.flatten(),
+            payload.status.map(SessionStatus::from),
+        )
+        .await?;
 
     Ok(Json(updated_session.into()))
 }
@@ -80,27 +61,11 @@ pub async fn delete_session(
     State(app_state): State<Arc<AppState>>,
     Path(session_id): Path<Uuid>,
 ) -> Result<Json<DeleteSessionResponse>> {
-    let table = match app_state
-        .table_service
-        .find_by_session_id(&session_id)
-        .await?
-    {
-        Some(table) => table,
-        None => {
-            return Err(Error::Domain(DomainError::EntityNotFound {
-                entity_type: "session",
-                entity_id: session_id.to_string(),
-            }));
-        }
-    };
-
-    if claims.0.sub != table.gm_id {
-        return Err(Error::Application(ApplicationError::InvalidCredentials));
-    }
+    let gm_id = claims.get_user_id();
 
     app_state
         .session_service
-        .delete(DeleteSessionCommand { id: session_id })
+        .delete_session_with_validation(gm_id, session_id)
         .await?;
 
     Ok(Json(DeleteSessionResponse {
@@ -130,11 +95,43 @@ pub async fn start_session(
     Ok(Json(()))
 }
 
+#[utoipa::path(
+    put,
+    path = "/{session_id}/finalize",
+    security(("auth" = [])),
+    tag = "session",
+    summary = "Finalize a session with check-ins (GM only)"
+)]
+pub async fn finalize_session_with_checkins(
+    claims: ClaimsExtractor,
+    Path(session_id): Path<Uuid>,
+    State(app_state): State<Arc<AppState>>,
+    Json(payload): Json<FinalizeSessionRequest>,
+) -> Result<Json<SessionFinalizationResponse>> {
+    let gm_id = claims.get_user_id();
+
+    app_state
+        .session_service
+        .finalize_session_with_checkins(
+            gm_id,
+            session_id,
+            payload
+                .checkins
+                .into_iter()
+                .map(SessionCheckinData::from)
+                .collect(),
+        )
+        .await?;
+
+    Ok(Json(SessionFinalizationResponse {}))
+}
+
 pub fn session_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
             "/sessions",
             OpenApiRouter::new()
+                .routes(routes!(start_session))
                 .routes(routes!(update_session))
                 .routes(routes!(delete_session)),
         )

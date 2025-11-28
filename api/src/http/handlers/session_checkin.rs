@@ -1,13 +1,9 @@
 use crate::http::dtos::session_management::{
-    CreateSessionCheckinRequest, CreateSessionCheckinResponse, DeleteSessionCheckinResponse,
-    SessionCheckinResponse, UpdateSessionCheckinRequest,
+    CreateSessionCheckinRequest, CreateSessionCheckinResponse, SessionCheckinResponse,
+    UpdateSessionCheckinRequest,
 };
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::{Json, extract::Path, extract::State, middleware::from_fn_with_state};
-use domain::entities::{
-    CreateSessionCheckinCommand, DeleteSessionCheckinCommand, GetSessionCheckinCommand, Update,
-    UpdateSessionCheckinCommand,
-};
 use infrastructure::state::AppState;
 use shared::Result;
 use std::sync::Arc;
@@ -34,17 +30,7 @@ async fn create_checkin(
         return Err(shared::Error::Validation(validation_error));
     }
 
-    let user_id = claims.get_user_id();
-
-    let command = CreateSessionCheckinCommand {
-        session_intent_id,
-        attendance: payload.attendance,
-        notes: payload.notes,
-    };
-
-    let created = app_state.session_service.create(command).await?;
-
-    Ok(Json(CreateSessionCheckinResponse { id: created.id }))
+    todo!()
 }
 
 #[utoipa::path(
@@ -63,52 +49,7 @@ async fn update_checkin(
 ) -> Result<Json<SessionCheckinResponse>> {
     let _user_id = claims.get_user_id();
 
-    let command = UpdateSessionCheckinCommand {
-        id: checkin_id,
-        session_intent_id: match payload.session_intent_id {
-            Some(id) => Update::Change(id),
-            None => Update::Keep,
-        },
-        attendance: match payload.attendance {
-            Some(a) => Update::Change(a),
-            None => Update::Keep,
-        },
-        notes: match payload.notes {
-            Some(n) => Update::Change(n),
-            None => Update::Keep,
-        },
-    };
-
-    let updated = app_appstate_or_placeholder(&app_state)
-        .session_checkin_service
-        .update(command)
-        .await?;
-
-    Ok(Json(updated.into()))
-}
-
-#[utoipa::path(
-    delete,
-    path = "/{checkin_id}",
-    tag = "session-checkin",
-    security(("auth" = [])),
-    summary = "Delete a session checkin"
-)]
-#[axum::debug_handler]
-async fn delete_checkin(
-    State(app_state): State<Arc<AppState>>,
-    claims: ClaimsExtractor,
-    Path(checkin_id): Path<Uuid>,
-) -> Result<Json<DeleteSessionCheckinResponse>> {
-    let _user_id = claims.get_user_id();
-
-    let command = DeleteSessionCheckinCommand { id: checkin_id };
-
-    app_state.session_checkin_service.delete(command).await?;
-
-    Ok(Json(DeleteSessionCheckinResponse {
-        message: format!("Checkin {} deleted successfully", checkin_id),
-    }))
+    todo!()
 }
 
 pub fn session_checkin_routes(state: Arc<AppState>) -> OpenApiRouter {

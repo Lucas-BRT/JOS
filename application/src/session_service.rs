@@ -1,31 +1,27 @@
-use domain::entities::*;
-use domain::repositories::{
-    SessionCheckinRepository, SessionIntentRepository, SessionRepository, TableRepository,
+use domain::entities::session_checkin::{
+    SessionCheckinData, SessionFinalizationData, SessionFinalizationResult,
 };
+use domain::entities::*;
+use domain::repositories::{SessionRepository, TableRepository};
 use shared::Result;
 use shared::error::{ApplicationError, DomainError, Error};
+use shared::prelude::Date;
 use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct SessionService {
     session_repository: Arc<dyn SessionRepository>,
-    session_intent_repository: Arc<dyn SessionIntentRepository>,
-    session_checkin_repository: Arc<dyn SessionCheckinRepository>,
     table_repository: Arc<dyn TableRepository>,
 }
 
 impl SessionService {
     pub fn new(
         session_repository: Arc<dyn SessionRepository>,
-        session_intent_repository: Arc<dyn SessionIntentRepository>,
-        session_checkin_repository: Arc<dyn SessionCheckinRepository>,
         table_repository: Arc<dyn TableRepository>,
     ) -> Self {
         Self {
             session_repository,
-            session_intent_repository,
-            session_checkin_repository,
             table_repository,
         }
     }
@@ -51,27 +47,63 @@ impl SessionService {
         self.session_repository.create(command).await
     }
 
-    pub async fn submit_session_intent(&self, command: CreateSessionIntentCommand) -> Result<()> {
-        self.session_intent_repository.create(command).await?;
-
-        Ok(())
-    }
-
-    pub async fn get_session_intents(
+    pub async fn update_session_with_validation(
         &self,
-        command: GetSessionIntentCommand,
-    ) -> Result<Vec<SessionIntent>> {
-        self.session_intent_repository.read(command).await
+        gm_id: Uuid,
+        session_id: Uuid,
+        title: Option<String>,
+        description: Option<String>,
+        scheduled_for: Option<Date>,
+        status: Option<SessionStatus>,
+    ) -> Result<Session> {
+        let table = self
+            .table_repository
+            .find_by_session_id(&session_id)
+            .await?
+            .ok_or(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Session",
+                entity_id: session_id.to_string(),
+            }))?;
+
+        if table.gm_id != gm_id {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "User is not the GM of the table".to_string(),
+            }));
+        }
+
+        let session = self.find_by_id(&session_id).await?;
+
+        let command = UpdateSessionCommand {
+            id: session.id,
+            title: title.into(),
+            description: description.into(),
+            scheduled_for: Update::from(Some(scheduled_for)),
+            status: status.into(),
+        };
+
+        self.update(command).await
     }
 
-    pub async fn update_session_intent(&self, command: UpdateSessionIntentCommand) -> Result<()> {
-        self.session_intent_repository.update(command).await?;
+    pub async fn delete_session_with_validation(
+        &self,
+        gm_id: Uuid,
+        session_id: Uuid,
+    ) -> Result<()> {
+        let table = self
+            .table_repository
+            .find_by_session_id(&session_id)
+            .await?
+            .ok_or(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Session",
+                entity_id: session_id.to_string(),
+            }))?;
 
+        if gm_id != table.gm_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        self.delete(DeleteSessionCommand { id: session_id }).await?;
         Ok(())
-    }
-
-    pub async fn find_intent_by_id(&self, id: Uuid) -> Result<Option<SessionIntent>> {
-        self.session_intent_repository.find_by_id(id).await
     }
 
     pub async fn get(&self, command: GetSessionCommand) -> Result<Vec<Session>> {
@@ -138,5 +170,60 @@ impl SessionService {
         };
 
         self.session_repository.update(update_command).await
+    }
+
+    pub async fn finalize_session_with_checkins(
+        &self,
+        gm_id: Uuid,
+        session_id: Uuid,
+        checkins: Vec<SessionCheckinData>,
+    ) -> Result<SessionFinalizationResult> {
+        let session = self
+            .session_repository
+            .find_by_id(session_id)
+            .await?
+            .ok_or(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Session",
+                entity_id: session_id.to_string(),
+            }))?;
+
+        let table = self
+            .table_repository
+            .find_by_id(&session.table_id)
+            .await?
+            .ok_or(Error::Domain(DomainError::EntityNotFound {
+                entity_type: "Table",
+                entity_id: session.table_id.to_string(),
+            }))?;
+
+        if table.gm_id != gm_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
+        if session.status != SessionStatus::InProgress {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "Only sessions in progress can be finalized".into(),
+            }));
+        }
+
+        let finalization_data = SessionFinalizationData {
+            session_id,
+            checkins,
+        };
+
+        let result = self
+            .session_repository
+            .finalize_session_with_checkins(finalization_data)
+            .await?;
+
+        let update_command = UpdateSessionCommand {
+            id: session_id,
+            status: Update::Change(SessionStatus::Completed),
+            ..Default::default()
+        };
+
+        self.session_repository.update(update_command).await?;
+
+        Ok(result)
     }
 }

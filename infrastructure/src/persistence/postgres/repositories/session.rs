@@ -1,6 +1,7 @@
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::SessionModel;
 use crate::persistence::postgres::models::session::ESessionStatus;
+use domain::entities::session_checkin::{SessionFinalizationData, SessionFinalizationResult};
 use domain::entities::*;
 use domain::repositories::SessionRepository;
 use shared::Result;
@@ -268,5 +269,12 @@ impl SessionRepository for PostgresSessionRepository {
         .map_err(constraint_mapper::map_database_error)?;
 
         Ok(sessions.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn finalize_session_with_checkins(
+        &self,
+        finalization_data: SessionFinalizationData,
+    ) -> Result<SessionFinalizationResult> {
+        todo!()
     }
 }
