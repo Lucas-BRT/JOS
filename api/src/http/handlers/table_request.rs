@@ -69,10 +69,7 @@ pub async fn accept_request(
         .await?
         .user_id;
 
-    let command = CreateTableMemberCommand {
-        table_id: table.id,
-        user_id: requested_member_id,
-    };
+    let command = CreateTableMemberCommand::new(table.id, requested_member_id);
 
     app_state.table_member_service.create(command).await?;
 

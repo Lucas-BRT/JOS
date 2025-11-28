@@ -15,11 +15,11 @@ pub struct Claims {
 
 #[async_trait]
 pub trait Authenticator {
-    async fn authenticate(&self, command: &mut LoginUserCommand) -> Result<String>;
-    async fn register(&self, command: &mut CreateUserCommand) -> Result<User>;
-    async fn update_password(&self, command: &mut UpdatePasswordCommand) -> Result<()>;
-    async fn logout(&self, user_id: &Uuid) -> Result<()>;
-    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()>;
+    async fn authenticate(&self, command: LoginUserCommand) -> Result<String>;
+    async fn register(&self, command: CreateUserCommand) -> Result<User>;
+    async fn update_password(&self, command: UpdatePasswordCommand) -> Result<()>;
+    async fn logout(&self, user_id: Uuid) -> Result<()>;
+    async fn delete_account(&self, command: DeleteAccountCommand) -> Result<()>;
 }
 
 #[async_trait]

@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::{Table, TableStatus};
+use domain::entities::{SessionStatus, Table};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -44,6 +44,26 @@ pub struct GameMasterInfo {
 pub struct PlayerInfo {
     pub id: Uuid,
     pub username: String,
+}
+
+#[derive(Deserialize, Serialize, ToSchema, Default)]
+pub enum ISessionStatus {
+    #[default]
+    Scheduled,
+    InProgress,
+    Completed,
+    Cancelled,
+}
+
+impl From<ISessionStatus> for SessionStatus {
+    fn from(value: ISessionStatus) -> Self {
+        match value {
+            ISessionStatus::Scheduled => SessionStatus::Scheduled,
+            ISessionStatus::InProgress => SessionStatus::InProgress,
+            ISessionStatus::Completed => SessionStatus::Completed,
+            ISessionStatus::Cancelled => SessionStatus::Cancelled,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

@@ -26,17 +26,11 @@ impl TableRequestService {
     }
 
     pub async fn create(&self, command: CreateTableRequestCommand) -> Result<TableRequest> {
-        let table = self.table_repository.find_by_id(&command.table_id).await?;
+        let table = self.table_repository.find_by_id(command.table_id).await?;
         if let Some(table) = table {
             if table.gm_id == command.user_id {
                 return Err(Error::Domain(DomainError::BusinessRuleViolation {
                     message: "Game master cannot request to join their own table".to_string(),
-                }));
-            }
-
-            if table.status != domain::entities::TableStatus::Active {
-                return Err(Error::Domain(DomainError::BusinessRuleViolation {
-                    message: "Table is not accepting new players".to_string(),
                 }));
             }
         } else {

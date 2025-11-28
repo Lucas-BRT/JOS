@@ -3,8 +3,19 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateTableMemberCommand {
+    pub id: Uuid,
     pub table_id: Uuid,
     pub user_id: Uuid,
+}
+
+impl CreateTableMemberCommand {
+    pub fn new(table_id: Uuid, user_id: Uuid) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            table_id,
+            user_id,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

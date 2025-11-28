@@ -2,9 +2,9 @@ use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableRequestModel;
 use crate::persistence::postgres::models::table_request::ETableRequestStatus;
 use domain::entities::*;
-use domain::repositories::TableRequestRepository;
+use domain::repositories::{Repository, TableRequestRepository};
 use shared::Result;
-use shared::error::{ApplicationError, Error};
+
 use sqlx::PgPool;
 use uuid::{NoContext, Uuid};
 
@@ -20,7 +20,15 @@ impl PostgresTableRequestRepository {
 }
 
 #[async_trait::async_trait]
-impl TableRequestRepository for PostgresTableRequestRepository {
+impl
+    Repository<
+        TableRequest,
+        CreateTableRequestCommand,
+        UpdateTableRequestCommand,
+        GetTableRequestCommand,
+        DeleteTableRequestCommand,
+    > for PostgresTableRequestRepository
+{
     async fn create(&self, request_data: CreateTableRequestCommand) -> Result<TableRequest> {
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
@@ -47,9 +55,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     updated_at
                 "#,
             uuid,
-            request_data.user_id,
-            request_data.table_id,
-            request_data.message,
+            &request_data.user_id,
+            &request_data.table_id,
+            request_data.message.as_deref(),
             ETableRequestStatus::Pending as ETableRequestStatus,
         )
         .fetch_one(&self.pool)
@@ -60,15 +68,6 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     }
 
     async fn update(&self, update_data: UpdateTableRequestCommand) -> Result<TableRequest> {
-        let has_status_update = matches!(update_data.status, Some(_));
-        let has_message_update = matches!(update_data.message, Some(_));
-
-        if !has_status_update && !has_message_update {
-            return Err(Error::Application(ApplicationError::InvalidInput {
-                message: "No fields to update".to_string(),
-            }));
-        }
-
         let status_value = update_data.status;
 
         let message_value = update_data.message;
@@ -92,7 +91,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     created_at,
                     updated_at
                 "#,
-                update_data.id,
+                &update_data.id,
                 ETableRequestStatus::from(status) as ETableRequestStatus,
                 message_value.as_deref()
             )
@@ -117,7 +116,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     created_at,
                     updated_at
                 "#,
-                update_data.id,
+                &update_data.id,
                 message_value.as_deref()
             )
             .fetch_one(&self.pool)
@@ -142,7 +141,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                 created_at,
                 updated_at
             "#,
-            command.id
+            &command.id
         )
         .fetch_one(&self.pool)
         .await
@@ -194,7 +193,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             FROM table_requests
             WHERE id = $1
             "#,
-            id
+            &id
         )
         .fetch_optional(&self.pool)
         .await
@@ -202,7 +201,10 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
         Ok(request.map(|model| model.into()))
     }
+}
 
+#[async_trait::async_trait]
+impl TableRequestRepository for PostgresTableRequestRepository {
     async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>> {
         let requests = sqlx::query_as!(
             TableRequestModel,
@@ -218,7 +220,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             FROM table_requests
             WHERE user_id = $1
             "#,
-            user_id
+            &user_id
         )
         .fetch_all(&self.pool)
         .await
@@ -242,7 +244,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             FROM table_requests
             WHERE table_id = $1
             "#,
-            table_id
+            &table_id
         )
         .fetch_all(&self.pool)
         .await
@@ -296,8 +298,8 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             FROM table_requests
             WHERE user_id = $1 AND table_id = $2
             "#,
-            user_id,
-            table_id
+            &user_id,
+            &table_id
         )
         .fetch_all(&self.pool)
         .await

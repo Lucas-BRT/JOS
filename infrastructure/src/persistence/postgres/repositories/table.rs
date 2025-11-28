@@ -1,12 +1,12 @@
+use crate::persistence::models::table::ETableStatus;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableModel;
+use domain::entities::Table;
 use domain::entities::commands::*;
-use domain::entities::{Table, TableStatus};
-use domain::repositories::TableRepository;
+use domain::repositories::{Repository, TableRepository};
 use shared::Result;
-use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableRepository {
@@ -20,10 +20,10 @@ impl PostgresTableRepository {
 }
 
 #[async_trait::async_trait]
-impl TableRepository for PostgresTableRepository {
-    async fn create(&self, command: &CreateTableCommand) -> Result<Table> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, DeleteTableCommand>
+    for PostgresTableRepository
+{
+    async fn create(&self, command: CreateTableCommand) -> Result<Table> {
         let created_table = sqlx::query_as!(
             TableModel,
             r#"INSERT INTO tables
@@ -33,30 +33,28 @@ impl TableRepository for PostgresTableRepository {
                 title,
                 description,
                 slots,
-                status,
                 game_system_id,
                 created_at,
                 updated_at)
             VALUES
-                ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                ($1, $2, $3, $4, $5, $6, NOW(), NOW())
             RETURNING
                 id,
                 gm_id,
                 title,
                 description,
                 slots,
-                status,
+                status as "status: ETableStatus",
                 game_system_id,
                 created_at,
                 updated_at
             "#,
-            uuid,
-            command.gm_id,
-            command.title,
-            command.description,
+            command.id,
+            &command.gm_id,
+            &command.title,
+            &command.description,
             command.slots as i32,
-            TableStatus::Active.to_string(),
-            command.game_system_id,
+            &command.game_system_id,
         )
         .fetch_one(&self.pool)
         .await
@@ -65,53 +63,34 @@ impl TableRepository for PostgresTableRepository {
         Ok(created_table.into())
     }
 
-    async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
-        if command.title.is_none()
-            && command.description.is_none()
-            && command.slots.is_none()
-            && command.game_system_id.is_none()
-            && command.status.is_none()
-        {
-            return Err(Error::Application(ApplicationError::InvalidInput {
-                message: "No fields to update".to_string(),
-            }));
-        }
-
-        let title_value = command.title.as_deref();
-        let description_value = command.description.as_deref();
-        let slots_value = command.slots.map(|s| s as i32);
-        let game_system_id_value = command.game_system_id;
-        let status_value = command.status.as_ref().map(|s| s.to_string());
-
+    async fn update(&self, command: UpdateTableCommand) -> Result<Table> {
         let updated_table = sqlx::query_as!(
             TableModel,
             r#"
-            UPDATE tables
-            SET
-                title = COALESCE($2, title),
-                description = COALESCE($3, description),
-                slots = COALESCE($4, slots),
-                game_system_id = COALESCE($5, game_system_id),
-                status = COALESCE($6, status),
-                updated_at = NOW()
-            WHERE id = $1
-            RETURNING
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status,
-                game_system_id,
-                created_at,
-                updated_at
-            "#,
-            command.id,
-            title_value,
-            description_value,
-            slots_value,
-            game_system_id_value,
-            status_value
+                UPDATE tables
+                SET
+                    title = COALESCE($2, title),
+                    description = COALESCE($3, description),
+                    slots = COALESCE($4, slots),
+                    game_system_id = COALESCE($5, game_system_id),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING
+                    id,
+                    gm_id,
+                    title,
+                    description,
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
+                "#,
+            &command.id,
+            command.title.as_deref(),
+            command.description.as_deref(),
+            command.slots.map(|s| s as i32),
+            command.game_system_id,
         )
         .fetch_one(&self.pool)
         .await
@@ -120,7 +99,39 @@ impl TableRepository for PostgresTableRepository {
         Ok(updated_table.into())
     }
 
-    async fn delete(&self, command: &DeleteTableCommand) -> Result<Table> {
+    async fn read(&self, command: GetTableCommand) -> Result<Vec<Table>> {
+        let tables = sqlx::query_as!(
+            TableModel,
+            r#"
+            SELECT
+                id,
+                gm_id,
+                title,
+                description,
+                slots,
+                status as "status: ETableStatus",
+                game_system_id,
+                created_at,
+                updated_at
+            FROM tables
+            WHERE ($1::uuid IS NULL OR id = $1)
+              AND ($2::uuid IS NULL OR gm_id = $2)
+              AND ($3::table_status IS NULL OR status = $3)
+              AND ($4::uuid IS NULL OR game_system_id = $4)
+            "#,
+            command.id,
+            command.gm_id,
+            command.status.map(ETableStatus::from) as Option<ETableStatus>,
+            command.game_system_id
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(tables.into_iter().map(|model| model.into()).collect())
+    }
+
+    async fn delete(&self, command: DeleteTableCommand) -> Result<Table> {
         let table = sqlx::query_as!(
             TableModel,
             r#"DELETE FROM tables
@@ -130,13 +141,13 @@ impl TableRepository for PostgresTableRepository {
                     gm_id,
                     title,
                     description,
-                slots,
-                status,
-                game_system_id,
-                created_at,
-                updated_at
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
             "#,
-            command.id
+            &command.id
         )
         .fetch_one(&self.pool)
         .await
@@ -145,7 +156,7 @@ impl TableRepository for PostgresTableRepository {
         Ok(table.into())
     }
 
-    async fn find_by_id(&self, id: &Uuid) -> Result<Option<Table>> {
+    async fn find_by_id(&self, id: Uuid) -> Result<Option<Table>> {
         let table = sqlx::query_as!(
             TableModel,
             r#"
@@ -155,14 +166,14 @@ impl TableRepository for PostgresTableRepository {
                 title,
                 description,
                 slots,
-                status,
+                status as "status: ETableStatus",
                 game_system_id,
                 created_at,
                 updated_at
             FROM tables
             WHERE id = $1
             "#,
-            id
+            &id
         )
         .fetch_optional(&self.pool)
         .await
@@ -170,7 +181,10 @@ impl TableRepository for PostgresTableRepository {
 
         Ok(table.map(|model| model.into()))
     }
+}
 
+#[async_trait::async_trait]
+impl TableRepository for PostgresTableRepository {
     async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<Table>> {
         let tables = sqlx::query_as!(
             TableModel,
@@ -181,7 +195,7 @@ impl TableRepository for PostgresTableRepository {
                 title,
                 description,
                 slots,
-                status,
+                status as "status: ETableStatus",
                 game_system_id,
                 created_at,
                 updated_at
@@ -207,7 +221,7 @@ impl TableRepository for PostgresTableRepository {
                 title,
                 description,
                 slots,
-                status,
+                status as "status: ETableStatus",
                 game_system_id,
                 created_at,
                 updated_at
@@ -232,7 +246,7 @@ impl TableRepository for PostgresTableRepository {
                 tables.title,
                 tables.description,
                 tables.slots,
-                tables.status,
+                tables.status as \"status: ETableStatus\",
                 tables.game_system_id,
                 tables.created_at,
                 tables.updated_at
@@ -247,19 +261,5 @@ impl TableRepository for PostgresTableRepository {
         .map_err(constraint_mapper::map_database_error)?;
 
         Ok(table.map(|model| model.into()))
-    }
-
-    async fn get_all(&self) -> Result<Vec<Table>> {
-        let tables = sqlx::query_as!(
-            TableModel,
-            r#"
-            SELECT * FROM tables
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(tables.into_iter().map(|model| model.into()).collect())
     }
 }

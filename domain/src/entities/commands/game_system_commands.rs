@@ -3,7 +3,17 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateGameSystemCommand {
+    pub id: Uuid,
     pub name: String,
+}
+
+impl CreateGameSystemCommand {
+    pub fn new(name: String) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            name,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

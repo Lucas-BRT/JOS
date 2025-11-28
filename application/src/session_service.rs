@@ -31,7 +31,7 @@ impl SessionService {
         gm_id: Uuid,
         command: CreateSessionCommand,
     ) -> Result<Session> {
-        let table = self.table_repository.find_by_id(&command.table_id).await?;
+        let table = self.table_repository.find_by_id(command.table_id).await?;
 
         if let Some(table) = table {
             if table.gm_id != gm_id {
@@ -191,7 +191,7 @@ impl SessionService {
 
         let table = self
             .table_repository
-            .find_by_id(&session.table_id)
+            .find_by_id(session.table_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "Table",

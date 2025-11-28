@@ -1,7 +1,7 @@
 use crate::persistence::postgres::models::SessionCheckinModel;
 use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
-use domain::repositories::SessionCheckinRepository;
+use domain::repositories::{Repository, SessionCheckinRepository};
 use shared::Result;
 use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
@@ -19,7 +19,15 @@ impl PostgresSessionCheckinRepository {
 }
 
 #[async_trait::async_trait]
-impl SessionCheckinRepository for PostgresSessionCheckinRepository {
+impl
+    Repository<
+        SessionCheckin,
+        CreateSessionCheckinCommand,
+        UpdateSessionCheckinCommand,
+        GetSessionCheckinCommand,
+        DeleteSessionCheckinCommand,
+    > for PostgresSessionCheckinRepository
+{
     async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
@@ -157,7 +165,10 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
 
         Ok(session_checkin.map(|model| model.into()))
     }
+}
 
+#[async_trait::async_trait]
+impl SessionCheckinRepository for PostgresSessionCheckinRepository {
     async fn find_by_session_intent_id(
         &self,
         session_intent_id: Uuid,

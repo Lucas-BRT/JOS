@@ -13,6 +13,7 @@ use shared::*;
 use std::sync::Arc;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+use uuid::Uuid;
 use validator::Validate;
 
 #[utoipa::path(post, path = "/login", summary = "User login", tag = "auth")]
@@ -25,22 +26,24 @@ async fn login(
         return Err(Error::Validation(validation_error));
     }
 
-    let email = login_payload.email.clone();
-    let mut login_command = login_payload.into();
-
     let user = app_state
         .auth_service
         .user_repository
-        .find_by_email(&email)
+        .find_by_email(&login_payload.email)
         .await?
         .ok_or(Error::Application(ApplicationError::InvalidCredentials))?;
 
-    let jwt_token = app_state
-        .auth_service
-        .authenticate(&mut login_command)
-        .await?;
+    let login_command = LoginUserCommand {
+        email: login_payload.email,
+        password: login_payload.password,
+    };
 
-    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
+    let jwt_token = app_state.auth_service.authenticate(login_command).await?;
+
+    let refresh_token = app_state
+        .auth_service
+        .issue_refresh_token(user.id, app_state.config.jwt_expiration_duration)
+        .await?;
 
     let expires_in = app_state.config.jwt_expiration_duration.num_seconds();
 
@@ -65,13 +68,23 @@ async fn register(
         return Err(Error::Validation(validation_error));
     }
 
-    let user = app_state.auth_service.register(&mut payload.into()).await?;
+    let command = CreateUserCommand {
+        username: payload.username.clone(),
+        email: payload.email.clone(),
+        password: payload.password.clone(),
+        id: Uuid::now_v7(),
+    };
+
+    let user = app_state.auth_service.register(command).await?;
     let jwt_token = app_state
         .auth_service
         .jwt_provider
         .generate_token(&user.id)
         .await?;
-    let refresh_token = app_state.auth_service.issue_refresh_token(&user.id).await?;
+    let refresh_token = app_state
+        .auth_service
+        .issue_refresh_token(user.id, app_state.config.jwt_expiration_duration)
+        .await?;
 
     Ok((
         StatusCode::CREATED,
@@ -95,7 +108,7 @@ async fn logout(
     State(app_state): State<Arc<AppState>>,
     claims: ClaimsExtractor,
 ) -> Result<LogoutResponse> {
-    app_state.auth_service.logout(&claims.0.sub).await?;
+    app_state.auth_service.logout(claims.get_user_id()).await?;
 
     Ok(LogoutResponse {
         message: "Logout successful".to_string(),
@@ -116,7 +129,10 @@ async fn refresh(
 ) -> Result<RefreshTokenResponse> {
     let (new_refresh_token, user_id) = app_state
         .auth_service
-        .rotate_refresh_token(&payload.refresh_token)
+        .rotate_refresh_token(
+            &payload.refresh_token,
+            app_state.config.jwt_expiration_duration,
+        )
         .await?;
 
     let new_jwt = app_state
@@ -147,7 +163,7 @@ async fn me(
     let user = app_state
         .auth_service
         .user_repository
-        .find_by_id(&claims.0.sub)
+        .find_by_id(claims.0.sub)
         .await?
         .ok_or(Error::Application(ApplicationError::InvalidCredentials))?;
 
@@ -171,13 +187,13 @@ pub async fn update_profile(
         return Err(Error::Validation(validation_error));
     }
 
-    let mut command = UpdateUserCommand {
+    let command = UpdateUserCommand {
         user_id: claims.0.sub,
         username: payload.username.clone(),
         email: payload.email.clone(),
         password: None,
     };
-    let updated_user = app_state.user_service.update(&mut command).await?;
+    let updated_user = app_state.user_service.update(command).await?;
 
     Ok(Json(UpdateProfileResponse {
         id: claims.0.sub,
@@ -212,13 +228,13 @@ pub async fn change_password(
         return Err(Error::Validation(errors));
     }
 
-    let mut command = UpdatePasswordCommand {
-        user_id: claims.0.sub,
+    let command = UpdatePasswordCommand {
+        user_id: claims.get_user_id(),
         current_password: payload.current_password,
         new_password: payload.new_password,
     };
 
-    app_state.auth_service.update_password(&mut command).await?;
+    app_state.auth_service.update_password(command).await?;
 
     Ok(Json(ChangePasswordResponse {
         message: "Password changed successfully".to_string(),
@@ -242,12 +258,12 @@ pub async fn delete_account(
         return Err(Error::Validation(validation_error));
     }
 
-    let mut command = DeleteAccountCommand {
+    let command = DeleteAccountCommand {
         user_id: claims.0.sub,
         password: payload.password,
     };
 
-    app_state.auth_service.delete_account(&mut command).await?;
+    app_state.auth_service.delete_account(command).await?;
 
     Ok(Json(DeleteAccountResponse {
         message: "Account deleted successfully".to_string(),

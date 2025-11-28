@@ -1,4 +1,5 @@
 use base64::Engine;
+use chrono::Duration;
 use chrono::Utc;
 use domain::auth::*;
 use domain::entities::*;
@@ -10,7 +11,7 @@ use shared::error::ApplicationError;
 use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct AuthService {
@@ -35,28 +36,31 @@ impl AuthService {
         }
     }
 
-    pub async fn issue_refresh_token(&self, user_id: &Uuid) -> Result<String> {
+    pub async fn issue_refresh_token(&self, user_id: Uuid, expiration: Duration) -> Result<String> {
         self.refresh_token_repository
             .delete_by_user(user_id)
             .await?;
 
         let mut bytes = [0u8; 32];
         rand::thread_rng().fill_bytes(&mut bytes);
-        let token_str = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
+        let token = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
 
-        let rt = RefreshToken {
-            id: Uuid::new_v7(uuid::Timestamp::now(NoContext)),
-            user_id: *user_id,
-            token: token_str.clone(),
-            expires_at: Utc::now() + chrono::Duration::days(7),
-            created_at: Utc::now(),
+        let command = CreateRefreshTokenCommand {
+            id: Uuid::now_v7(),
+            user_id,
+            token: token.clone(),
+            expires_at: Utc::now() + expiration,
         };
 
-        self.refresh_token_repository.create(&rt).await?;
-        Ok(token_str)
+        self.refresh_token_repository.create(command).await?;
+        Ok(token)
     }
 
-    pub async fn rotate_refresh_token(&self, old_token: &str) -> Result<(String, Uuid)> {
+    pub async fn rotate_refresh_token(
+        &self,
+        old_token: &str,
+        refresh_token_duration: Duration,
+    ) -> Result<(String, Uuid)> {
         let existing = self
             .refresh_token_repository
             .find_by_token(old_token)
@@ -86,14 +90,16 @@ impl AuthService {
             .delete_by_token(old_token)
             .await?;
 
-        let new_token = self.issue_refresh_token(&record.user_id).await?;
+        let new_token = self
+            .issue_refresh_token(record.user_id, refresh_token_duration)
+            .await?;
         Ok((new_token, record.user_id))
     }
 }
 
 #[async_trait::async_trait]
 impl Authenticator for AuthService {
-    async fn authenticate(&self, payload: &mut LoginUserCommand) -> Result<String> {
+    async fn authenticate(&self, payload: LoginUserCommand) -> Result<String> {
         let user = match self.user_repository.find_by_email(&payload.email).await? {
             Some(user) => user,
             None => {
@@ -118,21 +124,23 @@ impl Authenticator for AuthService {
         Ok(jwt_token)
     }
 
-    async fn register(&self, payload: &mut CreateUserCommand) -> Result<User> {
+    async fn register(&self, payload: CreateUserCommand) -> Result<User> {
+        let mut payload = payload;
+
         payload.password = self
             .password_provider
             .generate_hash(payload.password.clone())
             .await?;
 
-        let created_user = self.user_repository.create(payload).await?;
+        let created_user = self.user_repository.create(payload.clone()).await?;
 
         Ok(created_user)
     }
 
-    async fn update_password(&self, payload: &mut UpdatePasswordCommand) -> Result<()> {
+    async fn update_password(&self, payload: UpdatePasswordCommand) -> Result<()> {
         let user = self
             .user_repository
-            .find_by_id(&payload.user_id)
+            .find_by_id(payload.user_id)
             .await?
             .ok_or_else(|| {
                 Error::Domain(DomainError::EntityNotFound {
@@ -154,28 +162,30 @@ impl Authenticator for AuthService {
             .generate_hash(payload.new_password.clone())
             .await?;
 
-        let mut command = UpdateUserCommand {
+        let command = UpdateUserCommand {
             user_id: payload.user_id,
             username: None,
             email: None,
             password: Some(new_password_hash),
         };
 
-        self.user_repository.update(&mut command).await?;
+        self.user_repository.update(command).await?;
 
         Ok(())
     }
-    async fn logout(&self, user_id: &Uuid) -> Result<()> {
-        Ok(self
-            .refresh_token_repository
+
+    async fn logout(&self, user_id: Uuid) -> Result<()> {
+        self.refresh_token_repository
             .delete_by_user(user_id)
-            .await?)
+            .await?;
+
+        Ok(())
     }
 
-    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()> {
+    async fn delete_account(&self, command: DeleteAccountCommand) -> Result<()> {
         let user = self
             .user_repository
-            .find_by_id(&command.user_id)
+            .find_by_id(command.user_id)
             .await?
             .ok_or_else(|| {
                 Error::Domain(DomainError::EntityNotFound {

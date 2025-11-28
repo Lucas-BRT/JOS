@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -23,15 +22,4 @@ pub enum SessionStatus {
     InProgress,
     Completed,
     Cancelled,
-}
-
-impl fmt::Display for SessionStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            SessionStatus::Scheduled => write!(f, "Scheduled"),
-            SessionStatus::InProgress => write!(f, "In Progress"),
-            SessionStatus::Completed => write!(f, "Completed"),
-            SessionStatus::Cancelled => write!(f, "Cancelled"),
-        }
-    }
 }

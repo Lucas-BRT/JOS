@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::{CreateUserCommand, LoginUserCommand, User};
+use domain::entities::User;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -107,25 +107,6 @@ impl From<User> for UserResponse {
             username: username.clone(),
             joined_at: user.created_at,
             email: user.email,
-        }
-    }
-}
-
-impl From<LoginRequest> for LoginUserCommand {
-    fn from(req: LoginRequest) -> Self {
-        LoginUserCommand {
-            email: req.email,
-            password: req.password,
-        }
-    }
-}
-
-impl From<RegisterRequest> for CreateUserCommand {
-    fn from(req: RegisterRequest) -> Self {
-        CreateUserCommand {
-            username: req.username,
-            email: req.email,
-            password: req.password,
         }
     }
 }

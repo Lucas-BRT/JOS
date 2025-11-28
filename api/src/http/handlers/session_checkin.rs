@@ -21,9 +21,9 @@ use validator::Validate;
 )]
 #[axum::debug_handler]
 async fn create_checkin(
-    State(app_state): State<Arc<AppState>>,
-    Path(session_intent_id): Path<Uuid>,
-    claims: ClaimsExtractor,
+    State(_app_state): State<Arc<AppState>>,
+    Path(_session_intent_id): Path<Uuid>,
+    _claims: ClaimsExtractor,
     Json(payload): Json<CreateSessionCheckinRequest>,
 ) -> Result<Json<CreateSessionCheckinResponse>> {
     if let Err(validation_error) = payload.validate() {
@@ -42,10 +42,10 @@ async fn create_checkin(
 )]
 #[axum::debug_handler]
 async fn update_checkin(
-    State(app_state): State<Arc<AppState>>,
+    State(_app_state): State<Arc<AppState>>,
     claims: ClaimsExtractor,
-    Path(checkin_id): Path<Uuid>,
-    Json(payload): Json<UpdateSessionCheckinRequest>,
+    Path(_checkin_id): Path<Uuid>,
+    Json(_payload): Json<UpdateSessionCheckinRequest>,
 ) -> Result<Json<SessionCheckinResponse>> {
     let _user_id = claims.get_user_id();
 

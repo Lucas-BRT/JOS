@@ -10,3 +10,4 @@ DROP TABLE IF EXISTS game_systems CASCADE;
 DROP TYPE IF EXISTS session_status;
 DROP TYPE IF EXISTS intent_status;
 DROP TYPE IF EXISTS request_status;
+DROP TYPE IF EXISTS table_status;

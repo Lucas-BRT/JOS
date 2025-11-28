@@ -39,7 +39,7 @@ impl SessionIntentService {
     ) -> Result<()> {
         let user = self
             .user_repository
-            .find_by_id(&user_id)
+            .find_by_id(user_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "User",
@@ -84,7 +84,7 @@ impl SessionIntentService {
     ) -> Result<Vec<SessionIntent>> {
         let user = self
             .user_repository
-            .find_by_id(&user_id)
+            .find_by_id(user_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "User",
@@ -121,7 +121,7 @@ impl SessionIntentService {
     ) -> Result<()> {
         let user = self
             .user_repository
-            .find_by_id(&user_id)
+            .find_by_id(user_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "User",

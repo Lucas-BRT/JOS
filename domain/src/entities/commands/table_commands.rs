@@ -4,9 +4,11 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTableCommand {
+    pub id: Uuid,
     pub gm_id: Uuid,
     pub title: String,
     pub description: String,
+    pub status: TableStatus,
     pub slots: u32,
     pub game_system_id: Uuid,
 }

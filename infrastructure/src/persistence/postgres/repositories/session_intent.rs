@@ -7,7 +7,7 @@ use domain::{
         CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
         SessionIntent, UpdateSessionIntentCommand,
     },
-    repositories::SessionIntentRepository,
+    repositories::{Repository, SessionIntentRepository},
 };
 use shared::Result;
 use shared::error::DomainError;
@@ -28,7 +28,15 @@ impl PostgresSessionIntentRepository {
 }
 
 #[async_trait::async_trait]
-impl SessionIntentRepository for PostgresSessionIntentRepository {
+impl
+    Repository<
+        SessionIntent,
+        CreateSessionIntentCommand,
+        UpdateSessionIntentCommand,
+        GetSessionIntentCommand,
+        DeleteSessionIntentCommand,
+    > for PostgresSessionIntentRepository
+{
     async fn create(&self, command: CreateSessionIntentCommand) -> Result<SessionIntent> {
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
         let status = EIntentStatus::from(command.status);
@@ -36,22 +44,22 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"INSERT INTO session_intents
-            (
-                id,
-                user_id,
-                session_id,
-                intent_status,
-                created_at,
-                updated_at)
-            VALUES ($1, $2, $3, $4, NOW(), NOW())
-            RETURNING
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            "#,
+                (
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status,
+                    created_at,
+                    updated_at)
+                VALUES ($1, $2, $3, $4, NOW(), NOW())
+                RETURNING
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                "#,
             uuid,
             command.player_id,
             command.session_id,
@@ -96,7 +104,7 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
                     intent_status as "intent_status: EIntentStatus",
                     created_at,
                     updated_at
-            "#,
+                "#,
             command.id,
             new_status as Option<EIntentStatus>
         )
@@ -111,15 +119,15 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"DELETE FROM session_intents
-            WHERE id = $1
-            RETURNING
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            "#,
+                WHERE id = $1
+                RETURNING
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                "#,
             command.id
         )
         .fetch_one(&self.pool)
@@ -133,18 +141,18 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let sessions = sqlx::query_as!(
             SessionIntentModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            FROM session_intents
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::uuid IS NULL OR user_id = $2)
-              AND ($3::uuid IS NULL OR session_id = $3)
-            "#,
+                SELECT
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                FROM session_intents
+                WHERE ($1::uuid IS NULL OR id = $1)
+                  AND ($2::uuid IS NULL OR user_id = $2)
+                  AND ($3::uuid IS NULL OR session_id = $3)
+                "#,
             command.id,
             command.user_id,
             command.session_id
@@ -160,16 +168,16 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            FROM session_intents
-            WHERE id = $1
-            "#,
+                SELECT
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                FROM session_intents
+                WHERE id = $1
+                "#,
             id
         )
         .fetch_optional(&self.pool)
@@ -178,7 +186,10 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
 
         Ok(session_intent.map(|model| model.into()))
     }
+}
 
+#[async_trait::async_trait]
+impl SessionIntentRepository for PostgresSessionIntentRepository {
     async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<SessionIntent>> {
         let session_intents = sqlx::query_as!(
             SessionIntentModel,

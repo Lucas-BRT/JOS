@@ -5,8 +5,10 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateSessionCommand {
+    pub id: Uuid,
     pub table_id: Uuid,
     pub title: String,
+    pub status: SessionStatus,
     pub description: String,
     pub scheduled_for: Option<DateTime<Utc>>,
 }
