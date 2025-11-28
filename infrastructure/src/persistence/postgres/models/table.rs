@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::{Table, TableStatus};
-use shared::prelude::Date;
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -12,8 +12,8 @@ pub struct TableModel {
     pub slots: i32,
     pub status: String,
     pub game_system_id: Uuid,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<TableModel> for Table {

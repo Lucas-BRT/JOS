@@ -3,9 +3,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::Table;
+use domain::entities::{Table, TableStatus};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -64,7 +63,7 @@ pub struct TableListItem {
     pub game_master: GameMasterInfo,
     pub player_slots: i32,
     pub occupied_slots: i32,
-    pub next_session: Option<Date>,
+    pub next_session: Option<DateTime<Utc>>,
     pub description: String,
 }
 

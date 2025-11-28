@@ -173,9 +173,9 @@ pub async fn update_profile(
 
     let mut command = UpdateUserCommand {
         user_id: claims.0.sub,
-        username: payload.username.clone().into(),
-        email: payload.email.clone().into(),
-        ..Default::default()
+        username: payload.username.clone(),
+        email: payload.email.clone(),
+        password: None,
     };
     let updated_user = app_state.user_service.update(&mut command).await?;
 

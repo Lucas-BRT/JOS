@@ -60,8 +60,8 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     }
 
     async fn update(&self, update_data: UpdateTableRequestCommand) -> Result<TableRequest> {
-        let has_status_update = matches!(update_data.status, Update::Change(_));
-        let has_message_update = matches!(update_data.message, Update::Change(_));
+        let has_status_update = matches!(update_data.status, Some(_));
+        let has_message_update = matches!(update_data.message, Some(_));
 
         if !has_status_update && !has_message_update {
             return Err(Error::Application(ApplicationError::InvalidInput {
@@ -69,15 +69,9 @@ impl TableRequestRepository for PostgresTableRequestRepository {
             }));
         }
 
-        let status_value = match update_data.status {
-            Update::Change(status) => Some(ETableRequestStatus::from(status)),
-            Update::Keep => None,
-        };
+        let status_value = update_data.status;
 
-        let message_value = match &update_data.message {
-            Update::Change(message) => message.as_ref().map(|m| m.as_str()),
-            Update::Keep => None,
-        };
+        let message_value = update_data.message;
 
         let updated_request = if let Some(status) = status_value {
             sqlx::query_as!(
@@ -99,8 +93,8 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     updated_at
                 "#,
                 update_data.id,
-                status as ETableRequestStatus,
-                message_value
+                ETableRequestStatus::from(status) as ETableRequestStatus,
+                message_value.as_deref()
             )
             .fetch_one(&self.pool)
             .await
@@ -124,7 +118,7 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     updated_at
                 "#,
                 update_data.id,
-                message_value
+                message_value.as_deref()
             )
             .fetch_one(&self.pool)
             .await
@@ -283,7 +277,11 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_user_and_table(&self, user_id: Uuid, table_id: Uuid) -> Result<Vec<TableRequest>> {
+    async fn find_by_user_and_table(
+        &self,
+        user_id: Uuid,
+        table_id: Uuid,
+    ) -> Result<Vec<TableRequest>> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"

@@ -350,7 +350,6 @@ pub async fn create_session(
                 title: payload.title,
                 description: payload.description,
                 scheduled_for: payload.scheduled_for,
-                status: payload.status.unwrap_or_default(),
             },
         )
         .await?;

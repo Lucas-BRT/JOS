@@ -6,8 +6,14 @@ use jos::{
     application::*,
     domain::{auth::Authenticator, entities::*},
     infrastructure::{
-        config::AppConfig, persistence::postgres::repositories::*, security::*,
-        setup::environment::Environment, state::AppState,
+        config::AppConfig,
+        persistence::postgres::repositories::*,
+        persistence::repositories::{
+            PostgresSessionCheckinRepository, PostgresSessionIntentRepository,
+        },
+        security::*,
+        setup::environment::Environment,
+        state::AppState,
     },
 };
 use serde_json::json;
@@ -168,7 +174,22 @@ impl TestEnvironmentBuilder {
 
         // Table member service
         let table_member_repo = Arc::new(PostgresTableMemberRepository::new(self.pool.clone()));
-        let table_member_service = TableMemberService::new(table_member_repo);
+        let table_member_service = TableMemberService::new(table_member_repo.clone());
+
+        // Session Intent service
+        let session_intent_repository =
+            Arc::new(PostgresSessionIntentRepository::new(self.pool.clone()));
+        let session_intent_service = SessionIntentService::new(
+            session_intent_repository.clone(),
+            user_repo.clone(),
+            table_repo.clone(),
+            table_member_repo.clone(),
+        );
+
+        // Session Checkin service
+        let session_checkin_repository =
+            Arc::new(PostgresSessionCheckinRepository::new(self.pool.clone()));
+        let session_checkin_service = SessionCheckinService::new(session_checkin_repository);
 
         let state = Arc::new(AppState {
             config: config.clone(),
@@ -176,10 +197,12 @@ impl TestEnvironmentBuilder {
             table_service: table_service.clone(),
             table_request_service,
             session_service: session_service.clone(),
+            session_intent_service,
+            session_checkin_service,
             auth_service: auth_service.clone(),
             password_service,
             game_system_service: game_system_service.clone(),
-            table_member_service: table_member_service.clone(), // Add this line
+            table_member_service: table_member_service.clone(),
         });
 
         let server = TestServer::new(jos::api::http::handlers::create_router(state.clone()))
@@ -250,9 +273,11 @@ impl TestEnvironmentBuilder {
                 title: session_opts.name,
                 description: "A test session".to_string(),
                 scheduled_for: None,
-                status: SessionStatus::Scheduled,
             };
-            let session = session_service.create(owner.id, cmd).await.unwrap();
+            let session = session_service
+                .schedule_session(owner.id, cmd)
+                .await
+                .unwrap();
             seeded.sessions.insert(session_opts.identifier, session);
         }
 

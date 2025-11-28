@@ -22,7 +22,7 @@ impl PostgresSessionRepository {
 #[async_trait::async_trait]
 impl SessionRepository for PostgresSessionRepository {
     async fn create(&self, session: CreateSessionCommand) -> Result<Session> {
-        let status = ESessionStatus::from(session.status);
+        let status = ESessionStatus::Scheduled; // Default status for new sessions
         let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
 
         let created_session = sqlx::query_as!(
@@ -78,16 +78,14 @@ impl SessionRepository for PostgresSessionRepository {
                 updated_at
             FROM sessions
             WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::text IS NULL OR title = $2)
-              AND ($3::uuid IS NULL OR table_id = $3)
-              AND ($4::timestamptz IS NULL OR scheduled_for >= $4)
-              AND ($5::timestamptz IS NULL OR scheduled_for <= $5)
+              AND ($2::uuid IS NULL OR table_id = $2)
+              AND ($3::timestamptz IS NULL OR scheduled_for >= $3)
+              AND ($4::timestamptz IS NULL OR scheduled_for <= $4)
             "#,
             command.id,
-            command.title,
             command.table_id,
-            command.scheduled_for_start,
-            command.scheduled_for_end
+            command.scheduled_after,
+            command.scheduled_before
         )
         .fetch_all(&self.pool)
         .await
@@ -97,40 +95,20 @@ impl SessionRepository for PostgresSessionRepository {
     }
 
     async fn update(&self, command: UpdateSessionCommand) -> Result<Session> {
-        let has_title_update = matches!(command.title, Update::Change(_));
-        let has_description_update = matches!(command.description, Update::Change(_));
-        let has_scheduled_for_update = matches!(command.scheduled_for, Update::Change(_));
-        let has_status_update = matches!(command.status, Update::Change(_));
-
-        if !has_title_update
-            && !has_description_update
-            && !has_scheduled_for_update
-            && !has_status_update
+        if command.title.is_none()
+            && command.description.is_none()
+            && command.scheduled_for.is_none()
+            && command.status.is_none()
         {
             return Err(Error::Application(ApplicationError::InvalidInput {
                 message: "No fields to update".to_string(),
             }));
         }
 
-        let title_value = match &command.title {
-            Update::Change(title) => Some(title.as_str()),
-            Update::Keep => None,
-        };
-
-        let description_value = match &command.description {
-            Update::Change(description) => Some(description.as_str()),
-            Update::Keep => None,
-        };
-
-        let scheduled_for_value = match &command.scheduled_for {
-            Update::Change(scheduled_for) => scheduled_for.as_ref(),
-            Update::Keep => None,
-        };
-
-        let status_value = match command.status {
-            Update::Change(status) => Some(ESessionStatus::from(status)),
-            Update::Keep => None,
-        };
+        let title_value = command.title.as_ref().map(|s| s.as_str());
+        let description_value = command.description.as_ref().map(|s| s.as_str());
+        let scheduled_for_value = command.scheduled_for.as_ref();
+        let status_value = command.status.map(ESessionStatus::from);
 
         let updated_session = if let Some(status) = status_value {
             sqlx::query_as!(

@@ -156,8 +156,9 @@ impl Authenticator for AuthService {
 
         let mut command = UpdateUserCommand {
             user_id: payload.user_id,
-            password: Update::Change(new_password_hash),
-            ..Default::default()
+            username: None,
+            email: None,
+            password: Some(new_password_hash),
         };
 
         self.user_repository.update(&mut command).await?;

@@ -1,7 +1,7 @@
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableModel;
 use domain::entities::commands::*;
-use domain::entities::{Table, TableStatus, Update};
+use domain::entities::{Table, TableStatus};
 use domain::repositories::TableRepository;
 use shared::Result;
 use shared::error::{ApplicationError, Error};
@@ -66,47 +66,22 @@ impl TableRepository for PostgresTableRepository {
     }
 
     async fn update(&self, command: &UpdateTableCommand) -> Result<Table> {
-        let has_title_update = matches!(command.title, Update::Change(_));
-        let has_description_update = matches!(command.description, Update::Change(_));
-        let has_slots_update = matches!(command.slots, Update::Change(_));
-        let has_game_system_update = matches!(command.game_system_id, Update::Change(_));
-        let has_status_update = matches!(command.status, Update::Change(_));
-
-        if !has_title_update
-            && !has_description_update
-            && !has_slots_update
-            && !has_game_system_update
-            && !has_status_update
+        if command.title.is_none()
+            && command.description.is_none()
+            && command.slots.is_none()
+            && command.game_system_id.is_none()
+            && command.status.is_none()
         {
             return Err(Error::Application(ApplicationError::InvalidInput {
                 message: "No fields to update".to_string(),
             }));
         }
 
-        let title_value = match &command.title {
-            Update::Change(title) => Some(title.as_str()),
-            Update::Keep => None,
-        };
-
-        let description_value = match &command.description {
-            Update::Change(description) => Some(description.as_str()),
-            Update::Keep => None,
-        };
-
-        let slots_value = match command.slots {
-            Update::Change(slots) => Some(slots as i32),
-            Update::Keep => None,
-        };
-
-        let game_system_id_value = match &command.game_system_id {
-            Update::Change(game_system_id) => Some(*game_system_id),
-            Update::Keep => None,
-        };
-
-        let status_value = match &command.status {
-            Update::Change(status) => Some(status.to_string()),
-            Update::Keep => None,
-        };
+        let title_value = command.title.as_deref();
+        let description_value = command.description.as_deref();
+        let slots_value = command.slots.map(|s| s as i32);
+        let game_system_id_value = command.game_system_id;
+        let status_value = command.status.as_ref().map(|s| s.to_string());
 
         let updated_table = sqlx::query_as!(
             TableModel,

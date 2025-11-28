@@ -81,30 +81,18 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
     }
 
     async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
-        let has_session_intent_id_update = matches!(command.session_intent_id, Update::Change(_));
-        let has_attendance_update = matches!(command.attendance, Update::Change(_));
-        let has_notes_update = matches!(command.notes, Update::Change(_));
-
-        if !has_session_intent_id_update && !has_attendance_update && !has_notes_update {
+        if command.session_intent_id.is_none()
+            && command.attendance.is_none()
+            && command.notes.is_none()
+        {
             return Err(Error::Application(ApplicationError::InvalidInput {
                 message: "No fields to update".to_string(),
             }));
         }
 
-        let session_intent_id_value = match &command.session_intent_id {
-            Update::Change(session_intent_id) => Some(*session_intent_id),
-            Update::Keep => None,
-        };
-
-        let attendance_value = match command.attendance {
-            Update::Change(attendance) => Some(attendance),
-            Update::Keep => None,
-        };
-
-        let notes_value = match &command.notes {
-            Update::Change(notes) => notes.as_ref().map(|n| n.as_str()),
-            Update::Keep => None,
-        };
+        let session_intent_id_value = command.session_intent_id;
+        let attendance_value = command.attendance;
+        let notes_value = command.notes.as_ref().and_then(|n| n.as_deref());
 
         let updated_session_checkin = sqlx::query_as!(
             SessionCheckinModel,

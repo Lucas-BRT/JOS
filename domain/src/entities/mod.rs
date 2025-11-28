@@ -7,7 +7,7 @@ pub mod session_intent;
 pub mod table;
 pub mod table_member;
 pub mod table_request;
-pub mod update;
+
 pub mod user;
 
 pub use commands::*;
@@ -19,5 +19,5 @@ pub use session_intent::{IntentStatus, SessionIntent};
 pub use table::*;
 pub use table_member::TableMember;
 pub use table_request::{TableRequest, TableRequestStatus};
-pub use update::Update;
+
 pub use user::User;

@@ -52,30 +52,15 @@ impl UserRepository for PostgresUserRepository {
     }
 
     async fn update(&self, data: &mut UpdateUserCommand) -> Result<User> {
-        let has_username_update = matches!(data.username, Update::Change(_));
-        let has_email_update = matches!(data.email, Update::Change(_));
-        let has_password_update = matches!(data.password, Update::Change(_));
-
-        if !has_username_update && !has_email_update && !has_password_update {
+        if data.username.is_none() && data.email.is_none() && data.password.is_none() {
             return Err(Error::Application(ApplicationError::InvalidInput {
                 message: "No fields to update".to_string(),
             }));
         }
 
-        let username_value = match &data.username {
-            Update::Change(username) => Some(username.as_str()),
-            Update::Keep => None,
-        };
-
-        let email_value = match &data.email {
-            Update::Change(email) => Some(email.as_str()),
-            Update::Keep => None,
-        };
-
-        let password_value = match &data.password {
-            Update::Change(password) => Some(password.as_str()),
-            Update::Keep => None,
-        };
+        let username_value = data.username.as_ref().map(|s| s.as_str());
+        let email_value = data.email.as_ref().map(|s| s.as_str());
+        let password_value = data.password.as_ref().map(|s| s.as_str());
 
         let updated_user = sqlx::query_as!(
             UserModel,

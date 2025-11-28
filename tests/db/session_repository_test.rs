@@ -1,7 +1,7 @@
 use crate::utils::TestEnvironmentBuilder;
 use domain::entities::SessionStatus;
 use jos::domain::entities::commands::*;
-use jos::domain::entities::update::Update;
+
 use jos::domain::repositories::*;
 use jos::infrastructure::persistence::postgres::repositories::*;
 use jos::shared::error::Error;
@@ -188,7 +188,7 @@ async fn test_update_session_title(pool: PgPool) {
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
-        title: Update::Change("New Name".to_string()),
+        title: Some("New Name".to_string()),
         ..Default::default()
     };
 
@@ -227,7 +227,7 @@ async fn test_update_session_description(pool: PgPool) {
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
-        description: Update::Change("New Description".to_string()),
+        description: Some("New Description".to_string()),
         ..Default::default()
     };
 
@@ -266,7 +266,7 @@ async fn test_update_session_status(pool: PgPool) {
 
     let update_data = UpdateSessionCommand {
         id: created_session.id,
-        status: Update::Change(SessionStatus::Completed),
+        status: Some(SessionStatus::Completed),
         ..Default::default()
     };
 

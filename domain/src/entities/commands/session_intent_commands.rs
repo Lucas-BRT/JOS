@@ -1,7 +1,7 @@
 use crate::entities::IntentStatus;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct CreateSessionIntentCommand {
     pub player_id: Uuid,
     pub session_id: Uuid,
@@ -14,7 +14,7 @@ pub struct UpdateSessionIntentCommand {
     pub status: Option<IntentStatus>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct DeleteSessionIntentCommand {
     pub id: Uuid,
 }

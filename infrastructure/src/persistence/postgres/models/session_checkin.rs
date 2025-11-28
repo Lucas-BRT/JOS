@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::SessionCheckin;
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
@@ -8,8 +8,8 @@ pub struct SessionCheckinModel {
     pub session_intent_id: Uuid,
     pub attendance: bool,
     pub notes: Option<String>,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<SessionCheckinModel> for SessionCheckin {

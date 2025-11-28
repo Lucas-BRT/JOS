@@ -1,7 +1,6 @@
 use crate::utils::TestEnvironmentBuilder;
 use jos::domain::entities::commands::*;
 use jos::domain::entities::session_intent::IntentStatus;
-use jos::domain::entities::update::Update;
 use jos::domain::repositories::*;
 use jos::infrastructure::persistence::postgres::repositories::*;
 use jos::shared::error::Error;
@@ -191,7 +190,7 @@ async fn test_update_session_intent_status(pool: PgPool) {
 
     repo.update(UpdateSessionIntentCommand {
         id: created_intent.id,
-        status: Update::Change(IntentStatus::Confirmed),
+        status: Some(IntentStatus::Confirmed),
     })
     .await
     .unwrap();

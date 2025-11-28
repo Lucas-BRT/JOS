@@ -2,9 +2,7 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
-use domain::entities::{
-    CreateTableMemberCommand, TableRequestStatus, Update, UpdateTableRequestCommand,
-};
+use domain::entities::{CreateTableMemberCommand, TableRequestStatus, UpdateTableRequestCommand};
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::{DomainError, Error};
@@ -80,8 +78,8 @@ pub async fn accept_request(
 
     let command = UpdateTableRequestCommand {
         id: request_id,
-        status: Update::Change(TableRequestStatus::Approved),
-        message: Update::Keep,
+        status: Some(TableRequestStatus::Approved),
+        message: None,
     };
 
     app_state.table_request_service.update(command).await?;
@@ -118,8 +116,8 @@ pub async fn reject_request(
 
     let command = UpdateTableRequestCommand {
         id: request_id,
-        status: Update::Change(TableRequestStatus::Rejected),
-        message: Update::Keep,
+        status: Some(TableRequestStatus::Rejected),
+        message: None,
     };
 
     app_state.table_request_service.update(command).await?;

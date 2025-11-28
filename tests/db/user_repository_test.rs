@@ -154,7 +154,7 @@ async fn test_update_user_username(pool: PgPool) {
 
     let mut update_data = UpdateUserCommand {
         user_id: created_user.id,
-        username: jos::domain::entities::update::Update::Change("new_username".to_string()),
+        username: Some("new_username".to_string()),
         ..Default::default()
     };
 
@@ -175,7 +175,7 @@ async fn test_update_user_email(pool: PgPool) {
 
     let mut update_data = UpdateUserCommand {
         user_id: created_user.id,
-        email: jos::domain::entities::update::Update::Change("new@example.com".to_string()),
+        email: Some("new@example.com".to_string()),
         ..Default::default()
     };
 
@@ -196,7 +196,7 @@ async fn test_update_user_password(pool: PgPool) {
 
     let mut update_data = UpdateUserCommand {
         user_id: created_user.id,
-        password: jos::domain::entities::update::Update::Change("new_password".to_string()),
+        password: Some("new_password".to_string()),
         ..Default::default()
     };
 

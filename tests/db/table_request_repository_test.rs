@@ -1,7 +1,7 @@
 use crate::utils::TestEnvironmentBuilder;
 use jos::domain::entities::commands::*;
 use jos::domain::entities::table_request::TableRequestStatus;
-use jos::domain::entities::update::Update;
+
 use jos::domain::repositories::*;
 use jos::infrastructure::persistence::postgres::repositories::*;
 use jos::shared::error::Error;
@@ -205,7 +205,7 @@ async fn test_update_table_request_status(pool: PgPool) {
     table_request_repo
         .update(UpdateTableRequestCommand {
             id: created_request.id,
-            status: Update::Change(TableRequestStatus::Approved),
+            status: Some(TableRequestStatus::Approved),
             ..Default::default()
         })
         .await
@@ -246,7 +246,7 @@ async fn test_update_table_request_message(pool: PgPool) {
     table_request_repo
         .update(UpdateTableRequestCommand {
             id: created_request.id,
-            message: Update::Change(Some("New".to_string())),
+            message: Some("New".to_string()),
             ..Default::default()
         })
         .await

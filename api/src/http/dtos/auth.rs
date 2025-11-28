@@ -2,9 +2,9 @@ use axum::{
     Json,
     response::{IntoResponse, Response},
 };
+use chrono::{DateTime, Utc};
 use domain::entities::{CreateUserCommand, LoginUserCommand, User};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -36,7 +36,7 @@ pub struct RefreshTokenRequest {
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
-    pub joined_at: Date,
+    pub joined_at: DateTime<Utc>,
     pub email: String,
 }
 

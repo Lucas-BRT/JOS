@@ -58,18 +58,13 @@ impl GameSystemRepository for PostgresGameSystemRepository {
     }
 
     async fn update(&self, command: &mut UpdateGameSystemCommand) -> Result<GameSystem> {
-        let has_name_update = matches!(command.name, Update::Change(_));
-
-        if !has_name_update {
+        if command.name.is_none() {
             return Err(Error::Application(ApplicationError::InvalidInput {
                 message: "No fields to update".to_string(),
             }));
         }
 
-        let name_value = match &command.name {
-            Update::Change(name) => Some(name.as_str()),
-            Update::Keep => None,
-        };
+        let name_value = command.name.as_deref();
 
         let updated_game_system = sqlx::query_as!(
             GameSystemModel,

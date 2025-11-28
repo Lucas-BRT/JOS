@@ -44,9 +44,9 @@ impl TableMemberRepository for PostgresTableMemberRepository {
             r#"SELECT * FROM table_members
                WHERE ($1::uuid IS NULL OR id = $1)
                  AND ($2::uuid IS NULL OR table_id = $2)
-                 AND ($3::uuid IS NULL OR user_id = $3)"#, 
-            command.id, 
-            command.table_id, 
+                 AND ($3::uuid IS NULL OR user_id = $3)"#,
+            command.id,
+            command.table_id,
             command.user_id
         )
         .fetch_all(&self.pool)
@@ -82,7 +82,11 @@ impl TableMemberRepository for PostgresTableMemberRepository {
         Ok(members.into_iter().map(|m| m.into()).collect())
     }
 
-    async fn find_by_table_and_user(&self, table_id: Uuid, user_id: Uuid) -> Result<Option<TableMember>> {
+    async fn find_by_table_and_user(
+        &self,
+        table_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<Option<TableMember>> {
         let member = sqlx::query_as!(
             TableMemberModel,
             "SELECT * FROM table_members WHERE table_id = $1 AND user_id = $2",
@@ -106,8 +110,8 @@ impl TableMemberRepository for PostgresTableMemberRepository {
                WHERE id = $1
                RETURNING *"#,
             command.id,
-            command.table_id.into_option(),
-            command.user_id.into_option()
+            command.table_id,
+            command.user_id
         )
         .fetch_one(&self.pool)
         .await

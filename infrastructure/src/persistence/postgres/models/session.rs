@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::{Session, SessionStatus};
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
@@ -39,10 +39,10 @@ pub struct SessionModel {
     pub title: String,
     pub description: String,
     pub table_id: Uuid,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
     pub status: ESessionStatus,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<SessionModel> for Session {

@@ -1,6 +1,5 @@
 use crate::utils::TestEnvironmentBuilder;
 use jos::domain::entities::commands::*;
-use jos::domain::entities::update::Update;
 use jos::domain::repositories::{TableRepository, UserRepository};
 use jos::infrastructure::persistence::postgres::repositories::{
     PostgresTableRepository, PostgresUserRepository,
@@ -120,7 +119,7 @@ async fn test_update_table_title(pool: PgPool) {
 
     let update_data = UpdateTableCommand {
         id: table1.id,
-        title: Update::Change("New Title".to_string()),
+        title: Some("New Title".to_string()),
         ..Default::default()
     };
 
@@ -148,7 +147,7 @@ async fn test_update_table_description(pool: PgPool) {
 
     let update_data = UpdateTableCommand {
         id: table1.id,
-        description: Update::Change("New Description".to_string()),
+        description: Some("New Description".to_string()),
         ..Default::default()
     };
 
@@ -176,7 +175,7 @@ async fn test_update_table_slots(pool: PgPool) {
 
     let update_data = UpdateTableCommand {
         id: table1.id,
-        slots: Update::Change(10),
+        slots: Some(10),
         ..Default::default()
     };
 

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use domain::entities::session_checkin::{
     SessionCheckinData, SessionFinalizationData, SessionFinalizationResult,
 };
@@ -5,7 +6,6 @@ use domain::entities::*;
 use domain::repositories::{SessionRepository, TableRepository};
 use shared::Result;
 use shared::error::{ApplicationError, DomainError, Error};
-use shared::prelude::Date;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -53,7 +53,7 @@ impl SessionService {
         session_id: Uuid,
         title: Option<String>,
         description: Option<String>,
-        scheduled_for: Option<Date>,
+        scheduled_for: Option<DateTime<Utc>>,
         status: Option<SessionStatus>,
     ) -> Result<Session> {
         let table = self
@@ -75,10 +75,10 @@ impl SessionService {
 
         let command = UpdateSessionCommand {
             id: session.id,
-            title: title.into(),
-            description: description.into(),
-            scheduled_for: Update::from(Some(scheduled_for)),
-            status: status.into(),
+            title,
+            description,
+            scheduled_for,
+            status,
         };
 
         self.update(command).await
@@ -165,8 +165,10 @@ impl SessionService {
 
         let update_command = UpdateSessionCommand {
             id: session_id,
-            status: Update::Change(SessionStatus::InProgress),
-            ..Default::default()
+            title: None,
+            description: None,
+            scheduled_for: None,
+            status: Some(SessionStatus::InProgress),
         };
 
         self.session_repository.update(update_command).await
@@ -218,8 +220,10 @@ impl SessionService {
 
         let update_command = UpdateSessionCommand {
             id: session_id,
-            status: Update::Change(SessionStatus::Completed),
-            ..Default::default()
+            title: None,
+            description: None,
+            scheduled_for: None,
+            status: Some(SessionStatus::Completed),
         };
 
         self.session_repository.update(update_command).await?;
