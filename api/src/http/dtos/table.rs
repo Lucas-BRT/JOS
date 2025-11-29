@@ -3,7 +3,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::Table;
+use domain::entities::{Table, TableStatus};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -55,16 +55,49 @@ pub struct SessionInfo {
     pub scheduled_at: DateTime<Utc>,
 }
 
+#[derive(Deserialize, Serialize, ToSchema, Default)]
+pub enum ITableStatus {
+    #[default]
+    Active,
+    Inactive,
+}
+
+impl From<TableStatus> for ITableStatus {
+    fn from(value: TableStatus) -> Self {
+        match value {
+            TableStatus::Active => ITableStatus::Active,
+            TableStatus::Inactive => ITableStatus::Inactive,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct TableListItem {
     pub id: Uuid,
+    pub gm_id: Uuid,
     pub title: String,
-    pub game_system: String,
-    pub game_master: GameMasterInfo,
-    pub player_slots: i32,
-    pub occupied_slots: i32,
-    pub next_session: Option<DateTime<Utc>>,
     pub description: String,
+    pub player_slots: u32,
+    pub status: TableStatus,
+    pub game_system_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<Table> for TableListItem {
+    fn from(value: Table) -> Self {
+        Self {
+            id: value.id,
+            gm_id: value.gm_id,
+            title: value.title,
+            description: value.description,
+            player_slots: value.player_slots,
+            status: value.status,
+            game_system_id: value.game_system_id,
+            created_at: value.created_at,
+            updated_at: value.updated_at,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]

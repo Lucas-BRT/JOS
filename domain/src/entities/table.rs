@@ -1,3 +1,4 @@
+use crate::entities::{Session, User};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -17,6 +18,21 @@ pub struct Table {
     pub title: String,
     pub description: String,
     pub player_slots: u32,
+    pub status: TableStatus,
+    pub game_system_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
+pub struct TableDetails {
+    pub id: Uuid,
+    pub gm_id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub player_slots: u32,
+    pub players: Vec<User>,
+    pub sessions: Vec<Session>,
     pub status: TableStatus,
     pub game_system_id: Uuid,
     pub created_at: DateTime<Utc>,

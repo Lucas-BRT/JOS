@@ -1,4 +1,5 @@
 use crate::persistence::models::table::ETableStatus;
+use crate::persistence::models::TableDetailsModel;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableModel;
 use domain::entities::Table;
@@ -179,7 +180,7 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
 
 #[async_trait::async_trait]
 impl TableRepository for PostgresTableRepository {
-    async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<Table>> {
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Table>> {
         let tables = sqlx::query_as!(
             TableModel,
             r#"
@@ -205,7 +206,7 @@ impl TableRepository for PostgresTableRepository {
         Ok(tables.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<Table>> {
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<Table>> {
         let tables = sqlx::query_as!(
             TableModel,
             r#"
@@ -231,7 +232,7 @@ impl TableRepository for PostgresTableRepository {
         Ok(tables.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Option<Table>> {
+    async fn find_by_session_id(&self, session_id: Uuid) -> Result<Option<Table>> {
         let table = sqlx::query_as!(
             TableModel,
             r#"
@@ -257,5 +258,18 @@ impl TableRepository for PostgresTableRepository {
         .map_err(constraint_mapper::map_database_error)?;
 
         Ok(table.map(|model| model.into()))
+    }
+
+
+    async fn find_details_by_id(&self, table_id: Uuid) -> Result<Option<TableDetails>> {
+        let table = sqlx::query_as!(
+            TableDetailsModel,
+            r#"
+
+            "#,
+
+        ).fetch_optional(&self.pool).await.map_err(constraint_mapper::map_database_error)
+
+        todo!()
     }
 }

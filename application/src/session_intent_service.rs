@@ -48,7 +48,7 @@ impl SessionIntentService {
 
         let table = self
             .table_repository
-            .find_by_session_id(&session_id)
+            .find_by_session_id(session_id)
             .await?
             .ok_or(Error::Domain(DomainError::BusinessRuleViolation {
                 message: "Can only create session intent in a table that already exists"
@@ -89,7 +89,7 @@ impl SessionIntentService {
 
         let table = self
             .table_repository
-            .find_by_session_id(&session_id)
+            .find_by_session_id(session_id)
             .await?
             .ok_or(Error::Domain(DomainError::BusinessRuleViolation {
                 message: "Can only access session intents in a table that exists".to_string(),

@@ -1,11 +1,10 @@
 use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
-use axum::http::StatusCode;
 use axum::middleware::from_fn_with_state;
-use domain::entities::commands::session_commands::*;
+
 use domain::entities::commands::table_commands::*;
-use domain::entities::*;
+use domain::entities::commands::table_request_commands::*;
 use infrastructure::state::AppState;
 use shared::Result;
 use shared::error::*;
@@ -27,7 +26,7 @@ pub async fn create_table(
     claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<CreateTableRequest>,
-) -> Result<(StatusCode, Json<CreateTableResponse>)> {
+) -> Result<Json<CreateTableResponse>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
@@ -40,11 +39,11 @@ pub async fn create_table(
         payload.system_id,
     );
 
-    let table = app_state.table_service.create(command).await?;
+    let table = app_state.table_service.create_table(command).await?;
 
     let response = CreateTableResponse { id: table.id };
 
-    Ok((StatusCode::CREATED, Json(response)))
+    Ok(Json(response))
 }
 
 #[utoipa::path(
@@ -56,10 +55,17 @@ pub async fn create_table(
 )]
 #[axum::debug_handler]
 pub async fn get_tables(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-) -> Result<(StatusCode, Json<Vec<Table>>)> {
-    todo!()
+    State(app_state): State<Arc<AppState>>,
+) -> Result<Json<Vec<TableListItem>>> {
+    let tables = app_state
+        .table_service
+        .get_all_tables()
+        .await?
+        .into_iter()
+        .map(|t| t.into())
+        .collect::<Vec<TableListItem>>();
+
+    Ok(Json(tables))
 }
 
 #[utoipa::path(
@@ -71,11 +77,16 @@ pub async fn get_tables(
 )]
 #[axum::debug_handler]
 pub async fn get_table_details(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-    Path(_table_id): Path<Uuid>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
 ) -> Result<Json<TableDetails>> {
-    todo!()
+    let details = app_state
+        .table_service
+        .get_table_details(table_id, claims.get_user_id())
+        .await?;
+
+    Ok(Json(details))
 }
 
 #[utoipa::path(
@@ -112,12 +123,10 @@ pub async fn delete_table(
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<DeleteTableResponse>> {
-    let command = DeleteTableCommand {
-        id: table_id,
-        gm_id: claims.0.sub,
-    };
-
-    app_state.table_service.delete(command).await?;
+    app_state
+        .table_service
+        .delete_table(table_id, claims.get_user_id())
+        .await?;
 
     Ok(Json(DeleteTableResponse {
         message: format!("Table {} deleted successfully", table_id),
@@ -137,7 +146,7 @@ pub async fn get_sessions(
     claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<GetSessionsResponse>>> {
-    let user_id = claims.0.sub;
+    let user_id = claims.get_user_id();
 
     let sessions = app_state
         .session_service
@@ -168,20 +177,14 @@ pub async fn create_session(
         return Err(Error::Validation(validation_error));
     }
 
-    let user_id = claims.0.sub;
-
     let session = app_state
         .session_service
-        .schedule_session(
-            user_id,
-            CreateSessionCommand {
-                id: Uuid::now_v7(),
-                table_id,
-                title: payload.title,
-                status: SessionStatus::Scheduled,
-                description: payload.description,
-                scheduled_for: payload.scheduled_for,
-            },
+        .create_session_for_table(
+            claims.get_user_id(),
+            table_id,
+            payload.title,
+            payload.description,
+            payload.scheduled_for,
         )
         .await?;
 
@@ -197,19 +200,10 @@ pub async fn create_session(
 )]
 #[axum::debug_handler]
 pub async fn get_received_requests(
-    claims: ClaimsExtractor,
     Path(table_id): Path<Uuid>,
     State(app_state): State<Arc<AppState>>,
 ) -> Result<Json<Vec<ReceivedRequestItem>>> {
-    app_state
-        .table_service
-        .verify_table_ownership(table_id, claims.0.sub)
-        .await?;
-
-    let requests = app_state
-        .table_request_service
-        .find_by_table_id(&table_id)
-        .await?;
+    let requests = app_state.table_service.get_table_requests(table_id).await?;
 
     let requests = requests
         .into_iter()
@@ -221,6 +215,7 @@ pub async fn get_received_requests(
             message: request.message,
         })
         .collect::<Vec<ReceivedRequestItem>>();
+
     Ok(Json(requests))
 }
 
@@ -238,7 +233,7 @@ async fn create_request(
     Path(table_id): Path<Uuid>,
     Json(payload): Json<CreateTableRequestRequest>,
 ) -> Result<Json<CreateTableRequestResponse>> {
-    let requester_id = claims.0.sub;
+    let requester_id = claims.get_user_id();
 
     let command = CreateTableRequestCommand::new(requester_id, table_id, payload.message);
 

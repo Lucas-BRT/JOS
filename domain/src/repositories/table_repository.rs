@@ -10,7 +10,8 @@ pub trait TableRepository:
     + Send
     + Sync
 {
-    async fn find_by_table_id(&self, table_id: &Uuid) -> Result<Vec<Table>>;
-    async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Option<Table>>;
-    async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<Table>>;
+    async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<Table>>;
+    async fn find_by_session_id(&self, session_id: Uuid) -> Result<Option<Table>>;
+    async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<Table>>;
+    async fn find_details_by_id(&self, table_id: Uuid) -> Result<Option<TableDetails>>;
 }

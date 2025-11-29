@@ -58,7 +58,7 @@ impl SessionService {
     ) -> Result<Session> {
         let table = self
             .table_repository
-            .find_by_session_id(&session_id)
+            .find_by_session_id(session_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "Session",
@@ -91,7 +91,7 @@ impl SessionService {
     ) -> Result<()> {
         let table = self
             .table_repository
-            .find_by_session_id(&session_id)
+            .find_by_session_id(session_id)
             .await?
             .ok_or(Error::Domain(DomainError::EntityNotFound {
                 entity_type: "Session",
@@ -133,11 +133,7 @@ impl SessionService {
     }
 
     pub async fn start_session(&self, gm_id: Uuid, session_id: Uuid) -> Result<Session> {
-        let table = match self
-            .table_repository
-            .find_by_session_id(&session_id)
-            .await?
-        {
+        let table = match self.table_repository.find_by_session_id(session_id).await? {
             Some(table) => table,
             None => {
                 return Err(Error::Domain(DomainError::EntityNotFound {
@@ -253,5 +249,25 @@ impl SessionService {
         };
 
         self.session_repository.read(command).await
+    }
+
+    pub async fn create_session_for_table(
+        &self,
+        user_id: Uuid,
+        table_id: Uuid,
+        title: String,
+        description: String,
+        scheduled_for: Option<DateTime<Utc>>,
+    ) -> Result<Session> {
+        let command = CreateSessionCommand {
+            id: Uuid::now_v7(),
+            table_id,
+            title,
+            status: SessionStatus::Scheduled,
+            description,
+            scheduled_for,
+        };
+
+        self.schedule_session(user_id, command).await
     }
 }
