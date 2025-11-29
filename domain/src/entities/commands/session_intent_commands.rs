@@ -3,9 +3,21 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CreateSessionIntentCommand {
+    pub id: Uuid,
     pub player_id: Uuid,
     pub session_id: Uuid,
     pub status: IntentStatus,
+}
+
+impl CreateSessionIntentCommand {
+    pub fn new(player_id: Uuid, session_id: Uuid, status: IntentStatus) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            player_id,
+            session_id,
+            status,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]

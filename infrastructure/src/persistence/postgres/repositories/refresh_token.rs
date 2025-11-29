@@ -30,25 +30,14 @@ impl
     async fn create(&self, token: CreateRefreshTokenCommand) -> Result<RefreshToken> {
         let refresh_token = sqlx::query_as!(
             RefreshTokenModel,
-            r#"INSERT INTO refresh_tokens
-                (id,
-                user_id,
-                token,
-                expires_at,
-                created_at)
-            VALUES
-                ($1,
-                $2,
-                $3,
-                $4,
-                NOW())
-            RETURNING
-                id,
-                user_id,
-                token,
-                expires_at,
-                created_at
-                "#,
+            r#"
+                INSERT INTO refresh_tokens
+                    (id, user_id, token, expires_at)
+                VALUES
+                    ($1, $2, $3, $4)
+                RETURNING
+                    *
+            "#,
             token.id,
             token.user_id,
             token.token,
@@ -83,14 +72,12 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>> {
         let refresh_token = sqlx::query_as!(
             RefreshTokenModel,
-            r#"SELECT
-                id,
-                user_id,
-                token,
-                expires_at,
-                created_at
-            FROM refresh_tokens
-            WHERE token = $1"#,
+            r#"
+                SELECT
+                    *
+                FROM refresh_tokens
+                WHERE token = $1
+            "#,
             token
         )
         .fetch_optional(&self.pool)
@@ -103,9 +90,11 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn delete_by_token(&self, token: &str) -> Result<Option<RefreshToken>> {
         let refresh_token = sqlx::query_as!(
             RefreshTokenModel,
-            r#"DELETE FROM refresh_tokens
-            WHERE token = $1
-            RETURNING *"#,
+            r#"
+                DELETE FROM refresh_tokens
+                WHERE token = $1
+                RETURNING *
+            "#,
             token
         )
         .fetch_optional(&self.pool)
@@ -118,9 +107,10 @@ impl RefreshTokenRepository for PostgresRefreshTokenRepository {
     async fn delete_by_user(&self, user_id: Uuid) -> Result<Vec<RefreshToken>> {
         let refresh_token = sqlx::query_as!(
             RefreshTokenModel,
-            r#"DELETE FROM refresh_tokens
-            WHERE user_id = $1
-            RETURNING *
+            r#"
+                DELETE FROM refresh_tokens
+                WHERE user_id = $1
+                RETURNING *
             "#,
             user_id
         )

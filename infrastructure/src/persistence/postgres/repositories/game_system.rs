@@ -33,17 +33,11 @@ impl
             GameSystemModel,
             r#"
                 INSERT INTO game_systems
-                    (id,
-                    name,
-                    created_at,
-                    updated_at)
+                    (id, name)
                 VALUES
-                    ($1,
-                    $2,
-                    NOW(),
-                    NOW())
+                    ($1, $2)
                 RETURNING *
-                "#,
+            "#,
             command.id,
             command.name
         )
@@ -61,7 +55,7 @@ impl
                 SELECT *
                 FROM game_systems
                 WHERE ($1::text IS NULL OR name ILIKE $1)
-                "#,
+            "#,
             command.name.as_ref().map(|s| format!("%{}%", s))
         )
         .fetch_all(&self.pool)
@@ -89,7 +83,7 @@ impl
                     updated_at = NOW()
                 WHERE id = $1
                 RETURNING *
-                "#,
+            "#,
             command.id,
             name_value
         )
@@ -103,7 +97,11 @@ impl
     async fn delete(&self, command: DeleteGameSystemCommand) -> Result<GameSystem> {
         let result = sqlx::query_as!(
             GameSystemModel,
-            r#"DELETE FROM game_systems WHERE id = $1 RETURNING *"#,
+            r#"
+                DELETE FROM game_systems
+                WHERE id = $1
+                RETURNING *
+            "#,
             command.id,
         )
         .fetch_one(&self.pool)
@@ -120,7 +118,7 @@ impl
                 SELECT *
                 FROM game_systems
                 WHERE id = $1
-                "#,
+            "#,
             id
         )
         .fetch_optional(&self.pool)
@@ -137,9 +135,9 @@ impl GameSystemRepository for PostgresGameSystemRepository {
         let game_system = sqlx::query_as!(
             GameSystemModel,
             r#"
-            SELECT *
-            FROM game_systems
-            WHERE name = $1
+                SELECT *
+                FROM game_systems
+                WHERE name = $1
             "#,
             name
         )

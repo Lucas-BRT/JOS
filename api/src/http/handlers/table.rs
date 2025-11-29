@@ -240,11 +240,7 @@ async fn create_request(
 ) -> Result<Json<CreateTableRequestResponse>> {
     let requester_id = claims.0.sub;
 
-    let command = CreateTableRequestCommand {
-        table_id,
-        user_id: requester_id,
-        message: payload.message,
-    };
+    let command = CreateTableRequestCommand::new(requester_id, table_id, payload.message);
 
     let table_request = app_state.table_request_service.create(command).await?;
 

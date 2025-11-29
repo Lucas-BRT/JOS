@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct CreateSessionCheckinCommand {
+    pub id: Uuid,
     pub session_intent_id: Uuid,
     pub attendance: bool,
     pub notes: Option<String>,

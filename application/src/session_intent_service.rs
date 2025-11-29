@@ -67,11 +67,7 @@ impl SessionIntentService {
             }));
         }
 
-        let command = CreateSessionIntentCommand {
-            player_id: user.id,
-            session_id,
-            status,
-        };
+        let command = CreateSessionIntentCommand::new(user.id, session_id, status);
 
         self.create(command).await?;
         Ok(())

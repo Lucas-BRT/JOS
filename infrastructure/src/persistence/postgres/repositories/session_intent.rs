@@ -1,20 +1,10 @@
-use crate::persistence::postgres::{
-    constraint_mapper,
-    models::{SessionIntentModel, session_intent::EIntentStatus},
-};
-use domain::{
-    entities::{
-        CreateSessionIntentCommand, DeleteSessionIntentCommand, GetSessionIntentCommand,
-        SessionIntent, UpdateSessionIntentCommand,
-    },
-    repositories::{Repository, SessionIntentRepository},
-};
+use crate::persistence::postgres::constraint_mapper;
+use crate::persistence::postgres::models::{SessionIntentModel, session_intent::EIntentStatus};
+use domain::entities::*;
+use domain::repositories::{Repository, SessionIntentRepository};
 use shared::Result;
-use shared::error::DomainError;
-use shared::error::Error;
 use sqlx::PgPool;
-use tracing::info;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresSessionIntentRepository {
@@ -38,20 +28,13 @@ impl
     > for PostgresSessionIntentRepository
 {
     async fn create(&self, command: CreateSessionIntentCommand) -> Result<SessionIntent> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-        let status = EIntentStatus::from(command.status);
-
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
-            r#"INSERT INTO session_intents
-                (
-                    id,
-                    user_id,
-                    session_id,
-                    intent_status,
-                    created_at,
-                    updated_at)
-                VALUES ($1, $2, $3, $4, NOW(), NOW())
+            r#"
+                INSERT INTO session_intents
+                    (id, user_id, session_id, intent_status)
+                VALUES
+                    ($1, $2, $3, $4)
                 RETURNING
                     id,
                     user_id,
@@ -59,11 +42,11 @@ impl
                     intent_status as "intent_status: EIntentStatus",
                     created_at,
                     updated_at
-                "#,
-            uuid,
+            "#,
+            command.id,
             command.player_id,
             command.session_id,
-            status as EIntentStatus,
+            EIntentStatus::from(command.status) as EIntentStatus,
         )
         .fetch_one(&self.pool)
         .await
@@ -73,22 +56,6 @@ impl
     }
 
     async fn update(&self, command: UpdateSessionIntentCommand) -> Result<SessionIntent> {
-        if command.status.is_none() {
-            info!("should only update if has some value");
-
-            let session_intent = self.find_by_id(command.id).await?;
-
-            return match session_intent {
-                Some(session_intent) => Ok(session_intent),
-                None => Err(Error::Domain(DomainError::EntityNotFound {
-                    entity_type: "SessionIntent",
-                    entity_id: command.id.to_string(),
-                })),
-            };
-        }
-
-        let new_status = command.status.map(EIntentStatus::from);
-
         let updated_model = sqlx::query_as!(
             SessionIntentModel,
             r#"
@@ -104,9 +71,9 @@ impl
                     intent_status as "intent_status: EIntentStatus",
                     created_at,
                     updated_at
-                "#,
+            "#,
             command.id,
-            new_status as Option<EIntentStatus>
+            command.status.map(EIntentStatus::from) as Option<EIntentStatus>
         )
         .fetch_one(&self.pool)
         .await
@@ -118,7 +85,8 @@ impl
     async fn delete(&self, command: DeleteSessionIntentCommand) -> Result<SessionIntent> {
         let session_intent = sqlx::query_as!(
             SessionIntentModel,
-            r#"DELETE FROM session_intents
+            r#"
+                DELETE FROM session_intents
                 WHERE id = $1
                 RETURNING
                     id,
@@ -127,7 +95,7 @@ impl
                     intent_status as "intent_status: EIntentStatus",
                     created_at,
                     updated_at
-                "#,
+            "#,
             command.id
         )
         .fetch_one(&self.pool)
@@ -152,10 +120,12 @@ impl
                 WHERE ($1::uuid IS NULL OR id = $1)
                   AND ($2::uuid IS NULL OR user_id = $2)
                   AND ($3::uuid IS NULL OR session_id = $3)
-                "#,
+                  AND ($4::intent_status IS NULL OR intent_status = $4)
+            "#,
             command.id,
             command.user_id,
-            command.session_id
+            command.session_id,
+            command.status.map(EIntentStatus::from) as Option<EIntentStatus>
         )
         .fetch_all(&self.pool)
         .await
@@ -177,7 +147,7 @@ impl
                     updated_at
                 FROM session_intents
                 WHERE id = $1
-                "#,
+            "#,
             id
         )
         .fetch_optional(&self.pool)
@@ -194,15 +164,15 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let session_intents = sqlx::query_as!(
             SessionIntentModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            FROM session_intents
-            WHERE user_id = $1
+                SELECT
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                FROM session_intents
+                WHERE user_id = $1
             "#,
             user_id
         )
@@ -220,15 +190,15 @@ impl SessionIntentRepository for PostgresSessionIntentRepository {
         let session_intents = sqlx::query_as!(
             SessionIntentModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                session_id,
-                intent_status as "intent_status: EIntentStatus",
-                created_at,
-                updated_at
-            FROM session_intents
-            WHERE session_id = $1
+                SELECT
+                    id,
+                    user_id,
+                    session_id,
+                    intent_status as "intent_status: EIntentStatus",
+                    created_at,
+                    updated_at
+                FROM session_intents
+                WHERE session_id = $1
             "#,
             session_id
         )

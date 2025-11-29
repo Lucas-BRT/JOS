@@ -3,9 +3,8 @@ use crate::persistence::postgres::{RepositoryError, constraint_mapper};
 use domain::entities::*;
 use domain::repositories::{Repository, SessionCheckinRepository};
 use shared::Result;
-use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresSessionCheckinRepository {
@@ -29,27 +28,20 @@ impl
     > for PostgresSessionCheckinRepository
 {
     async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
         let created_session_checkin = sqlx::query_as!(
             SessionCheckinModel,
-            r#"INSERT INTO session_checkins
-                (
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at)
-            VALUES
-                ($1, $2, $3, $4, NOW(), NOW())
-            RETURNING
-                *
+            r#"
+                INSERT INTO session_checkins
+                    (id, session_intent_id, attendance, notes)
+                VALUES
+                    ($1, $2, $3, $4)
+                RETURNING
+                    *
             "#,
-            uuid,
-            &command.session_intent_id,
-            &command.attendance,
-            command.notes.as_deref(),
+            command.id,
+            command.session_intent_id,
+            command.attendance,
+            command.notes,
         )
         .fetch_one(&self.pool)
         .await
@@ -62,17 +54,12 @@ impl
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            SELECT
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at
-            FROM session_checkins
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::uuid IS NULL OR session_intent_id = $2)
-              AND ($3::bool IS NULL OR attendance = $3)
+                SELECT
+                    *
+                FROM session_checkins
+                WHERE ($1::uuid IS NULL OR id = $1)
+                    AND ($2::uuid IS NULL OR session_intent_id = $2)
+                    AND ($3::bool IS NULL OR attendance = $3)
             "#,
             command.id,
             command.session_intent_id,
@@ -89,35 +76,22 @@ impl
     }
 
     async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin> {
-        if command.session_intent_id.is_none()
-            && command.attendance.is_none()
-            && command.notes.is_none()
-        {
-            return Err(Error::Application(ApplicationError::InvalidInput {
-                message: "No fields to update".to_string(),
-            }));
-        }
-
-        let session_intent_id_value = command.session_intent_id;
-        let attendance_value = command.attendance;
-        let notes_value = command.notes.as_ref().and_then(|n| n.as_deref());
-
         let updated_session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            UPDATE session_checkins
-            SET
-                session_intent_id = COALESCE($2, session_intent_id),
-                attendance = COALESCE($3, attendance),
-                notes = COALESCE($4, notes),
-                updated_at = NOW()
-            WHERE id = $1
-            RETURNING *
+                UPDATE session_checkins
+                SET
+                    session_intent_id = COALESCE($2, session_intent_id),
+                    attendance = COALESCE($3, attendance),
+                    notes = COALESCE($4, notes),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING *
             "#,
             command.id,
-            session_intent_id_value,
-            attendance_value,
-            notes_value
+            command.session_intent_id,
+            command.attendance,
+            command.notes as Option<Option<String>>
         )
         .fetch_one(&self.pool)
         .await
@@ -129,12 +103,13 @@ impl
     async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin> {
         let session_checkin = sqlx::query_as!(
             SessionCheckinModel,
-            r#"DELETE FROM session_checkins
-            WHERE id = $1
-            RETURNING
-                *
+            r#"
+                DELETE FROM session_checkins
+                WHERE id = $1
+                RETURNING
+                    *
             "#,
-            &command.id
+            command.id
         )
         .fetch_one(&self.pool)
         .await
@@ -147,15 +122,10 @@ impl
         let session_checkin = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            SELECT
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at
-            FROM session_checkins
-            WHERE id = $1
+                SELECT
+                    *
+                FROM session_checkins
+                WHERE id = $1
             "#,
             id
         )
@@ -176,15 +146,10 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            SELECT
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at
-            FROM session_checkins
-            WHERE session_intent_id = $1
+                SELECT
+                    *
+                FROM session_checkins
+                WHERE session_intent_id = $1
             "#,
             session_intent_id
         )
@@ -202,15 +167,10 @@ impl SessionCheckinRepository for PostgresSessionCheckinRepository {
         let session_checkins = sqlx::query_as!(
             SessionCheckinModel,
             r#"
-            SELECT
-                id,
-                session_intent_id,
-                attendance,
-                notes,
-                created_at,
-                updated_at
-            FROM session_checkins
-            WHERE attendance = $1
+                SELECT
+                    *
+                FROM session_checkins
+                WHERE attendance = $1
             "#,
             attendance
         )

@@ -15,8 +15,9 @@ pub struct SessionCheckin {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionCheckinData {
+    pub id: Uuid,
     pub user_id: Uuid,
-    pub attended: bool,
+    pub attendance: bool,
     pub notes: Option<String>,
 }
 
@@ -24,7 +25,7 @@ pub struct SessionCheckinData {
 pub struct SessionCheckinResult {
     pub user_id: Uuid,
     pub intent_status: IntentStatus,
-    pub attended: bool,
+    pub attendance: bool,
     pub checkin_id: Uuid,
 }
 

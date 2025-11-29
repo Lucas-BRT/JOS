@@ -24,17 +24,18 @@ impl Repository<User, CreateUserCommand, UpdateUserCommand, GetUserCommand, Dele
     async fn create(&self, user: CreateUserCommand) -> Result<User> {
         let created_user = sqlx::query_as!(
             UserModel,
-            r#"INSERT INTO users
-                (id, username, email, password, created_at, updated_at)
-            VALUES
-                ($1, $2, $3, $4, NOW(), NOW())
-            RETURNING
-                id, username, email, password, created_at, updated_at
+            r#"
+                INSERT INTO users
+                    (id, username, email, password)
+                VALUES
+                    ($1, $2, $3, $4)
+                RETURNING
+                    *
             "#,
             user.id,
-            &user.username,
-            &user.email,
-            &user.password,
+            user.username,
+            user.email,
+            user.password,
         )
         .fetch_one(&self.pool)
         .await
@@ -47,19 +48,19 @@ impl Repository<User, CreateUserCommand, UpdateUserCommand, GetUserCommand, Dele
         let updated_user = sqlx::query_as!(
             UserModel,
             r#"
-            UPDATE users
-            SET
-                username = COALESCE($2, username),
-                email = COALESCE($3, email),
-                password = COALESCE($4, password),
-                updated_at = NOW()
-            WHERE id = $1
-            RETURNING *
+                UPDATE users
+                SET
+                    username = COALESCE($2, username),
+                    email = COALESCE($3, email),
+                    password = COALESCE($4, password),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING *
             "#,
             data.user_id,
-            data.username.as_deref(),
-            data.email.as_deref(),
-            data.password.as_deref()
+            data.username,
+            data.email,
+            data.password
         )
         .fetch_one(&self.pool)
         .await
@@ -72,15 +73,16 @@ impl Repository<User, CreateUserCommand, UpdateUserCommand, GetUserCommand, Dele
         let users = sqlx::query_as!(
             UserModel,
             r#"
-            SELECT id, username, email, password, created_at, updated_at
-            FROM users
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::text IS NULL OR username = $2)
-              AND ($3::text IS NULL OR email = $3)
+                SELECT
+                    *
+                FROM users
+                WHERE ($1::uuid IS NULL OR id = $1)
+                    AND ($2::text IS NULL OR username = $2)
+                    AND ($3::text IS NULL OR email = $3)
             "#,
             command.id,
-            command.username.as_deref(),
-            command.email.as_deref()
+            command.username,
+            command.email
         )
         .fetch_all(&self.pool)
         .await
@@ -92,7 +94,9 @@ impl Repository<User, CreateUserCommand, UpdateUserCommand, GetUserCommand, Dele
     async fn find_by_id(&self, id: Uuid) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             UserModel,
-            r#"SELECT id, username, email, password, created_at, updated_at
+            r#"
+                SELECT
+                    *
                 FROM users
                 WHERE id = $1
             "#,
@@ -108,10 +112,11 @@ impl Repository<User, CreateUserCommand, UpdateUserCommand, GetUserCommand, Dele
     async fn delete(&self, command: DeleteUserCommand) -> Result<User> {
         let user = sqlx::query_as!(
             UserModel,
-            r#"DELETE FROM users
-            WHERE id = $1
-            RETURNING
-                id, username, email, password, created_at, updated_at
+            r#"
+                DELETE FROM users
+                WHERE id = $1
+                RETURNING
+                    *
             "#,
             &command.id
         )
@@ -128,15 +133,11 @@ impl UserRepository for PostgresUserRepository {
     async fn find_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             UserModel,
-            r#"SELECT
-                id,
-                username,
-                email,
-                password,
-                created_at,
-                updated_at
-            FROM users
-            WHERE email = $1
+            r#"
+                SELECT
+                    *
+                FROM users
+                WHERE email = $1
             "#,
             email
         )
@@ -145,37 +146,5 @@ impl UserRepository for PostgresUserRepository {
         .map_err(constraint_mapper::map_database_error)?;
 
         Ok(user.map(|model| model.into()))
-    }
-
-    async fn delete_by_id(&self, id: &Uuid) -> Result<()> {
-        sqlx::query!(
-            r#"DELETE FROM users
-            WHERE id = $1
-            "#,
-            id
-        )
-        .execute(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(())
-    }
-
-    async fn search(&self, query: &str) -> Result<Vec<User>> {
-        let search_pattern = format!("%{}%", query);
-        let users = sqlx::query_as!(
-            UserModel,
-            r#"SELECT id, username, email, password, created_at, updated_at
-                FROM users
-                WHERE username ILIKE $1 OR email ILIKE $1
-                LIMIT 10
-            "#,
-            search_pattern
-        )
-        .fetch_all(&self.pool)
-        .await
-        .map_err(constraint_mapper::map_database_error)?;
-
-        Ok(users.into_iter().map(|model| model.into()).collect())
     }
 }

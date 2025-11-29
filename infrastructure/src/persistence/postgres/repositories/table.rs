@@ -26,18 +26,11 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
     async fn create(&self, command: CreateTableCommand) -> Result<Table> {
         let created_table = sqlx::query_as!(
             TableModel,
-            r#"INSERT INTO tables
-                (
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                game_system_id,
-                created_at,
-                updated_at)
+            r#"
+            INSERT INTO tables
+                (id, gm_id, title, description, slots, game_system_id)
             VALUES
-                ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+                ($1, $2, $3, $4, $5, $6)
             RETURNING
                 id,
                 gm_id,
@@ -50,11 +43,11 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
                 updated_at
             "#,
             command.id,
-            &command.gm_id,
-            &command.title,
-            &command.description,
+            command.gm_id,
+            command.title,
+            command.description,
             command.slots as i32,
-            &command.game_system_id,
+            command.game_system_id,
         )
         .fetch_one(&self.pool)
         .await
@@ -85,8 +78,8 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
                     game_system_id,
                     created_at,
                     updated_at
-                "#,
-            &command.id,
+            "#,
+            command.id,
             command.title.as_deref(),
             command.description.as_deref(),
             command.slots.map(|s| s as i32),
@@ -103,21 +96,21 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
         let tables = sqlx::query_as!(
             TableModel,
             r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status as "status: ETableStatus",
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::uuid IS NULL OR gm_id = $2)
-              AND ($3::table_status IS NULL OR status = $3)
-              AND ($4::uuid IS NULL OR game_system_id = $4)
+                SELECT
+                    id,
+                    gm_id,
+                    title,
+                    description,
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
+                FROM tables
+                WHERE ($1::uuid IS NULL OR id = $1)
+                    AND ($2::uuid IS NULL OR gm_id = $2)
+                    AND ($3::table_status IS NULL OR status = $3)
+                    AND ($4::uuid IS NULL OR game_system_id = $4)
             "#,
             command.id,
             command.gm_id,
@@ -134,7 +127,8 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
     async fn delete(&self, command: DeleteTableCommand) -> Result<Table> {
         let table = sqlx::query_as!(
             TableModel,
-            r#"DELETE FROM tables
+            r#"
+                DELETE FROM tables
                 WHERE id = $1
                 RETURNING
                     id,
@@ -147,7 +141,7 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
                     created_at,
                     updated_at
             "#,
-            &command.id
+            command.id
         )
         .fetch_one(&self.pool)
         .await
@@ -160,18 +154,18 @@ impl Repository<Table, CreateTableCommand, UpdateTableCommand, GetTableCommand, 
         let table = sqlx::query_as!(
             TableModel,
             r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status as "status: ETableStatus",
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE id = $1
+                SELECT
+                    id,
+                    gm_id,
+                    title,
+                    description,
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
+                FROM tables
+                WHERE id = $1
             "#,
             &id
         )
@@ -189,18 +183,18 @@ impl TableRepository for PostgresTableRepository {
         let tables = sqlx::query_as!(
             TableModel,
             r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status as "status: ETableStatus",
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE id = $1
+                SELECT
+                    id,
+                    gm_id,
+                    title,
+                    description,
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
+                FROM tables
+                WHERE id = $1
             "#,
             table_id
         )
@@ -215,18 +209,18 @@ impl TableRepository for PostgresTableRepository {
         let tables = sqlx::query_as!(
             TableModel,
             r#"
-            SELECT
-                id,
-                gm_id,
-                title,
-                description,
-                slots,
-                status as "status: ETableStatus",
-                game_system_id,
-                created_at,
-                updated_at
-            FROM tables
-            WHERE gm_id = $1
+                SELECT
+                    id,
+                    gm_id,
+                    title,
+                    description,
+                    slots,
+                    status as "status: ETableStatus",
+                    game_system_id,
+                    created_at,
+                    updated_at
+                FROM tables
+                WHERE gm_id = $1
             "#,
             user_id
         )
@@ -240,20 +234,22 @@ impl TableRepository for PostgresTableRepository {
     async fn find_by_session_id(&self, session_id: &Uuid) -> Result<Option<Table>> {
         let table = sqlx::query_as!(
             TableModel,
-            "SELECT
-                tables.id,
-                tables.gm_id,
-                tables.title,
-                tables.description,
-                tables.slots,
-                tables.status as \"status: ETableStatus\",
-                tables.game_system_id,
-                tables.created_at,
-                tables.updated_at
-            FROM tables
-            INNER JOIN sessions
-            ON tables.id = sessions.table_id
-            WHERE sessions.id = $1",
+            r#"
+                SELECT
+                    tables.id,
+                    tables.gm_id,
+                    tables.title,
+                    tables.description,
+                    tables.slots,
+                    tables.status as "status: ETableStatus",
+                    tables.game_system_id,
+                    tables.created_at,
+                    tables.updated_at
+                FROM tables
+                INNER JOIN sessions
+                ON tables.id = sessions.table_id
+                WHERE sessions.id = $1
+            "#,
             session_id
         )
         .fetch_optional(&self.pool)

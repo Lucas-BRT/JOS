@@ -46,13 +46,11 @@ pub struct CreateSessionResponse {
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct UpdateSessionRequest {
-    #[validate(length(min = 1, max = 100))]
+    #[validate(length(min = 3, max = 100))]
     pub title: Option<String>,
     #[validate(length(max = 1000))]
     pub description: Option<String>,
     pub scheduled_for: Option<Option<DateTime<Utc>>>,
-    #[validate(range(min = 1, max = 20))]
-    pub max_players: Option<i32>,
     pub status: Option<ISessionStatus>,
 }
 
@@ -79,10 +77,7 @@ impl From<Session> for UpdateSessionResponse {
 pub struct SessionPlayer {
     pub id: Uuid,
     pub name: String,
-    pub character: String,
-    pub avatar: String,
     pub status: String,
-    pub is_current_user: bool,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -131,7 +126,7 @@ pub struct FinalizeSessionRequest {
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct ISessionCheckinData {
     pub user_id: Uuid,
-    pub attended: bool,
+    pub attendance: bool,
     pub notes: Option<String>,
 }
 
@@ -139,8 +134,9 @@ impl From<ISessionCheckinData> for SessionCheckinData {
     fn from(value: ISessionCheckinData) -> Self {
         Self {
             user_id: value.user_id,
-            attended: value.attended,
+            attendance: value.attendance,
             notes: value.notes,
+            id: Uuid::now_v7(),
         }
     }
 }

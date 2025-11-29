@@ -1,4 +1,4 @@
-use crate::entities::SessionStatus;
+use crate::entities::{SessionStatus, session_checkin::SessionCheckinData};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -34,4 +34,10 @@ pub struct GetSessionCommand {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DeleteSessionCommand {
     pub id: Uuid,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FinalizeSessionCommand {
+    pub session_id: Uuid,
+    pub checkins: Vec<SessionCheckinData>,
 }

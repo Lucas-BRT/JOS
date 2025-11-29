@@ -30,9 +30,12 @@ impl
     async fn create(&self, command: CreateTableMemberCommand) -> Result<TableMember> {
         let member = sqlx::query_as!(
             TableMemberModel,
-            r#"INSERT INTO table_members (id, table_id, user_id, created_at, updated_at)
-                  VALUES ($1, $2, $3, NOW(), NOW())
-                  RETURNING * "#,
+            r#"
+                INSERT INTO table_members
+                    (id, table_id, user_id)
+                VALUES ($1, $2, $3)
+                RETURNING *
+            "#,
             command.id,
             command.table_id,
             command.user_id
@@ -47,10 +50,13 @@ impl
     async fn read(&self, command: GetTableMemberCommand) -> Result<Vec<TableMember>> {
         let members = sqlx::query_as!(
             TableMemberModel,
-            r#"SELECT * FROM table_members
-                  WHERE ($1::uuid IS NULL OR id = $1)
+            r#"
+                SELECT *
+                FROM table_members
+                WHERE ($1::uuid IS NULL OR id = $1)
                     AND ($2::uuid IS NULL OR table_id = $2)
-                    AND ($3::uuid IS NULL OR user_id = $3)"#,
+                    AND ($3::uuid IS NULL OR user_id = $3)
+            "#,
             command.id,
             command.table_id,
             command.user_id
@@ -65,7 +71,11 @@ impl
     async fn find_by_id(&self, id: Uuid) -> Result<Option<TableMember>> {
         let member = sqlx::query_as!(
             TableMemberModel,
-            "SELECT * FROM table_members WHERE id = $1",
+            r#"
+                SELECT *
+                FROM table_members
+                WHERE id = $1
+            "#,
             id
         )
         .fetch_optional(&self.pool)
@@ -78,12 +88,14 @@ impl
     async fn update(&self, command: UpdateTableMemberCommand) -> Result<TableMember> {
         let member = sqlx::query_as!(
             TableMemberModel,
-            r#"UPDATE table_members
-                  SET table_id = COALESCE($2, table_id),
-                      user_id = COALESCE($3, user_id),
-                      updated_at = NOW()
-                  WHERE id = $1
-                  RETURNING *"#,
+            r#"
+                UPDATE table_members
+                SET table_id = COALESCE($2, table_id),
+                    user_id = COALESCE($3, user_id),
+                    updated_at = NOW()
+                WHERE id = $1
+                RETURNING *
+            "#,
             command.id,
             command.table_id,
             command.user_id
@@ -98,7 +110,11 @@ impl
     async fn delete(&self, command: DeleteTableMemberCommand) -> Result<TableMember> {
         let deleted = sqlx::query_as!(
             TableMemberModel,
-            "DELETE FROM table_members WHERE id = $1 RETURNING *",
+            r#"
+                DELETE FROM table_members
+                WHERE id = $1
+                RETURNING *
+            "#,
             command.id
         )
         .fetch_one(&self.pool)
@@ -114,7 +130,11 @@ impl TableMemberRepository for PostgresTableMemberRepository {
     async fn find_by_table_id(&self, table_id: Uuid) -> Result<Vec<TableMember>> {
         let members = sqlx::query_as!(
             TableMemberModel,
-            "SELECT * FROM table_members WHERE table_id = $1",
+            r#"
+                SELECT *
+                FROM table_members
+                WHERE table_id = $1
+            "#,
             table_id
         )
         .fetch_all(&self.pool)
@@ -131,7 +151,11 @@ impl TableMemberRepository for PostgresTableMemberRepository {
     ) -> Result<Option<TableMember>> {
         let member = sqlx::query_as!(
             TableMemberModel,
-            "SELECT * FROM table_members WHERE table_id = $1 AND user_id = $2",
+            r#"
+                SELECT *
+                FROM table_members
+                WHERE table_id = $1 AND user_id = $2
+            "#,
             table_id,
             user_id
         )
