@@ -3,11 +3,13 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::{Table, TableStatus};
+use domain::entities::{Session, Table, TableDetails, TableStatus, User};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+use crate::http::dtos::ISessionStatus;
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateTableRequest {
@@ -46,27 +48,28 @@ pub struct PlayerInfo {
     pub username: String,
 }
 
+impl From<User> for PlayerInfo {
+    fn from(value: User) -> Self {
+        Self {
+            id: value.id,
+            username: value.username,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct SessionInfo {
     pub id: Uuid,
     pub title: String,
-    pub description: String,
-    pub status: String,
-    pub scheduled_at: DateTime<Utc>,
+    pub status: ISessionStatus,
 }
 
-#[derive(Deserialize, Serialize, ToSchema, Default)]
-pub enum ITableStatus {
-    #[default]
-    Active,
-    Inactive,
-}
-
-impl From<TableStatus> for ITableStatus {
-    fn from(value: TableStatus) -> Self {
-        match value {
-            TableStatus::Active => ITableStatus::Active,
-            TableStatus::Inactive => ITableStatus::Inactive,
+impl From<Session> for SessionInfo {
+    fn from(value: Session) -> Self {
+        Self {
+            id: value.id,
+            title: value.title,
+            status: value.status.into(),
         }
     }
 }
@@ -100,17 +103,51 @@ impl From<Table> for TableListItem {
     }
 }
 
+#[derive(Deserialize, Serialize, ToSchema, Debug, Default)]
+pub enum ITableStatus {
+    #[default]
+    Active,
+    Inactive,
+}
+
+impl From<TableStatus> for ITableStatus {
+    fn from(value: TableStatus) -> Self {
+        match value {
+            TableStatus::Active => ITableStatus::Active,
+            TableStatus::Inactive => ITableStatus::Inactive,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema)]
-pub struct TableDetails {
+pub struct ITableDetails {
     pub id: Uuid,
     pub title: String,
-    pub game_system: String,
-    pub game_master: GameMasterInfo,
+    pub game_system_id: Uuid,
+    pub game_master_id: Uuid,
     pub description: String,
     pub player_slots: i32,
     pub players: Vec<PlayerInfo>,
-    pub status: String,
     pub sessions: Vec<SessionInfo>,
+    pub status: ITableStatus,
+    pub created_at: DateTime<Utc>,
+}
+
+impl From<TableDetails> for ITableDetails {
+    fn from(value: TableDetails) -> Self {
+        Self {
+            id: value.id,
+            title: value.title,
+            game_system_id: value.game_system_id,
+            game_master_id: value.gm_id,
+            description: value.description,
+            player_slots: value.player_slots as i32,
+            players: value.players.into_iter().map(PlayerInfo::from).collect(),
+            sessions: value.sessions.into_iter().map(SessionInfo::from).collect(),
+            status: value.status.into(),
+            created_at: value.created_at,
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -130,7 +167,7 @@ pub struct DeleteTableResponse {
 }
 
 // IntoResponse implementations
-impl IntoResponse for TableDetails {
+impl IntoResponse for ITableDetails {
     fn into_response(self) -> Response {
         Json(self).into_response()
     }

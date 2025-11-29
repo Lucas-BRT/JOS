@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use domain::entities::User;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserModel {
     pub id: Uuid,
     pub username: String,

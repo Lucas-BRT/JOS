@@ -50,9 +50,9 @@ impl TableService {
         table_id: Uuid,
         user_id: Uuid,
     ) -> Result<Option<TableDetails>> {
-        self.table_repository.find_details_by_id(table_id).await?;
+        let table_details = self.table_repository.find_details_by_id(table_id).await?;
 
-        todo!()
+        Ok(table_details)
     }
 
     pub async fn update_table(&self, command: UpdateTableCommand) -> Result<Table> {

@@ -29,6 +29,17 @@ impl From<ISessionStatus> for SessionStatus {
     }
 }
 
+impl From<SessionStatus> for ISessionStatus {
+    fn from(value: SessionStatus) -> Self {
+        match value {
+            SessionStatus::Scheduled => ISessionStatus::Scheduled,
+            SessionStatus::InProgress => ISessionStatus::InProgress,
+            SessionStatus::Completed => ISessionStatus::Completed,
+            SessionStatus::Cancelled => ISessionStatus::Cancelled,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateSessionRequest {
     #[validate(length(min = 1, max = 100))]

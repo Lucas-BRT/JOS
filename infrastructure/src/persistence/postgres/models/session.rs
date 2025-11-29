@@ -1,8 +1,9 @@
 use chrono::{DateTime, Utc};
 use domain::entities::{Session, SessionStatus};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[sqlx(type_name = "session_status", rename_all = "snake_case")]
 pub enum ESessionStatus {
     Scheduled,
@@ -33,7 +34,7 @@ impl From<SessionStatus> for ESessionStatus {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SessionModel {
     pub id: Uuid,
     pub title: String,

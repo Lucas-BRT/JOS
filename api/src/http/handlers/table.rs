@@ -2,7 +2,6 @@ use crate::http::dtos::*;
 use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
 use axum::middleware::from_fn_with_state;
-
 use domain::entities::commands::table_commands::*;
 use domain::entities::commands::table_request_commands::*;
 use infrastructure::state::AppState;
@@ -80,11 +79,12 @@ pub async fn get_table_details(
     claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
-) -> Result<Json<TableDetails>> {
+) -> Result<Json<Option<ITableDetails>>> {
     let details = app_state
         .table_service
         .get_table_details(table_id, claims.get_user_id())
-        .await?;
+        .await?
+        .map(ITableDetails::from);
 
     Ok(Json(details))
 }
@@ -98,11 +98,11 @@ pub async fn get_table_details(
 )]
 #[axum::debug_handler]
 pub async fn update_table(
-    _claims: ClaimsExtractor,
-    State(_app_state): State<Arc<AppState>>,
-    Path(_table_id): Path<Uuid>,
+    claims: ClaimsExtractor,
+    State(app_state): State<Arc<AppState>>,
+    Path(table_id): Path<Uuid>,
     Json(payload): Json<UpdateTableRequest>,
-) -> Result<Json<TableDetails>> {
+) -> Result<Json<()>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }

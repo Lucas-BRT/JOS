@@ -1,8 +1,13 @@
-use crate::persistence::models::table::ETableStatus;
+use crate::persistence::constraint_mapper::map_database_error;
+use crate::persistence::models::ESessionStatus;
+use crate::persistence::models::SessionModel;
 use crate::persistence::models::TableDetailsModel;
+use crate::persistence::models::UserModel;
+use crate::persistence::models::table::ETableStatus;
 use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableModel;
 use domain::entities::Table;
+use domain::entities::TableDetails;
 use domain::entities::commands::*;
 use domain::repositories::{Repository, TableRepository};
 use shared::Result;
@@ -260,16 +265,87 @@ impl TableRepository for PostgresTableRepository {
         Ok(table.map(|model| model.into()))
     }
 
-
     async fn find_details_by_id(&self, table_id: Uuid) -> Result<Option<TableDetails>> {
-        let table = sqlx::query_as!(
-            TableDetailsModel,
+        let table_task = sqlx::query_as!(
+            TableModel,
             r#"
-
+                SELECT
+                    tables.id,
+                    tables.gm_id,
+                    tables.title,
+                    tables.description,
+                    tables.slots,
+                    tables.status as "status: ETableStatus",
+                    tables.game_system_id,
+                    tables.created_at,
+                    tables.updated_at
+                FROM tables
+                WHERE tables.id = $1
             "#,
+            table_id
+        )
+        .fetch_optional(&self.pool);
 
-        ).fetch_optional(&self.pool).await.map_err(constraint_mapper::map_database_error)
+        let users_task = sqlx::query_as!(
+            UserModel,
+            r#"
+                SELECT
+                    users.id,
+                    users.email,
+                    users.username,
+                    users.created_at,
+                    users.password,
+                    users.updated_at
+                FROM users
+                INNER JOIN table_members
+                ON users.id = table_members.user_id
+                WHERE table_members.table_id = $1
+            "#,
+            table_id
+        )
+        .fetch_all(&self.pool);
 
-        todo!()
+        let session_task = sqlx::query_as!(
+            SessionModel,
+            r#"
+                SELECT
+                    sessions.id,
+                    sessions.title,
+                    sessions.table_id,
+                    sessions.description,
+                    sessions.scheduled_for,
+                    sessions.status as "status: ESessionStatus",
+                    sessions.created_at,
+                    sessions.updated_at
+                FROM sessions
+                WHERE sessions.table_id = $1
+            "#,
+            table_id
+        )
+        .fetch_all(&self.pool);
+
+        let response = tokio::try_join!(table_task, users_task, session_task);
+
+        match response {
+            Ok((Some(table), users, sessions)) => {
+                let details = TableDetailsModel {
+                    id: table.id,
+                    gm_id: table.gm_id,
+                    title: table.title,
+                    description: table.description,
+                    players: users,
+                    slots: table.slots,
+                    sessions,
+                    status: table.status,
+                    game_system_id: table.game_system_id,
+                    created_at: table.created_at,
+                    updated_at: table.updated_at,
+                };
+
+                Ok(Some(details.into()))
+            }
+            Ok((None, _, _)) => Ok(None),
+            Err(err) => Err(map_database_error(err).into()),
+        }
     }
 }
