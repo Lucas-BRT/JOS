@@ -52,7 +52,6 @@ pub struct RegisterCommand {
 pub struct ChangePasswordCommand {
     pub current_password: String,
     pub new_password: String,
-    pub confirm_password: String,
 }
 
 #[async_trait::async_trait]

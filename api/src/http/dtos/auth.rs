@@ -1,7 +1,3 @@
-use axum::{
-    Json,
-    response::{IntoResponse, Response},
-};
 use chrono::{DateTime, Utc};
 use domain::entities::User;
 use serde::{Deserialize, Serialize};
@@ -60,6 +56,7 @@ pub struct RegisterResponse {
     pub user: UserResponse,
     pub token: String,
     pub refresh_token: String,
+    pub expires_in: i64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -72,37 +69,6 @@ pub struct RefreshTokenResponse {
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct LogoutResponse {
     pub message: String,
-}
-
-// IntoResponse implementations
-impl IntoResponse for LoginResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for RegisterResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for LogoutResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for RefreshTokenResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for UserResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
 }
 
 // Conversion implementations

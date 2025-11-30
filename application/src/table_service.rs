@@ -45,11 +45,7 @@ impl TableService {
         self.table_repository.read(GetTableCommand::default()).await
     }
 
-    pub async fn get_table_details(
-        &self,
-        table_id: Uuid,
-        user_id: Uuid,
-    ) -> Result<Option<TableDetails>> {
+    pub async fn get_table_details(&self, table_id: Uuid) -> Result<Option<TableDetails>> {
         let table_details = self.table_repository.find_details_by_id(table_id).await?;
 
         Ok(table_details)
