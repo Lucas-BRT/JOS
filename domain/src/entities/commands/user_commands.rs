@@ -9,7 +9,7 @@ pub struct CreateUserCommand {
     pub password: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UpdateUserCommand {
     pub user_id: Uuid,
     pub username: Option<String>,
@@ -17,26 +17,26 @@ pub struct UpdateUserCommand {
     pub password: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GetUserCommand {
     pub id: Option<Uuid>,
     pub username: Option<String>,
     pub email: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DeleteUserCommand {
     pub id: Uuid,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UpdatePasswordCommand {
     pub user_id: Uuid,
     pub current_password: String,
     pub new_password: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DeleteAccountCommand {
     pub user_id: Uuid,
     pub password: String,

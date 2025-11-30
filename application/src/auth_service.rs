@@ -8,6 +8,7 @@ use rand::Rng;
 use rand::RngCore;
 use shared::Result;
 use shared::error::ApplicationError;
+use shared::error::DomainError;
 use shared::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
@@ -132,10 +133,6 @@ impl AuthenticationService for AuthService {
     }
 
     async fn change_password(&self, user_id: Uuid, command: ChangePasswordCommand) -> Result<()> {
-        if command.new_password != command.confirm_password {
-            return Err(Error::Application(ApplicationError::InvalidCredentials));
-        }
-
         let update_command = UpdatePasswordCommand {
             user_id,
             current_password: command.current_password,
@@ -147,7 +144,7 @@ impl AuthenticationService for AuthService {
             .find_by_id(user_id)
             .await?
             .ok_or_else(|| {
-                Error::Domain(shared::error::DomainError::EntityNotFound {
+                Error::Domain(DomainError::EntityNotFound {
                     entity_type: "User",
                     entity_id: user_id.to_string(),
                 })
@@ -171,9 +168,8 @@ impl AuthenticationService for AuthService {
 
         let user_update_command = UpdateUserCommand {
             user_id,
-            username: None,
-            email: None,
             password: Some(new_password_hash),
+            ..Default::default()
         };
 
         self.user_repository.update(user_update_command).await?;

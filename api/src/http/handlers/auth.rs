@@ -4,7 +4,7 @@ use crate::http::middleware::auth::ClaimsExtractor;
 use crate::http::middleware::auth::auth_middleware;
 use application::user_service::UpdateProfileCommand;
 use axum::middleware::from_fn_with_state;
-use axum::{extract::State, http::StatusCode, *};
+use axum::{extract::State, *};
 use domain::auth::*;
 use domain::entities::commands::DeleteAccountCommand;
 use infrastructure::state::AppState;
@@ -20,7 +20,7 @@ use validator::Validate;
 async fn login(
     State(app_state): State<Arc<AppState>>,
     Json(login_payload): Json<LoginRequest>,
-) -> Result<(StatusCode, Json<LoginResponse>)> {
+) -> Result<Json<LoginResponse>> {
     if let Err(validation_error) = login_payload.validate() {
         return Err(Error::Validation(validation_error));
     }
@@ -32,15 +32,12 @@ async fn login(
 
     let auth_response = app_state.auth_service.login(login_command).await?;
 
-    Ok((
-        StatusCode::OK,
-        Json(LoginResponse {
-            user: auth_response.user.into(),
-            token: auth_response.access_token,
-            refresh_token: auth_response.refresh_token,
-            expires_in: auth_response.expires_in,
-        }),
-    ))
+    Ok(Json(LoginResponse {
+        user: auth_response.user.into(),
+        token: auth_response.access_token,
+        refresh_token: auth_response.refresh_token,
+        expires_in: auth_response.expires_in,
+    }))
 }
 
 #[utoipa::path(post, path = "/register", summary = "User registration", tag = "auth")]
@@ -48,7 +45,7 @@ async fn login(
 async fn register(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<RegisterRequest>,
-) -> Result<(StatusCode, Json<RegisterResponse>)> {
+) -> Result<Json<RegisterResponse>> {
     if let Err(validation_error) = payload.validate() {
         return Err(Error::Validation(validation_error));
     }
@@ -61,14 +58,12 @@ async fn register(
 
     let auth_response = app_state.auth_service.register(command).await?;
 
-    Ok((
-        StatusCode::CREATED,
-        Json(RegisterResponse {
-            user: auth_response.user.into(),
-            token: auth_response.access_token,
-            refresh_token: auth_response.refresh_token,
-        }),
-    ))
+    Ok(Json(RegisterResponse {
+        user: auth_response.user.into(),
+        token: auth_response.access_token,
+        refresh_token: auth_response.refresh_token,
+        expires_in: auth_response.expires_in,
+    }))
 }
 
 #[utoipa::path(
@@ -82,16 +77,16 @@ async fn register(
 async fn logout(
     State(app_state): State<Arc<AppState>>,
     claims: ClaimsExtractor,
-) -> Result<LogoutResponse> {
+) -> Result<Json<LogoutResponse>> {
     let command = LogoutCommand {
         user_id: claims.get_user_id(),
     };
 
     app_state.auth_service.logout(command).await?;
 
-    Ok(LogoutResponse {
+    Ok(Json(LogoutResponse {
         message: "Logout successful".to_string(),
-    })
+    }))
 }
 
 #[utoipa::path(
@@ -105,18 +100,18 @@ async fn logout(
 async fn refresh(
     State(app_state): State<Arc<AppState>>,
     Json(payload): Json<RefreshTokenRequest>,
-) -> Result<RefreshTokenResponse> {
+) -> Result<Json<RefreshTokenResponse>> {
     let command = RefreshTokenCommand {
         token: payload.refresh_token,
     };
 
     let refresh_response = app_state.auth_service.refresh_token(command).await?;
 
-    Ok(RefreshTokenResponse {
+    Ok(Json(RefreshTokenResponse {
         token: refresh_response.access_token,
         refresh_token: refresh_response.refresh_token,
         expires_in: refresh_response.expires_in,
-    })
+    }))
 }
 
 #[utoipa::path(
@@ -130,18 +125,18 @@ async fn refresh(
 async fn me(
     State(app_state): State<Arc<AppState>>,
     claims: ClaimsExtractor,
-) -> Result<UserResponse> {
+) -> Result<Json<UserResponse>> {
     let profile = app_state
         .user_service
         .get_user_profile(claims.0.sub)
         .await?;
 
-    Ok(UserResponse {
+    Ok(Json(UserResponse {
         id: profile.id,
         username: profile.username,
         email: profile.email,
         joined_at: profile.joined_at,
-    })
+    }))
 }
 
 #[utoipa::path(
@@ -199,7 +194,6 @@ pub async fn change_password(
     let command = ChangePasswordCommand {
         current_password: payload.current_password,
         new_password: payload.new_password,
-        confirm_password: payload.confirm_password,
     };
 
     app_state

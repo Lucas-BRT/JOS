@@ -76,13 +76,12 @@ pub async fn get_tables(
 )]
 #[axum::debug_handler]
 pub async fn get_table_details(
-    claims: ClaimsExtractor,
     State(app_state): State<Arc<AppState>>,
     Path(table_id): Path<Uuid>,
 ) -> Result<Json<Option<ITableDetails>>> {
     let details = app_state
         .table_service
-        .get_table_details(table_id, claims.get_user_id())
+        .get_table_details(table_id)
         .await?
         .map(ITableDetails::from);
 

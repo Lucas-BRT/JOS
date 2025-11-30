@@ -1,7 +1,3 @@
-use axum::{
-    Json,
-    response::{IntoResponse, Response},
-};
 use chrono::{DateTime, Utc};
 use domain::entities::User;
 use serde::{Deserialize, Serialize};
@@ -23,8 +19,6 @@ pub struct ChangePasswordRequest {
     pub current_password: String,
     #[validate(length(min = 6))]
     pub new_password: String,
-    #[validate(length(min = 6))]
-    pub confirm_password: String,
 }
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
@@ -60,23 +54,4 @@ pub struct ChangePasswordResponse {
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct DeleteAccountResponse {
     pub message: String,
-}
-
-// IntoResponse implementations
-impl IntoResponse for UpdateProfileResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for ChangePasswordResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
-}
-
-impl IntoResponse for DeleteAccountResponse {
-    fn into_response(self) -> Response {
-        Json(self).into_response()
-    }
 }

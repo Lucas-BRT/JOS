@@ -80,6 +80,10 @@ impl UserService {
                 })
             })?;
 
+        if user.id != command.user_id {
+            return Err(Error::Application(ApplicationError::InvalidCredentials));
+        }
+
         if !self
             .password_provider
             .verify_hash(command.password.clone(), user.password.clone())
