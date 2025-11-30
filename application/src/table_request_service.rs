@@ -1,5 +1,7 @@
 use domain::entities::*;
-use domain::repositories::{TableMemberRepository, TableRepository, TableRequestRepository};
+use domain::repositories::{
+    SessionRepository, TableMemberRepository, TableRepository, TableRequestRepository,
+};
 use shared::Result;
 use shared::error::{DomainError, Error};
 use std::sync::Arc;
@@ -10,6 +12,7 @@ pub struct TableRequestService {
     table_request_repository: Arc<dyn TableRequestRepository>,
     table_repository: Arc<dyn TableRepository>,
     table_member_repository: Arc<dyn TableMemberRepository>,
+    session_repository: Arc<dyn SessionRepository>,
 }
 
 impl TableRequestService {
@@ -17,26 +20,22 @@ impl TableRequestService {
         table_request_repository: Arc<dyn TableRequestRepository>,
         table_repository: Arc<dyn TableRepository>,
         table_member_repository: Arc<dyn TableMemberRepository>,
+        session_repository: Arc<dyn SessionRepository>,
     ) -> Self {
         Self {
             table_request_repository,
             table_repository,
             table_member_repository,
+            session_repository,
         }
     }
 
     pub async fn create(&self, command: CreateTableRequestCommand) -> Result<TableRequest> {
-        let table = self.table_repository.find_by_id(&command.table_id).await?;
+        let table = self.table_repository.find_by_id(command.table_id).await?;
         if let Some(table) = table {
             if table.gm_id == command.user_id {
                 return Err(Error::Domain(DomainError::BusinessRuleViolation {
                     message: "Game master cannot request to join their own table".to_string(),
-                }));
-            }
-
-            if table.status != domain::entities::TableStatus::Active {
-                return Err(Error::Domain(DomainError::BusinessRuleViolation {
-                    message: "Table is not accepting new players".to_string(),
                 }));
             }
         } else {
@@ -121,5 +120,129 @@ impl TableRequestService {
 
     pub async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest> {
         self.table_request_repository.delete(command).await
+    }
+
+    pub async fn accept_request(&self, request_id: Uuid, requester_id: Uuid) -> Result<()> {
+        let session = self
+            .session_repository
+            .find_by_id(request_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Session",
+                    entity_id: request_id.to_string(),
+                })
+            })?;
+
+        let table = self
+            .table_repository
+            .find_by_id(session.table_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Table",
+                    entity_id: session.table_id.to_string(),
+                })
+            })?;
+
+        if table.gm_id != requester_id {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "invalid credentials".to_owned(),
+            }));
+        }
+
+        let request = self.find_by_id(&request_id).await?;
+        let requested_member_id = request.user_id;
+
+        let command = CreateTableMemberCommand::new(table.id, requested_member_id);
+        self.table_member_repository.create(command).await?;
+
+        let command = UpdateTableRequestCommand {
+            id: request_id,
+            status: Some(TableRequestStatus::Approved),
+            message: None,
+        };
+
+        self.table_request_repository.update(command).await?;
+        Ok(())
+    }
+
+    pub async fn reject_request(&self, request_id: Uuid, requester_id: Uuid) -> Result<()> {
+        let session = self
+            .session_repository
+            .find_by_id(request_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Session",
+                    entity_id: request_id.to_string(),
+                })
+            })?;
+
+        let table = self
+            .table_repository
+            .find_by_id(session.table_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Table",
+                    entity_id: session.table_id.to_string(),
+                })
+            })?;
+
+        if table.gm_id != requester_id {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "invalid credentials".to_owned(),
+            }));
+        }
+
+        let command = UpdateTableRequestCommand {
+            id: request_id,
+            status: Some(TableRequestStatus::Rejected),
+            message: None,
+        };
+
+        self.table_request_repository.update(command).await?;
+        Ok(())
+    }
+
+    pub async fn cancel_request(&self, request_id: Uuid, requester_id: Uuid) -> Result<()> {
+        let session = self
+            .session_repository
+            .find_by_id(request_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Session",
+                    entity_id: request_id.to_string(),
+                })
+            })?;
+
+        let table = self
+            .table_repository
+            .find_by_id(session.table_id)
+            .await?
+            .ok_or_else(|| {
+                Error::Domain(DomainError::EntityNotFound {
+                    entity_type: "Table",
+                    entity_id: session.table_id.to_string(),
+                })
+            })?;
+
+        if table.gm_id != requester_id {
+            return Err(Error::Domain(DomainError::BusinessRuleViolation {
+                message: "invalid credentials".to_owned(),
+            }));
+        }
+
+        Ok(())
+    }
+
+    pub async fn get_sent_requests(&self, user_id: Uuid) -> Result<Vec<TableRequest>> {
+        let requests = self.find_by_user_id(&user_id).await?;
+        Ok(requests
+            .into_iter()
+            .filter(|request| request.user_id == user_id)
+            .collect())
     }
 }

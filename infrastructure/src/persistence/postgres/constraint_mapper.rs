@@ -5,7 +5,7 @@ use sqlx::error::DatabaseError;
 const UNIQUE_CONSTRAINT_CODE: &str = "23505";
 const FOREIGN_KEY_CONSTRAINT_CODE: &str = "23503";
 
-pub fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) -> RepositoryError {
+fn map_constraint_violation(db_err: &dyn DatabaseError, constraint: &str) -> RepositoryError {
     let message = db_err.message();
     let is_referenced_not_found = message.contains("is not present in table");
 

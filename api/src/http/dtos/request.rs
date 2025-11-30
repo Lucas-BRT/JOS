@@ -1,16 +1,23 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
 use chrono::{DateTime, Utc};
 use domain::entities::{TableRequest, TableRequestStatus};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema, Validate)]
 pub struct CreateTableRequestRequest {
     #[validate(length(max = 500))]
-    pub message: String,
+    pub message: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone, ToSchema)]
+pub struct CreateTableRequestResponse {
+    pub id: Uuid,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -55,7 +62,7 @@ pub struct ReceivedRequestItem {
     pub id: Uuid,
     pub player_id: Uuid,
     pub table_id: Uuid,
-    pub request_date: Date,
+    pub request_date: DateTime<Utc>,
     pub message: Option<String>,
 }
 
@@ -111,25 +118,25 @@ pub struct CancelRequestResponse {
 
 // IntoResponse implementations
 impl IntoResponse for TableRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for AcceptRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RejectRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for CancelRequestResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }

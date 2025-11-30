@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::{IntentStatus, SessionIntent};
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
@@ -14,7 +14,7 @@ impl From<EIntentStatus> for IntentStatus {
     fn from(status: EIntentStatus) -> Self {
         match status {
             EIntentStatus::Confirmed => IntentStatus::Confirmed,
-            EIntentStatus::Unsure => IntentStatus::Tentative,
+            EIntentStatus::Unsure => IntentStatus::Unsure,
             EIntentStatus::Declined => IntentStatus::Declined,
         }
     }
@@ -24,7 +24,7 @@ impl From<IntentStatus> for EIntentStatus {
     fn from(status: IntentStatus) -> Self {
         match status {
             IntentStatus::Confirmed => EIntentStatus::Confirmed,
-            IntentStatus::Tentative => EIntentStatus::Unsure,
+            IntentStatus::Unsure => EIntentStatus::Unsure,
             IntentStatus::Declined => EIntentStatus::Declined,
         }
     }
@@ -36,8 +36,8 @@ pub struct SessionIntentModel {
     pub user_id: Uuid,
     pub session_id: Uuid,
     pub intent_status: EIntentStatus,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<SessionIntentModel> for SessionIntent {

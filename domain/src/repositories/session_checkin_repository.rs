@@ -1,17 +1,18 @@
-use crate::entities::{
-    CreateSessionCheckinCommand, DeleteSessionCheckinCommand, UpdateSessionCheckinCommand,
-};
-use crate::entities::{GetSessionCheckinCommand, SessionCheckin};
+use crate::{entities::*, repositories::Repository};
 use shared::Result;
 use uuid::Uuid;
 
 #[async_trait::async_trait]
-pub trait SessionCheckinRepository: Send + Sync {
-    async fn create(&self, command: CreateSessionCheckinCommand) -> Result<SessionCheckin>;
-    async fn read(&self, command: GetSessionCheckinCommand) -> Result<Vec<SessionCheckin>>;
-    async fn update(&self, command: UpdateSessionCheckinCommand) -> Result<SessionCheckin>;
-    async fn delete(&self, command: DeleteSessionCheckinCommand) -> Result<SessionCheckin>;
-    async fn find_by_id(&self, id: Uuid) -> Result<Option<SessionCheckin>>;
+pub trait SessionCheckinRepository:
+    Repository<
+        SessionCheckin,
+        CreateSessionCheckinCommand,
+        UpdateSessionCheckinCommand,
+        GetSessionCheckinCommand,
+        DeleteSessionCheckinCommand,
+    > + Send
+    + Sync
+{
     async fn find_by_session_intent_id(
         &self,
         session_intent_id: Uuid,

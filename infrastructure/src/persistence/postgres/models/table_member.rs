@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::TableMember;
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
@@ -7,8 +7,8 @@ pub struct TableMemberModel {
     pub id: Uuid,
     pub table_id: Uuid,
     pub user_id: Uuid,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<TableMemberModel> for TableMember {

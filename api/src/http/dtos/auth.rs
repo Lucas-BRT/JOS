@@ -1,6 +1,10 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
+use chrono::{DateTime, Utc};
+use domain::entities::User;
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -29,10 +33,17 @@ pub struct RefreshTokenRequest {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+pub struct RefreshResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
-    pub joined_at: Date,
+    pub joined_at: DateTime<Utc>,
     pub email: String,
 }
 
@@ -55,7 +66,7 @@ pub struct RegisterResponse {
 pub struct RefreshTokenResponse {
     pub token: String,
     pub refresh_token: String,
-    pub expires_in: i64,
+    pub expires_in: u64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -65,38 +76,38 @@ pub struct LogoutResponse {
 
 // IntoResponse implementations
 impl IntoResponse for LoginResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RegisterResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for LogoutResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for RefreshTokenResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for UserResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 // Conversion implementations
-impl From<domain::entities::User> for UserResponse {
-    fn from(user: domain::entities::User) -> Self {
+impl From<User> for UserResponse {
+    fn from(user: User) -> Self {
         let username = user.username.clone();
         UserResponse {
             id: user.id,

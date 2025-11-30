@@ -1,47 +1,21 @@
-use crate::http::{dtos::CreateTableResponse, middleware::auth::auth_middleware};
-use axum::{Json, extract::State, middleware::from_fn_with_state, response::IntoResponse};
-use domain::entities::{CreateGameSystemCommand, GameSystem, GetGameSystemCommand};
+use crate::http::{
+    dtos::{CreateGameSystemRequest, CreateTableResponse, GameSystemResponse},
+    middleware::auth::auth_middleware,
+};
+use axum::{Json, extract::State, middleware::from_fn_with_state};
+use domain::entities::{CreateGameSystemCommand, GetGameSystemCommand};
 use infrastructure::state::AppState;
-use serde::*;
 use shared::{Error, Result};
 use std::sync::Arc;
-use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
-use uuid::Uuid;
 use validator::Validate;
-
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
-pub struct CreateGameSystemRequest {
-    #[validate(length(max = 80))]
-    name: String,
-}
-
-#[derive(Deserialize, Serialize, ToSchema, Validate)]
-pub struct CreateGameSystemRespose {
-    id: Uuid,
-}
-
-impl IntoResponse for CreateTableResponse {
-    fn into_response(self) -> axum::response::Response {
-        Json(self.id).into_response()
-    }
-}
-
-impl From<CreateGameSystemRequest> for CreateGameSystemCommand {
-    fn from(value: CreateGameSystemRequest) -> Self {
-        Self { name: value.name }
-    }
-}
 
 #[utoipa::path(
     post,
     path = "/",
-    tag = "game_systems",
-    request_body = CreateGameSystemRequest,
-    security(("auth" = [])),
-    responses(
-        (status = 200, description = "", body = CreateGameSystemRespose),
-    )
+    tag = "game-system",
+    summary = "Create a new RPG System",
+    security(("auth" = []))
 )]
 #[axum::debug_handler]
 async fn create_game_system(
@@ -54,36 +28,19 @@ async fn create_game_system(
 
     let id = app_state
         .game_system_service
-        .create(&mut payload.into())
+        .create(CreateGameSystemCommand::new(payload.name))
         .await?
         .id;
 
     Ok(CreateTableResponse { id })
 }
 
-#[derive(Debug, Deserialize, Serialize, ToSchema, Validate)]
-pub struct GameSystemResponse {
-    pub id: Uuid,
-    pub name: String,
-}
-
-impl From<&GameSystem> for GameSystemResponse {
-    fn from(value: &GameSystem) -> Self {
-        Self {
-            id: value.id,
-            name: value.name.clone(),
-        }
-    }
-}
-
 #[utoipa::path(
     get,
     path = "/",
-    tag = "game_systems",
+    tag = "game-system",
+    summary = "Get supported RPG Systems",
     security(("auth" = [])),
-    responses(
-        (status = 200, description = "", body = Vec<GameSystemResponse>),
-    )
 )]
 #[axum::debug_handler]
 async fn get_game_systems(
@@ -91,7 +48,7 @@ async fn get_game_systems(
 ) -> Result<Json<Vec<GameSystemResponse>>> {
     let systems = app_state
         .game_system_service
-        .get(&mut GetGameSystemCommand::default())
+        .get(GetGameSystemCommand::default())
         .await?
         .iter()
         .map(GameSystemResponse::from)

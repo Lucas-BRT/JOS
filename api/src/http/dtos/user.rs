@@ -1,4 +1,7 @@
-use axum::response::IntoResponse;
+use axum::{
+    Json,
+    response::{IntoResponse, Response},
+};
 use chrono::{DateTime, Utc};
 use domain::entities::User;
 use serde::{Deserialize, Serialize};
@@ -61,19 +64,19 @@ pub struct DeleteAccountResponse {
 
 // IntoResponse implementations
 impl IntoResponse for UpdateProfileResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for ChangePasswordResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }
 
 impl IntoResponse for DeleteAccountResponse {
-    fn into_response(self) -> axum::response::Response {
-        axum::Json(self).into_response()
+    fn into_response(self) -> Response {
+        Json(self).into_response()
     }
 }

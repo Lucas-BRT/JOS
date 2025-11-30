@@ -1,10 +1,9 @@
 use crate::http::dtos::*;
-use crate::http::middleware::auth::ClaimsExtractor;
+use crate::http::middleware::auth::{ClaimsExtractor, auth_middleware};
 use axum::extract::*;
-use domain::entities::{TableRequestStatus, Update, UpdateTableRequestCommand};
+use axum::middleware::from_fn_with_state;
 use infrastructure::state::AppState;
 use shared::Result;
-use shared::error::{DomainError, Error};
 use std::sync::Arc;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -13,12 +12,9 @@ use uuid::Uuid;
 #[utoipa::path(
     get,
     path = "/sent",
-    tag = "table-requests",
+    tag = "table-request",
+    summary = "Get sent requests",
     security(("auth" = [])),
-    responses(
-        (status = 200, description = "Sent requests retrieved successfully", body = Vec<SentRequestItem>),
-        (status = 401, description = "Authentication required", body = ErrorResponse)
-    )
 )]
 #[axum::debug_handler]
 pub async fn get_sent_requests(
@@ -27,12 +23,11 @@ pub async fn get_sent_requests(
 ) -> Result<Json<Vec<SentRequestItem>>> {
     let requests = app_state
         .table_request_service
-        .find_by_user_id(&claims.0.sub)
+        .get_sent_requests(claims.get_user_id())
         .await?;
 
     let requests = requests
         .into_iter()
-        .filter(|request| request.user_id == claims.0.sub)
         .map(SentRequestItem::from)
         .collect::<Vec<SentRequestItem>>();
 
@@ -41,18 +36,10 @@ pub async fn get_sent_requests(
 
 #[utoipa::path(
     post,
-    path = "/{id}/accept",
-    tag = "table-requests",
+    path = "/{request_id}/accept",
+    tag = "table-request",
+    summary = "Accepts a player request",
     security(("auth" = [])),
-    params(
-        ("table_id" = Uuid, Path, description = "Table ID")
-    ),
-    responses(
-        (status = 200, description = "Requests for the table retrieved successfully", body = Vec<TableRequestResponse>),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to view requests for this table", body = ErrorResponse),
-        (status = 404, description = "Table not found", body = ErrorResponse)
-    )
 )]
 #[axum::debug_handler]
 pub async fn accept_request(
@@ -60,25 +47,10 @@ pub async fn accept_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
 ) -> Result<Json<AcceptRequestResponse>> {
-    let session = app_state.session_service.find_by_id(&request_id).await?;
-    let table = app_state
-        .table_service
-        .find_by_id(&session.table_id)
+    app_state
+        .table_request_service
+        .accept_request(request_id, claims.get_user_id())
         .await?;
-
-    if table.gm_id != claims.0.sub {
-        return Err(Error::Domain(DomainError::BusinessRuleViolation {
-            message: "invalid credentials".to_owned(),
-        }));
-    }
-
-    let command = UpdateTableRequestCommand {
-        id: request_id,
-        status: Update::Change(TableRequestStatus::Approved),
-        message: Update::Keep,
-    };
-
-    app_state.table_request_service.update(command).await?;
 
     Ok(Json(AcceptRequestResponse {
         message: format!("Request {} accepted successfully", request_id),
@@ -87,18 +59,10 @@ pub async fn accept_request(
 
 #[utoipa::path(
     post,
-    path = "/{id}/reject",
-    tag = "table-requests",
+    path = "/{request_id}/reject",
+    tag = "table-request",
     security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Request ID")
-    ),
-    responses(
-        (status = 200, description = "Request rejected successfully", body = RejectRequestResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to reject this request", body = ErrorResponse),
-        (status = 404, description = "Request not found", body = ErrorResponse)
-    )
+    summary = "Rejects a player request"
 )]
 #[axum::debug_handler]
 pub async fn reject_request(
@@ -106,25 +70,10 @@ pub async fn reject_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
 ) -> Result<Json<RejectRequestResponse>> {
-    let session = app_state.session_service.find_by_id(&request_id).await?;
-    let table = app_state
-        .table_service
-        .find_by_id(&session.table_id)
+    app_state
+        .table_request_service
+        .reject_request(request_id, claims.get_user_id())
         .await?;
-
-    if table.gm_id != claims.0.sub {
-        return Err(Error::Domain(DomainError::BusinessRuleViolation {
-            message: "invalid credentials".to_owned(),
-        }));
-    }
-
-    let command = UpdateTableRequestCommand {
-        id: request_id,
-        status: Update::Change(TableRequestStatus::Rejected),
-        message: Update::Keep,
-    };
-
-    app_state.table_request_service.update(command).await?;
 
     Ok(Json(RejectRequestResponse {
         message: format!("Request {} rejected successfully", request_id),
@@ -133,18 +82,10 @@ pub async fn reject_request(
 
 #[utoipa::path(
     delete,
-    path = "/{id}",
-    tag = "table-requests",
+    path = "/{request_id}",
+    tag = "table-request",
     security(("auth" = [])),
-    params(
-        ("id" = Uuid, Path, description = "Request ID")
-    ),
-    responses(
-        (status = 200, description = "Request cancelled successfully", body = CancelRequestResponse),
-        (status = 401, description = "Authentication required", body = ErrorResponse),
-        (status = 403, description = "Not authorized to cancel this request", body = ErrorResponse),
-        (status = 404, description = "Request not found", body = ErrorResponse)
-    )
+    summary = "Delete a request"
 )]
 #[axum::debug_handler]
 pub async fn cancel_request(
@@ -152,17 +93,10 @@ pub async fn cancel_request(
     State(app_state): State<Arc<AppState>>,
     Path(request_id): Path<Uuid>,
 ) -> Result<Json<CancelRequestResponse>> {
-    let session = app_state.session_service.find_by_id(&request_id).await?;
-    let table = app_state
-        .table_service
-        .find_by_id(&session.table_id)
+    app_state
+        .table_request_service
+        .cancel_request(request_id, claims.get_user_id())
         .await?;
-
-    if table.gm_id != claims.0.sub {
-        return Err(Error::Domain(DomainError::BusinessRuleViolation {
-            message: "invalid credentials".to_owned(),
-        }));
-    }
 
     Ok(Json(CancelRequestResponse {
         message: format!("Request {} cancelled successfully", request_id),
@@ -179,5 +113,6 @@ pub fn table_request_routes(state: Arc<AppState>) -> OpenApiRouter {
                 .routes(routes!(reject_request))
                 .routes(routes!(cancel_request)),
         )
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
         .with_state(state)
 }

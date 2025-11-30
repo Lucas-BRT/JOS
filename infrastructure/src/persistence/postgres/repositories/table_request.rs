@@ -2,11 +2,10 @@ use crate::persistence::postgres::constraint_mapper;
 use crate::persistence::postgres::models::TableRequestModel;
 use crate::persistence::postgres::models::table_request::ETableRequestStatus;
 use domain::entities::*;
-use domain::repositories::TableRequestRepository;
+use domain::repositories::{Repository, TableRequestRepository};
 use shared::Result;
-use shared::error::{ApplicationError, Error};
 use sqlx::PgPool;
-use uuid::{NoContext, Uuid};
+use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct PostgresTableRequestRepository {
@@ -20,23 +19,23 @@ impl PostgresTableRequestRepository {
 }
 
 #[async_trait::async_trait]
-impl TableRequestRepository for PostgresTableRequestRepository {
-    async fn create(&self, request_data: CreateTableRequestCommand) -> Result<TableRequest> {
-        let uuid = Uuid::new_v7(uuid::Timestamp::now(NoContext));
-
+impl
+    Repository<
+        TableRequest,
+        CreateTableRequestCommand,
+        UpdateTableRequestCommand,
+        GetTableRequestCommand,
+        DeleteTableRequestCommand,
+    > for PostgresTableRequestRepository
+{
+    async fn create(&self, command: CreateTableRequestCommand) -> Result<TableRequest> {
         let result = sqlx::query_as!(
             TableRequestModel,
-            r#"INSERT INTO table_requests
-                    (
-                    id,
-                    user_id,
-                    table_id,
-                    message,
-                    status,
-                    created_at,
-                    updated_at)
+            r#"
+                INSERT INTO table_requests
+                    (id, user_id, table_id, message, status)
                 VALUES
-                    ($1, $2, $3, $4, $5, NOW(), NOW())
+                    ($1, $2, $3, $4, $5)
                 RETURNING
                     id,
                     user_id,
@@ -45,12 +44,12 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     status as "status: ETableRequestStatus",
                     created_at,
                     updated_at
-                "#,
-            uuid,
-            request_data.user_id,
-            request_data.table_id,
-            request_data.message,
-            ETableRequestStatus::Pending as ETableRequestStatus,
+            "#,
+            command.id,
+            command.user_id,
+            command.table_id,
+            command.message,
+            ETableRequestStatus::from(command.status) as ETableRequestStatus,
         )
         .fetch_one(&self.pool)
         .await
@@ -59,30 +58,10 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(result.into())
     }
 
-    async fn update(&self, update_data: UpdateTableRequestCommand) -> Result<TableRequest> {
-        let has_status_update = matches!(update_data.status, Update::Change(_));
-        let has_message_update = matches!(update_data.message, Update::Change(_));
-
-        if !has_status_update && !has_message_update {
-            return Err(Error::Application(ApplicationError::InvalidInput {
-                message: "No fields to update".to_string(),
-            }));
-        }
-
-        let status_value = match update_data.status {
-            Update::Change(status) => Some(ETableRequestStatus::from(status)),
-            Update::Keep => None,
-        };
-
-        let message_value = match &update_data.message {
-            Update::Change(message) => message.as_ref().map(|m| m.as_str()),
-            Update::Keep => None,
-        };
-
-        let updated_request = if let Some(status) = status_value {
-            sqlx::query_as!(
-                TableRequestModel,
-                r#"
+    async fn update(&self, command: UpdateTableRequestCommand) -> Result<TableRequest> {
+        let response = sqlx::query_as!(
+            TableRequestModel,
+            r#"
                 UPDATE table_requests
                 SET
                     status = $2::request_status,
@@ -97,22 +76,23 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     status as "status: ETableRequestStatus",
                     created_at,
                     updated_at
-                "#,
-                update_data.id,
-                status as ETableRequestStatus,
-                message_value
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?
-        } else {
-            sqlx::query_as!(
-                TableRequestModel,
-                r#"
-                UPDATE table_requests
-                SET
-                    message = COALESCE($2, message),
-                    updated_at = NOW()
+            "#,
+            command.id,
+            command.status.map(ETableRequestStatus::from) as Option<ETableRequestStatus>,
+            command.message
+        )
+        .fetch_one(&self.pool)
+        .await
+        .map_err(constraint_mapper::map_database_error)?;
+
+        Ok(response.into())
+    }
+
+    async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest> {
+        let table = sqlx::query_as!(
+            TableRequestModel,
+            r#"
+                DELETE FROM table_requests
                 WHERE id = $1
                 RETURNING
                     id,
@@ -122,31 +102,6 @@ impl TableRequestRepository for PostgresTableRequestRepository {
                     status as "status: ETableRequestStatus",
                     created_at,
                     updated_at
-                "#,
-                update_data.id,
-                message_value
-            )
-            .fetch_one(&self.pool)
-            .await
-            .map_err(constraint_mapper::map_database_error)?
-        };
-
-        Ok(updated_request.into())
-    }
-
-    async fn delete(&self, command: DeleteTableRequestCommand) -> Result<TableRequest> {
-        let table = sqlx::query_as!(
-            TableRequestModel,
-            r#"DELETE FROM table_requests
-                WHERE id = $1
-                RETURNING
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
             "#,
             command.id
         )
@@ -161,22 +116,24 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE ($1::uuid IS NULL OR id = $1)
-              AND ($2::uuid IS NULL OR user_id = $2)
-              AND ($3::uuid IS NULL OR table_id = $3)
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE ($1::uuid IS NULL OR id = $1)
+                    AND ($2::uuid IS NULL OR user_id = $2)
+                    AND ($3::uuid IS NULL OR table_id = $3)
+                    AND ($4::request_status IS NULL OR status = $4)
             "#,
             command.id,
             command.user_id,
-            command.table_id
+            command.table_id,
+            command.status.map(ETableRequestStatus::from) as Option<ETableRequestStatus>
         )
         .fetch_all(&self.pool)
         .await
@@ -189,16 +146,16 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let request = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE id = $1
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE id = $1
             "#,
             id
         )
@@ -208,21 +165,24 @@ impl TableRequestRepository for PostgresTableRequestRepository {
 
         Ok(request.map(|model| model.into()))
     }
+}
 
+#[async_trait::async_trait]
+impl TableRequestRepository for PostgresTableRequestRepository {
     async fn find_by_user_id(&self, user_id: Uuid) -> Result<Vec<TableRequest>> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE user_id = $1
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE user_id = $1
             "#,
             user_id
         )
@@ -237,18 +197,18 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE table_id = $1
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE table_id = $1
             "#,
-            table_id
+            &table_id
         )
         .fetch_all(&self.pool)
         .await
@@ -258,23 +218,21 @@ impl TableRequestRepository for PostgresTableRequestRepository {
     }
 
     async fn find_by_status(&self, status: TableRequestStatus) -> Result<Vec<TableRequest>> {
-        let status = ETableRequestStatus::from(status);
-
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE status = $1
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE status = $1
             "#,
-            status as ETableRequestStatus
+            ETableRequestStatus::from(status) as ETableRequestStatus
         )
         .fetch_all(&self.pool)
         .await
@@ -283,20 +241,24 @@ impl TableRequestRepository for PostgresTableRequestRepository {
         Ok(requests.into_iter().map(|model| model.into()).collect())
     }
 
-    async fn find_by_user_and_table(&self, user_id: Uuid, table_id: Uuid) -> Result<Vec<TableRequest>> {
+    async fn find_by_user_and_table(
+        &self,
+        user_id: Uuid,
+        table_id: Uuid,
+    ) -> Result<Vec<TableRequest>> {
         let requests = sqlx::query_as!(
             TableRequestModel,
             r#"
-            SELECT
-                id,
-                user_id,
-                table_id,
-                message,
-                status as "status: ETableRequestStatus",
-                created_at,
-                updated_at
-            FROM table_requests
-            WHERE user_id = $1 AND table_id = $2
+                SELECT
+                    id,
+                    user_id,
+                    table_id,
+                    message,
+                    status as "status: ETableRequestStatus",
+                    created_at,
+                    updated_at
+                FROM table_requests
+                WHERE user_id = $1 AND table_id = $2
             "#,
             user_id,
             table_id

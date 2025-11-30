@@ -1,11 +1,13 @@
 use crate::constants::*;
 use crate::setup::environment::Environment;
-use chrono::Duration;
 use shared::Result;
 use shared::error::Error;
 use shared::error::SetupError;
+use std::time::Duration;
 use std::{net::SocketAddr, str::FromStr};
 use tracing::{info, warn};
+
+pub const DEFAULT_JWT_EXPIRATION_DURATION: Duration = Duration::from_hours(24);
 
 #[derive(Debug, Clone)]
 pub struct AppConfig {
@@ -22,7 +24,7 @@ impl Default for AppConfig {
             addr: SocketAddr::from_str("127.0.0.1:8080").unwrap(),
             database_url: "".to_string(),
             jwt_secret: "secret".to_string(),
-            jwt_expiration_duration: Duration::days(1),
+            jwt_expiration_duration: DEFAULT_JWT_EXPIRATION_DURATION,
             environment: Environment::Development,
         }
     }
@@ -90,13 +92,15 @@ impl AppConfig {
 
         let mut jwt_expiration_duration = std::env::var("JWT_EXPIRATION_DURATION")
             .ok()
-            .and_then(|value| value.parse::<i64>().ok())
-            .map(Duration::days)
+            .and_then(|value| value.parse::<u64>().ok())
+            .map(Duration::from_hours)
             .unwrap_or(DEFAULT_JWT_EXPIRATION_DURATION);
 
-        if jwt_expiration_duration.num_days() < 1 {
+        let one_day_in_secs = Duration::from_hours(24).as_secs();
+
+        if jwt_expiration_duration.as_secs() < one_day_in_secs {
             warn!("⚠️  JWT_EXPIRATION_DURATION is less than 1 day, setting to 1 day");
-            jwt_expiration_duration = Duration::days(1);
+            jwt_expiration_duration = DEFAULT_JWT_EXPIRATION_DURATION;
         }
 
         Ok(Self {
@@ -116,7 +120,7 @@ impl AppConfig {
                 .split('@')
                 .next_back()
                 .unwrap_or("unknown"),
-            self.jwt_expiration_duration.num_days()
+            (self.jwt_expiration_duration.as_secs() / (60 * 60 * 24))
         )
     }
 
@@ -137,10 +141,6 @@ impl AppConfig {
                 .split('@')
                 .next_back()
                 .unwrap_or("unknown")
-        );
-        info!(
-            "🔐 JWT expiration: {} days",
-            self.jwt_expiration_duration.num_days()
         );
     }
 }

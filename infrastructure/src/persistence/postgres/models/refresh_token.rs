@@ -1,10 +1,11 @@
 use chrono::{DateTime, Utc};
+use domain::entities::RefreshToken;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, FromRow, Serialize, Deserialize)]
-pub struct RefreshTokenRow {
+pub struct RefreshTokenModel {
     pub id: Uuid,
     pub user_id: Uuid,
     pub token: String,
@@ -12,8 +13,8 @@ pub struct RefreshTokenRow {
     pub created_at: DateTime<Utc>,
 }
 
-impl From<RefreshTokenRow> for domain::entities::RefreshToken {
-    fn from(r: RefreshTokenRow) -> Self {
+impl From<RefreshTokenModel> for RefreshToken {
+    fn from(r: RefreshTokenModel) -> Self {
         Self {
             id: r.id,
             user_id: r.user_id,
