@@ -1,15 +1,16 @@
+use chrono::{DateTime, Utc};
 use domain::entities::User;
-use shared::prelude::Date;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UserModel {
     pub id: Uuid,
     pub username: String,
     pub email: String,
     pub password: String,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<UserModel> for User {

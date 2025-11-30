@@ -1,37 +1,58 @@
-use crate::entities::{TableStatus, Update};
+use crate::entities::TableStatus;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateTableCommand {
+    pub id: Uuid,
     pub gm_id: Uuid,
     pub title: String,
     pub description: String,
+    pub status: TableStatus,
     pub slots: u32,
     pub game_system_id: Uuid,
 }
 
-#[derive(Debug, Clone, Default)]
+impl CreateTableCommand {
+    pub fn new(
+        gm_id: Uuid,
+        title: String,
+        description: String,
+        slots: u32,
+        game_system_id: Uuid,
+    ) -> Self {
+        Self {
+            id: Uuid::now_v7(),
+            gm_id,
+            title,
+            description,
+            slots,
+            status: TableStatus::default(),
+            game_system_id,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateTableCommand {
     pub id: Uuid,
-    pub title: Update<String>,
-    pub description: Update<String>,
-    pub slots: Update<u32>,
-    pub game_system_id: Update<Uuid>,
-    pub status: Update<TableStatus>,
+    pub title: Option<String>,
+    pub description: Option<String>,
+    pub slots: Option<u32>,
+    pub game_system_id: Option<Uuid>,
+    pub status: Option<TableStatus>,
 }
 
-#[derive(Debug, Clone)]
-pub struct DeleteTableCommand {
-    pub id: Uuid,
-    pub gm_id: Uuid,
-}
-
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct GetTableCommand {
     pub id: Option<Uuid>,
     pub gm_id: Option<Uuid>,
-    pub session_id: Option<Uuid>,
-    pub title: Option<String>,
+    pub status: Option<TableStatus>,
     pub game_system_id: Option<Uuid>,
-    pub slots: Option<u32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteTableCommand {
+    pub id: Uuid,
+    pub gm_id: Uuid,
 }

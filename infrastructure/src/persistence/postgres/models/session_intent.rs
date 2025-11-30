@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::{IntentStatus, SessionIntent};
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
@@ -36,8 +36,8 @@ pub struct SessionIntentModel {
     pub user_id: Uuid,
     pub session_id: Uuid,
     pub intent_status: EIntentStatus,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<SessionIntentModel> for SessionIntent {

@@ -2,9 +2,9 @@ use axum::{
     Json,
     response::{IntoResponse, Response},
 };
-use domain::entities::{CreateUserCommand, LoginUserCommand, User};
+use chrono::{DateTime, Utc};
+use domain::entities::User;
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -33,10 +33,17 @@ pub struct RefreshTokenRequest {
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
+pub struct RefreshResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct UserResponse {
     pub id: Uuid,
     pub username: String,
-    pub joined_at: Date,
+    pub joined_at: DateTime<Utc>,
     pub email: String,
 }
 
@@ -59,7 +66,7 @@ pub struct RegisterResponse {
 pub struct RefreshTokenResponse {
     pub token: String,
     pub refresh_token: String,
-    pub expires_in: i64,
+    pub expires_in: u64,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -107,25 +114,6 @@ impl From<User> for UserResponse {
             username: username.clone(),
             joined_at: user.created_at,
             email: user.email,
-        }
-    }
-}
-
-impl From<LoginRequest> for LoginUserCommand {
-    fn from(req: LoginRequest) -> Self {
-        LoginUserCommand {
-            email: req.email,
-            password: req.password,
-        }
-    }
-}
-
-impl From<RegisterRequest> for CreateUserCommand {
-    fn from(req: RegisterRequest) -> Self {
-        CreateUserCommand {
-            username: req.username,
-            email: req.email,
-            password: req.password,
         }
     }
 }

@@ -8,7 +8,7 @@ use axum_extra::{
     TypedHeader,
     headers::{Authorization, authorization::Bearer},
 };
-use domain::auth::Claims;
+use domain::auth::{AuthenticationService, Claims};
 use infrastructure::state::AppState;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -51,8 +51,7 @@ pub async fn auth_middleware(
 
     let token_data = app_state
         .auth_service
-        .jwt_provider
-        .decode_token(&token)
+        .validate_token(&token)
         .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?;
 

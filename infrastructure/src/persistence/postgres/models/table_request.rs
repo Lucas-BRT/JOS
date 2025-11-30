@@ -1,5 +1,5 @@
+use chrono::{DateTime, Utc};
 use domain::entities::{TableRequest, TableRequestStatus};
-use shared::prelude::Date;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
@@ -37,8 +37,8 @@ pub struct TableRequestModel {
     pub table_id: Uuid,
     pub message: Option<String>,
     pub status: ETableRequestStatus,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<TableRequestModel> for TableRequest {

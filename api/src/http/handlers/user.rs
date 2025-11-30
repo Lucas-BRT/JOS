@@ -6,7 +6,7 @@ use axum::{
     middleware::from_fn_with_state,
 };
 use infrastructure::state::AppState;
-use shared::Error as AppError;
+use shared::Error;
 use shared::Result;
 use shared::error::ApplicationError;
 use std::sync::Arc;
@@ -16,22 +16,20 @@ use uuid::Uuid;
 
 #[utoipa::path(
     get,
-    path = "/{id}",
+    path = "/{user_id}",
     security(("auth" = [])),
     summary = "Get details about a existing user",
     tag = "user",
 )]
 pub async fn get_user_by_id(
     State(app_state): State<Arc<AppState>>,
-    Path(user_id): Path<String>,
+    Path(user_id): Path<Uuid>,
 ) -> Result<Json<UserResponse>> {
-    let parsed_user_id = Uuid::parse_str(&user_id).map_err(|_| {
-        AppError::Application(ApplicationError::InvalidInput {
-            message: "Invalid user ID format".to_string(),
-        })
-    })?;
-
-    let user = app_state.user_service.find_by_id(&parsed_user_id).await?;
+    let user = app_state
+        .user_service
+        .find_by_id(user_id)
+        .await?
+        .ok_or_else(|| Error::Application(ApplicationError::InvalidCredentials))?;
 
     Ok(Json(user.into()))
 }
@@ -39,7 +37,7 @@ pub async fn get_user_by_id(
 pub fn user_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
-            "/user",
+            "/users",
             OpenApiRouter::new()
                 .routes(routes!(get_user_by_id))
                 .layer(from_fn_with_state(state.clone(), auth_middleware)),

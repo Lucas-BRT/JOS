@@ -1,4 +1,5 @@
 pub mod game_system_commands;
+pub mod refresh_token_commands;
 pub mod session_checkin_commands;
 pub mod session_commands;
 pub mod session_intent_commands;
@@ -8,6 +9,7 @@ pub mod table_request_commands;
 pub mod user_commands;
 
 pub use game_system_commands::*;
+pub use refresh_token_commands::*;
 pub use session_checkin_commands::*;
 pub use session_commands::*;
 pub use session_intent_commands::*;

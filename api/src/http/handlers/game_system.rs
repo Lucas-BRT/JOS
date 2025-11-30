@@ -3,7 +3,7 @@ use crate::http::{
     middleware::auth::auth_middleware,
 };
 use axum::{Json, extract::State, middleware::from_fn_with_state};
-use domain::entities::GetGameSystemCommand;
+use domain::entities::{CreateGameSystemCommand, GetGameSystemCommand};
 use infrastructure::state::AppState;
 use shared::{Error, Result};
 use std::sync::Arc;
@@ -28,7 +28,7 @@ async fn create_game_system(
 
     let id = app_state
         .game_system_service
-        .create(&mut payload.into())
+        .create(CreateGameSystemCommand::new(payload.name))
         .await?
         .id;
 
@@ -48,7 +48,7 @@ async fn get_game_systems(
 ) -> Result<Json<Vec<GameSystemResponse>>> {
     let systems = app_state
         .game_system_service
-        .get(&mut GetGameSystemCommand::default())
+        .get(GetGameSystemCommand::default())
         .await?
         .iter()
         .map(GameSystemResponse::from)

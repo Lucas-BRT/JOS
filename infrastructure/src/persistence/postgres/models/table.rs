@@ -1,19 +1,45 @@
-use domain::entities::{Table, TableStatus};
-use shared::prelude::Date;
-use std::str::FromStr;
+use chrono::{DateTime, Utc};
+use domain::entities::{Session, Table, TableDetails, TableStatus, User};
 use uuid::Uuid;
 
-#[derive(Clone, Debug, PartialEq, Eq, sqlx::FromRow)]
+use crate::persistence::models::{SessionModel, UserModel};
+
+#[derive(Debug, Clone, PartialEq, Eq, sqlx::Type)]
+#[sqlx(type_name = "table_status", rename_all = "lowercase")]
+pub enum ETableStatus {
+    Active,
+    Inactive,
+}
+
+impl From<TableStatus> for ETableStatus {
+    fn from(status: TableStatus) -> Self {
+        match status {
+            TableStatus::Active => ETableStatus::Active,
+            TableStatus::Inactive => ETableStatus::Inactive,
+        }
+    }
+}
+
+impl From<ETableStatus> for TableStatus {
+    fn from(status: ETableStatus) -> Self {
+        match status {
+            ETableStatus::Active => TableStatus::Active,
+            ETableStatus::Inactive => TableStatus::Inactive,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TableModel {
     pub id: Uuid,
     pub gm_id: Uuid,
     pub title: String,
     pub description: String,
+    pub status: ETableStatus,
     pub slots: i32,
-    pub status: String,
     pub game_system_id: Uuid,
-    pub created_at: Date,
-    pub updated_at: Date,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 impl From<TableModel> for Table {
@@ -24,10 +50,43 @@ impl From<TableModel> for Table {
             title: model.title,
             description: model.description,
             player_slots: model.slots as u32,
-            status: TableStatus::from_str(&model.status).unwrap_or(TableStatus::Active),
+            status: model.status.into(),
             game_system_id: model.game_system_id,
             created_at: model.created_at,
             updated_at: model.updated_at,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TableDetailsModel {
+    pub id: Uuid,
+    pub gm_id: Uuid,
+    pub title: String,
+    pub description: String,
+    pub players: Vec<UserModel>,
+    pub slots: i32,
+    pub sessions: Vec<SessionModel>,
+    pub status: ETableStatus,
+    pub game_system_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl From<TableDetailsModel> for TableDetails {
+    fn from(model: TableDetailsModel) -> Self {
+        Self {
+            id: model.id,
+            gm_id: model.gm_id,
+            title: model.title,
+            description: model.description,
+            player_slots: model.slots as u32,
+            status: model.status.into(),
+            game_system_id: model.game_system_id,
+            created_at: model.created_at,
+            updated_at: model.updated_at,
+            players: model.players.into_iter().map(User::from).collect(),
+            sessions: model.sessions.into_iter().map(Session::from).collect(),
         }
     }
 }

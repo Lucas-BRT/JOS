@@ -3,9 +3,8 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
-use domain::entities::{Session, SessionStatus};
+use domain::entities::{Session, SessionStatus, session_checkin::SessionCheckinData};
 use serde::{Deserialize, Serialize};
-use shared::prelude::Date;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -30,13 +29,24 @@ impl From<ISessionStatus> for SessionStatus {
     }
 }
 
+impl From<SessionStatus> for ISessionStatus {
+    fn from(value: SessionStatus) -> Self {
+        match value {
+            SessionStatus::Scheduled => ISessionStatus::Scheduled,
+            SessionStatus::InProgress => ISessionStatus::InProgress,
+            SessionStatus::Completed => ISessionStatus::Completed,
+            SessionStatus::Cancelled => ISessionStatus::Cancelled,
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateSessionRequest {
     #[validate(length(min = 1, max = 100))]
     pub title: String,
     #[validate(length(max = 1000))]
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
     pub status: Option<SessionStatus>,
 }
 
@@ -47,13 +57,11 @@ pub struct CreateSessionResponse {
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct UpdateSessionRequest {
-    #[validate(length(min = 1, max = 100))]
+    #[validate(length(min = 3, max = 100))]
     pub title: Option<String>,
     #[validate(length(max = 1000))]
     pub description: Option<String>,
-    pub scheduled_for: Option<Option<Date>>,
-    #[validate(range(min = 1, max = 20))]
-    pub max_players: Option<i32>,
+    pub scheduled_for: Option<Option<DateTime<Utc>>>,
     pub status: Option<ISessionStatus>,
 }
 
@@ -61,7 +69,7 @@ pub struct UpdateSessionRequest {
 pub struct UpdateSessionResponse {
     pub title: String,
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
     pub status: SessionStatus,
 }
 
@@ -80,10 +88,7 @@ impl From<Session> for UpdateSessionResponse {
 pub struct SessionPlayer {
     pub id: Uuid,
     pub name: String,
-    pub character: String,
-    pub avatar: String,
     pub status: String,
-    pub is_current_user: bool,
 }
 
 #[derive(Deserialize, Serialize, ToSchema)]
@@ -91,7 +96,7 @@ pub struct GetSessionsResponse {
     pub id: Uuid,
     pub title: String,
     pub description: String,
-    pub scheduled_for: Option<Date>,
+    pub scheduled_for: Option<DateTime<Utc>>,
 }
 
 impl From<Session> for GetSessionsResponse {
@@ -123,6 +128,32 @@ pub struct SessionDetails {
 pub struct DeleteSessionResponse {
     pub message: String,
 }
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct FinalizeSessionRequest {
+    pub checkins: Vec<ISessionCheckinData>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct ISessionCheckinData {
+    pub user_id: Uuid,
+    pub attendance: bool,
+    pub notes: Option<String>,
+}
+
+impl From<ISessionCheckinData> for SessionCheckinData {
+    fn from(value: ISessionCheckinData) -> Self {
+        Self {
+            user_id: value.user_id,
+            attendance: value.attendance,
+            notes: value.notes,
+            id: Uuid::now_v7(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct SessionFinalizationResponse {}
 
 // IntoResponse implementations
 impl IntoResponse for SessionDetails {

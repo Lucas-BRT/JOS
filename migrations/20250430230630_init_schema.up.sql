@@ -1,6 +1,7 @@
 CREATE TYPE session_status AS ENUM ('scheduled', 'in_progress', 'completed', 'cancelled');
 CREATE TYPE intent_status AS ENUM ('confirmed', 'unsure', 'declined');
 CREATE TYPE request_status AS ENUM ('pending', 'approved', 'rejected');
+CREATE TYPE table_status AS ENUM ('active', 'inactive');
 
 CREATE TABLE users (
     "id" UUID NOT NULL DEFAULT uuidv7(),
@@ -26,6 +27,7 @@ CREATE TABLE tables (
     "title" TEXT NOT NULL,
     "description" TEXT NOT NULL,
     "slots" INTEGER NOT NULL CHECK ("slots" >= 0),
+    "status" table_status NOT NULL DEFAULT 'active',
     "game_system_id" UUID NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     "updated_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(),

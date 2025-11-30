@@ -1,10 +1,12 @@
 use crate::entities::*;
-use async_trait::async_trait;
-use chrono::{Duration, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use shared::Result;
-use std::ops::Add;
+use std::{ops::Add, time::Duration};
 use uuid::Uuid;
+
+pub const DEFAULT_MIN_DELAY_MILIS: u64 = 30;
+pub const DEFAULT_MAX_DELAY_MILIS: u64 = 300;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -13,25 +15,71 @@ pub struct Claims {
     pub iat: i64,
 }
 
-#[async_trait]
-pub trait Authenticator {
-    async fn authenticate(&self, command: &mut LoginUserCommand) -> Result<String>;
-    async fn register(&self, command: &mut CreateUserCommand) -> Result<User>;
-    async fn update_password(&self, command: &mut UpdatePasswordCommand) -> Result<()>;
-    async fn logout(&self, user_id: &Uuid) -> Result<()>;
-    async fn delete_account(&self, command: &mut DeleteAccountCommand) -> Result<()>;
+#[derive(Debug, Clone)]
+pub struct LoginResponse {
+    pub user: User,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: i64,
 }
 
-#[async_trait]
+#[derive(Debug, Clone)]
+pub struct RefreshResponse {
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expires_in: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct RefreshTokenCommand {
+    pub token: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct LoginCommand {
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct RegisterCommand {
+    pub username: String,
+    pub email: String,
+    pub password: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ChangePasswordCommand {
+    pub current_password: String,
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+#[async_trait::async_trait]
+pub trait AuthenticationService: Send + Sync {
+    async fn login(&self, command: LoginCommand) -> Result<LoginResponse>;
+    async fn register(&self, command: RegisterCommand) -> Result<LoginResponse>;
+    async fn refresh_token(&self, command: RefreshTokenCommand) -> Result<RefreshResponse>;
+    async fn logout(&self, command: LogoutCommand) -> Result<()>;
+    async fn validate_token(&self, token: &str) -> Result<Claims>;
+    async fn change_password(&self, user_id: Uuid, command: ChangePasswordCommand) -> Result<()>;
+}
+
+#[derive(Debug, Clone)]
+pub struct LogoutCommand {
+    pub user_id: Uuid,
+}
+
+#[async_trait::async_trait]
 pub trait PasswordProvider: Send + Sync {
     async fn generate_hash(&self, password: String) -> Result<String>;
     async fn verify_hash(&self, password: String, hash: String) -> Result<bool>;
     async fn validate_password(&self, password: &str) -> Result<()>;
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait TokenProvider: Send + Sync {
-    async fn generate_token(&self, user_id: &Uuid) -> Result<String>;
+    async fn generate_token(&self, user_id: Uuid) -> Result<String>;
     async fn decode_token(&self, token: &str) -> Result<Claims>;
 }
 

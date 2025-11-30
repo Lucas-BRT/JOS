@@ -114,7 +114,6 @@ impl IntoResponse for DeleteSessionIntentResponse {
 
 #[derive(Deserialize, Serialize, ToSchema, Validate)]
 pub struct CreateSessionCheckinRequest {
-    pub session_intent_id: Uuid,
     pub attendance: bool,
     pub notes: Option<String>,
 }
