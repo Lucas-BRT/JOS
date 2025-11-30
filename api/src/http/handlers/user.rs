@@ -37,7 +37,7 @@ pub async fn get_user_by_id(
 pub fn user_routes(state: Arc<AppState>) -> OpenApiRouter {
     OpenApiRouter::new()
         .nest(
-            "/user",
+            "/users",
             OpenApiRouter::new()
                 .routes(routes!(get_user_by_id))
                 .layer(from_fn_with_state(state.clone(), auth_middleware)),

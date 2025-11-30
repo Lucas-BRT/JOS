@@ -13,6 +13,7 @@ use uuid::Uuid;
     get,
     path = "/sent",
     tag = "table-request",
+    summary = "Get sent requests",
     security(("auth" = [])),
 )]
 #[axum::debug_handler]
@@ -107,6 +108,7 @@ pub fn table_request_routes(state: Arc<AppState>) -> OpenApiRouter {
         .nest(
             "/requests",
             OpenApiRouter::new()
+                .routes(routes!(get_sent_requests))
                 .routes(routes!(accept_request))
                 .routes(routes!(reject_request))
                 .routes(routes!(cancel_request)),

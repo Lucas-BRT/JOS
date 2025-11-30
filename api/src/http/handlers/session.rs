@@ -131,6 +131,7 @@ pub fn session_routes(state: Arc<AppState>) -> OpenApiRouter {
         .nest(
             "/sessions",
             OpenApiRouter::new()
+                .routes(routes!(finalize_session_with_checkins))
                 .routes(routes!(start_session))
                 .routes(routes!(update_session))
                 .routes(routes!(delete_session)),
